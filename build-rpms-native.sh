@@ -151,6 +151,9 @@ S="${STAGING}/wpewebkit2-qt5"; rm -rf "$S"; mkdir -p "$S"
 # Patch glibc version symbols in libqtwpe.so before packaging
 python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
     "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
+# Add libEGL.so.1 as DT_NEEDED (EGL symbols are directly referenced)
+patchelf --add-needed libEGL.so.1 \
+    "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" 2>/dev/null || true
 
 mkdir -p "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe"
 cp -a "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" \
@@ -190,6 +193,11 @@ do
 done
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap.so"  "${COMPAT_SRC}/libexecve_wrap.c"  -ldl
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap2.so" "${COMPAT_SRC}/libexecve_wrap2.c" -ldl
+
+# Patch glibc version symbols in all compat shims (built with host glibc > 2.30)
+for f in "${COMPAT_BUILD}"/*.so; do
+    python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$f"
+done
 
 echo "--- Staging wpe-sfos-compat ---"
 S="${STAGING}/wpe-sfos-compat"; rm -rf "$S"; mkdir -p "$S"
