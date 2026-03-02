@@ -90,10 +90,12 @@ fpm_rpm libepoxy 1.5.11 "OpenGL function pointer management for Sailfish OS" "$S
 # ===========================================================================
 echo "--- Staging wpebackend-fdo ---"
 S="${STAGING}/wpebackend-fdo"; rm -rf "$S"; mkdir -p "$S"
-stage_cp "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1.11.0" /usr/lib64 "$S"
-stage_cp "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1"      /usr/lib64 "$S"
-stage_cp "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so"        /usr/lib64 "$S"
-stage_cp "${WPE_PREFIX}/include/wpe-fdo-1.0"                 /usr/include "$S"
+cp -a "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1.11.0" /usr/lib64 "$S"  2>/dev/null; true
+mkdir -p "${S}/usr/lib64"
+cp -a "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1.11.0" "${S}/usr/lib64/"
+ln -sfn libWPEBackend-fdo-1.0.so.1.11.0 "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1"
+ln -sfn libWPEBackend-fdo-1.0.so.1      "${S}/usr/lib64/libWPEBackend-fdo-1.0.so"
+cp -a "${WPE_PREFIX}/include/wpe-fdo-1.0"                 /usr/include "$S"
 mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/wpebackend-fdo-1.0.pc"    "${S}/usr/lib64/pkgconfig/"
 sed -i "s|${WPE_PREFIX}|/usr|g"                               "${S}/usr/lib64/pkgconfig/wpebackend-fdo-1.0.pc"
@@ -146,11 +148,18 @@ fpm_rpm wpewebkit2 2.50.5 "WPE WebKit 2.50.5 for Sailfish OS" "$S" \
 echo "--- Staging wpewebkit2-qt5 ---"
 S="${STAGING}/wpewebkit2-qt5"; rm -rf "$S"; mkdir -p "$S"
 
+# Patch glibc version symbols in libqtwpe.so before packaging
+python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
+    "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
+
 mkdir -p "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe"
 cp -a "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" \
       "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe/"
 cp -a "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/qmldir" \
       "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe/"
+# Flat symlink so the browser binary can find libqtwpe.so via ldconfig
+ln -sfn /usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so \
+        "${S}/usr/lib64/libqtwpe.so"
 
 fpm_rpm wpewebkit2-qt5 2.50.5 "WPE WebKit Qt5 QML plugin for Sailfish OS" "$S" \
     --depends wpewebkit2
