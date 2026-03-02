@@ -5,4 +5,5 @@ export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
 export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
 export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
+export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
 exec /usr/libexec/wpe-webkit-2.0/WPEWebProcess $@
