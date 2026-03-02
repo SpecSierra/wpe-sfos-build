@@ -4,16 +4,18 @@ Version:    1.0.0
 Release:    1
 License:    LGPL-2.1+
 URL:        https://github.com/SpecSierra/wpe-sfos-build
+# Create with: git archive --prefix=wpe-sfos-compat-1.0.0/ HEAD | bzip2 > wpe-sfos-compat-1.0.0.tar.bz2
+# Run from inside the wpe-sfos-build git repo root.
 Source0:    %{name}-%{version}.tar.bz2
 
 BuildRequires:  gcc
 
 %description
 Compatibility shim libraries required to run WPE WebKit 2.50.5 on
-Sailfish OS 5.0 (glibc 2.28, ARMv8.0-A, Snapdragon 665).
+Sailfish OS 5.0 (glibc 2.30, ARMv8.0-A, Snapdragon 665).
 
 Provides:
-  - glibc 2.29+ symbol stubs missing from SFOS glibc 2.28
+  - glibc 2.31+ symbol stubs missing from SFOS glibc 2.30
   - getauxval() fix for AT_HWCAP2 / AT_MINSIGSTKSZ on aarch64
   - SIGILL skip handler for ARMv8.1+ CPU feature probes
   - execve() wrapper to rewrite WPE subprocess paths under sailjail

@@ -407,6 +407,58 @@ WebProcess and NetworkProcess, rewriting their library paths to point at
 
 ---
 
+## Building Distributable RPMs
+
+All spec files are in `rpm/`. Use the Sailfish SDK CLI (`sfdk`) with the
+SFOS 5.0.0.62 aarch64 target.
+
+### 1. Stage sources
+
+Run the provided script once to download and archive all source tarballs into
+`~/rpmbuild/SOURCES/`:
+
+```bash
+bash setup-rpmbuild.sh
+```
+
+This will:
+- Create `wpe-sfos-compat-1.0.0.tar.bz2` from the current git repo
+- Clone and archive libwpe 1.17.0, libepoxy 1.5.11, WPEBackend-fdo 1.17.0
+- Download `wpewebkit-2.50.5.tar.xz` from wpewebkit.org
+- Copy toolchain files, patches, and scripts
+
+### 2. Configure sfdk target
+
+```bash
+sfdk config target=SailfishOS-5.0.0.62-aarch64
+```
+
+### 3. Build in order
+
+Each package must be built and installed into the SDK target before the next:
+
+```bash
+sfdk build rpm/libwpe.spec
+sfdk build rpm/libepoxy.spec
+sfdk build rpm/wpebackend-fdo.spec
+sfdk build rpm/wpe-sfos-compat.spec
+sfdk build rpm/wpewebkit2.spec
+sfdk build rpm/wpewebkit2-qt5.spec
+# From the sailfish-browser repo:
+sfdk build rpm/sailfish-browser.spec
+```
+
+> ⚠️ `wpewebkit2` takes 60–90 min to build on an 8-core machine.
+
+### 4. Install to device
+
+```bash
+scp RPMS/aarch64/*.rpm nemo@device:~/
+ssh nemo@device 'devel-su rpm -Uvh ~/*.rpm'
+```
+
+---
+
 ## Contributing
 
 This port targets upstreaming. Patches should be:
