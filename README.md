@@ -288,6 +288,16 @@ sudo ln -sfn /opt/sfos-sysroot/usr/lib64/qt5 /usr/lib64/qt5
 sudo ln -sfn /opt/sfos-sysroot/usr/include/qt5 /usr/include/qt5
 ```
 
+The sysroot Qt5 tools (e.g. `lupdate`) are aarch64 binaries and run natively on the
+build host, but need sysroot libraries on the host's library path. Create these
+symlinks once:
+
+```bash
+for lib in libQt5Core.so.5 libQt5Xml.so.5 libicui18n.so.70 libicuuc.so.70 libicudata.so.70 libpcre16.so.0; do
+    sudo ln -sfn /opt/sfos-sysroot/usr/lib64/$lib /usr/lib/$lib
+done
+```
+
 Configure and build:
 
 ```bash
@@ -308,14 +318,10 @@ qmake -spec /opt/sfos-sysroot/usr/share/qt5/mkspecs/linux-g++ \
 make -j$(nproc)
 ```
 
-> **Note:** The top-level `sailfish-browser.pro` includes `settings/` and
-> `backup-unit/` sub-projects that may fail if optional SFOS packages
-> (`vault`, etc.) are absent from the sysroot. These sub-projects are not
-> needed for the browser to run — build only the core library and binary if
-> the top-level make fails:
+> **Note:** The `captiveportal` sub-project has not been ported to WPE and will
+> fail to build. Build only the core library and binary instead of the full tree:
 > ```bash
-> make -C apps/lib
-> make -C apps/browser
+> make -C apps/lib && make -C apps/browser
 > ```
 
 ---
