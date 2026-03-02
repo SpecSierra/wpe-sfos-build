@@ -1,0 +1,26 @@
+diff --git a/Source/WebCore/page/Quirks.cpp b/Source/WebCore/page/Quirks.cpp
+index 6ca36b2201..c79d6be620 100644
+--- a/Source/WebCore/page/Quirks.cpp
++++ b/Source/WebCore/page/Quirks.cpp
+@@ -51,7 +51,9 @@
+ #include "HTMLObjectElement.h"
+ #include "HTMLScriptElement.h"
+ #include "HTMLTextAreaElement.h"
++#if ENABLE(VIDEO)
+ #include "HTMLVideoElement.h"
++#endif
+ #include "JSEventListener.h"
+ #include "KeyframeEffect.h"
+ #include "LayoutUnit.h"
+@@ -2340,7 +2342,11 @@ bool Quirks::needsInstagramResizingReelsQuirk(const Element& element, const Rend
+     if (!parentStyle.width().isPercent())
+         return false;
+ 
++#if ENABLE(VIDEO)
+     return descendantsOfType<HTMLVideoElement>(element).first();
++#else
++    return false;
++#endif
+ }
+ 
+ bool Quirks::needsWebKitMediaTextTrackDisplayQuirk() const
