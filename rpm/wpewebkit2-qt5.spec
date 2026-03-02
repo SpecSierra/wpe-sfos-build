@@ -9,6 +9,7 @@ URL:        https://wpewebkit.org
 #   wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5/
 Source0:    wpewebkit-%{version}.tar.xz
 Source1:    sfos-toolchain.cmake
+Source2:    qt5-plugin-gnuinstalldirs.patch
 
 BuildRequires:  cmake >= 3.20
 BuildRequires:  ninja
@@ -38,13 +39,15 @@ Import in QML:
 # ===========================================================================
 %prep
 %setup -q -n wpewebkit-%{version}
+patch -p1 < %{SOURCE2}
 
 %build
 cd Source/WebKit/UIProcess/API/wpe/qt5
 cmake -B build -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=%{SOURCE1} \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=%{_prefix}
+    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+    -DCMAKE_INSTALL_LIBDIR=lib
 ninja -C build %{?_smp_mflags}
 
 %install

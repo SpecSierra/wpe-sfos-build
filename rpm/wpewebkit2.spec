@@ -9,6 +9,7 @@ Source0:    wpewebkit-%{version}.tar.xz
 Source1:    sfos-toolchain.cmake
 Source2:    webkit-quirks-no-video.patch
 Source3:    patch-glibc-versions.py
+Source4:    qt5-plugin-gnuinstalldirs.patch
 
 BuildRequires:  cmake >= 3.20
 BuildRequires:  ninja
@@ -47,11 +48,10 @@ ARMv8.0-A). This is the engine used by the WPE Sailfish Browser as a
 replacement for the Gecko/EmbedLite engine.
 
 Build configuration:
-  - VIDEO disabled (no GStreamer dependency)
-  - WEB_AUDIO disabled
-  - GEOLOCATION disabled
+  - VIDEO, MEDIA_STREAM, WEB_CODECS, WEB_AUDIO disabled (no GStreamer)
+  - GEOLOCATION, SPEECH_SYNTHESIS, XSLT, WEBDRIVER disabled
   - Static libstdc++ / libgcc (no GLIBCXX version requirements)
-  - glibc version tags patched to GLIBC_2.28
+  - glibc version tags downgraded to GLIBC_2.17
 
 %package devel
 Summary:    Development files for WPE WebKit 2.50.5
@@ -78,39 +78,45 @@ cmake -B WebKitBuild/Release -G Ninja \
     -DENABLE_GAMEPAD=OFF \
     -DENABLE_SPELLCHECK=OFF \
     -DENABLE_SAMPLING_PROFILER=OFF \
+    -DENABLE_SPEECH_SYNTHESIS=OFF \
+    -DENABLE_XSLT=OFF \
+    -DENABLE_WEBDRIVER=OFF \
+    -DENABLE_MEDIA_STREAM=OFF \
+    -DENABLE_MEDIA_RECORDER=OFF \
+    -DENABLE_WEB_CODECS=OFF \
+    -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+    -DENABLE_MINIBROWSER=OFF \
+    -DENABLE_INTROSPECTION=OFF \
     -DUSE_GSTREAMER=OFF \
+    -DUSE_GSTREAMER_GL=OFF \
+    -DUSE_ATK=OFF \
+    -DUSE_LCMS=OFF \
+    -DUSE_LIBBACKTRACE=OFF \
     -DUSE_LIBHYPHEN=OFF \
     -DUSE_OPENJPEG=OFF \
     -DUSE_WOFF2=OFF \
     -DUSE_AVIF=OFF \
-    -DENABLE_MINIBROWSER=OFF \
-    -DENABLE_INTROSPECTION=OFF
+    -DUSE_SKIA=ON \
+    -DUSE_SYSPROF_CAPTURE=ON \
+    -DUSE_SYSTEM_SYSPROF_CAPTURE=NO
 
 ninja -C WebKitBuild/Release %{?_smp_mflags}
 
 %install
 DESTDIR=%{buildroot} ninja -C WebKitBuild/Release install
 
-# Patch GLIBC version tags in all installed .so files
-find %{buildroot}%{_libdir} -name "*.so*" -type f | while read f; do
-    python3 %{SOURCE3} "$f" || true
-done
+# libWPEInjectedBundle.so is not installed by ninja install — copy manually
+install -d %{buildroot}%{_libdir}/wpe-webkit-2.0
+install -m 755 WebKitBuild/Release/lib/libWPEInjectedBundle.so \
+    %{buildroot}%{_libdir}/wpe-webkit-2.0/libWPEInjectedBundle.so
 
-# WPE subprocess helper binaries go to libexec
-install -d %{buildroot}%{_libexecdir}/wpewebkit
-for bin in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
-    if [ -f WebKitBuild/Release/bin/$bin ]; then
-        install -m 755 WebKitBuild/Release/bin/$bin \
-            %{buildroot}%{_libexecdir}/wpewebkit/$bin
-    fi
-done
-
-# InjectedBundle goes next to the helpers
-install -d %{buildroot}%{_libdir}/wpewebkit
-if [ -f WebKitBuild/Release/lib/libWPEInjectedBundle.so ]; then
-    install -m 755 WebKitBuild/Release/lib/libWPEInjectedBundle.so \
-        %{buildroot}%{_libdir}/wpewebkit/libWPEInjectedBundle.so
-fi
+# Patch GLIBC_2.34+ version tags down to GLIBC_2.17 in all installed binaries
+python3 %{SOURCE3} \
+    %{buildroot}%{_libdir}/libWPEWebKit-2.0.so.*.*.* \
+    %{buildroot}%{_libdir}/wpe-webkit-2.0/libWPEInjectedBundle.so \
+    %{buildroot}%{_libexecdir}/wpe-webkit-2.0/WPEWebProcess \
+    %{buildroot}%{_libexecdir}/wpe-webkit-2.0/WPENetworkProcess \
+    %{buildroot}%{_libexecdir}/wpe-webkit-2.0/WPEGPUProcess
 
 %post
 /sbin/ldconfig || :
@@ -121,27 +127,14 @@ fi
 %files
 %license Source/WebKit/LICENSE
 %{_libdir}/libWPEWebKit-2.0.so.*
-%{_libdir}/libWPEBackend-fdo-1.0.so.*
-%{_libdir}/libwpe-1.0.so.*
-%{_libdir}/libepoxy.so.*
-%{_libdir}/libsoup-3.0.so.*
-%{_libdir}/libharfbuzz-icu.so.*
-%dir %{_libdir}/wpewebkit
-%{_libdir}/wpewebkit/libWPEInjectedBundle.so
-%dir %{_libexecdir}/wpewebkit
-%{_libexecdir}/wpewebkit/WPEWebProcess
-%{_libexecdir}/wpewebkit/WPENetworkProcess
-%{_libexecdir}/wpewebkit/WPEGPUProcess
+%dir %{_libdir}/wpe-webkit-2.0
+%{_libdir}/wpe-webkit-2.0/libWPEInjectedBundle.so
+%dir %{_libexecdir}/wpe-webkit-2.0
+%{_libexecdir}/wpe-webkit-2.0/WPEWebProcess
+%{_libexecdir}/wpe-webkit-2.0/WPENetworkProcess
+%{_libexecdir}/wpe-webkit-2.0/WPEGPUProcess
 
 %files devel
 %{_libdir}/libWPEWebKit-2.0.so
-%{_libdir}/libWPEBackend-fdo-1.0.so
-%{_libdir}/libwpe-1.0.so
-%{_libdir}/libepoxy.so
-%{_libdir}/libsoup-3.0.so
 %{_includedir}/wpe-webkit-2.0
-%{_includedir}/wpe-1.0
-%{_libdir}/pkgconfig/wpewebkit-2.0.pc
-%{_libdir}/pkgconfig/wpe-1.0.pc
-%{_libdir}/pkgconfig/wpebackend-fdo-1.0.pc
-%{_libdir}/pkgconfig/epoxy.pc
+%{_libdir}/pkgconfig/wpe-webkit-2.0.pc
