@@ -124,11 +124,12 @@ ninja -C build install
 ```bash
 git clone https://github.com/igalia/WPEBackend-fdo
 cd WPEBackend-fdo
+PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig \
 meson setup build \
     --cross-file /path/to/wpe-sfos-build/sfos-meson-cross.ini \
     --prefix /opt/wpe-sfos \
     --buildtype release
-ninja -C build install
+PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig ninja -C build install
 ```
 
 ### 4. WPE WebKit 2.50.5
@@ -150,6 +151,7 @@ patch -p1 < /path/to/wpe-sfos-build/webkit-quirks-no-video.patch
 Configure and build:
 
 ```bash
+PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig \
 cmake -B WebKitBuild/Release -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=/path/to/wpe-sfos-build/sfos-toolchain.cmake \
     -DCMAKE_BUILD_TYPE=Release \
@@ -160,12 +162,25 @@ cmake -B WebKitBuild/Release -G Ninja \
     -DENABLE_GEOLOCATION=OFF \
     -DENABLE_GAMEPAD=OFF \
     -DENABLE_SPELLCHECK=OFF \
+    -DENABLE_SPEECH_SYNTHESIS=OFF \
     -DENABLE_SAMPLING_PROFILER=OFF \
+    -DENABLE_INTROSPECTION=OFF \
+    -DENABLE_WEBDRIVER=OFF \
+    -DENABLE_XSLT=OFF \
+    -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+    -DUSE_ATK=OFF \
     -DUSE_GSTREAMER=OFF \
+    -DUSE_GSTREAMER_GL=OFF \
+    -DUSE_JPEGXL=OFF \
+    -DUSE_LCMS=OFF \
+    -DUSE_LIBBACKTRACE=OFF \
     -DUSE_LIBHYPHEN=OFF \
     -DUSE_OPENJPEG=OFF \
     -DUSE_WOFF2=OFF \
-    -DUSE_AVIF=OFF
+    -DUSE_AVIF=OFF \
+    -DUSE_SKIA=ON \
+    -DUSE_SYSPROF_CAPTURE=ON \
+    -DUSE_SYSTEM_SYSPROF_CAPTURE=NO
 
 ninja -C WebKitBuild/Release
 ninja -C WebKitBuild/Release install
@@ -179,7 +194,11 @@ The Qt5 WPE plugin source lives inside the WPE WebKit tarball at
 `Source/WebKit/UIProcess/API/wpe/qt5/`. Build it separately with Qt 5.6:
 
 ```bash
+# qmake is inside the SFOS sysroot — add it to PATH first
+export PATH="/opt/sfos-sysroot/usr/lib64/qt5/bin:$PATH"
+
 cd wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5
+PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig \
 cmake -B build -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=/path/to/wpe-sfos-build/sfos-toolchain.cmake \
     -DCMAKE_BUILD_TYPE=Release \
@@ -213,14 +232,22 @@ $CC $CFLAGS $LDFLAGS -o libegl-stubs.so           libegl-stubs.c
 
 #### Patch GLIBC version tags
 
-After building all WPE `.so` files, strip references to newer glibc symbols:
+After building all WPE `.so` files, strip references to newer glibc symbols.
+Pass each file explicitly:
 
 ```bash
-python3 patch-glibc-versions.py /opt/wpe-sfos/lib/libWPEWebKit-2.0.so
-python3 patch-glibc-versions.py /opt/wpe-sfos/lib/libWPEBackend-fdo-1.0.so
-python3 patch-glibc-versions.py /opt/wpe-sfos/lib/libwpe-1.0.so
-# repeat for any .so that references GLIBC_2.29+
+python3 patch-glibc-versions.py \
+    /opt/wpe-sfos/lib/libWPEWebKit-2.0.so.*.* \
+    /opt/wpe-sfos/lib/libWPEBackend-fdo-1.0.so.*.* \
+    /opt/wpe-sfos/lib/libwpe-1.0.so.*.* \
+    /opt/wpe-sfos/libexec/wpewebkit/WPEWebProcess \
+    /opt/wpe-sfos/libexec/wpewebkit/WPENetworkProcess \
+    /opt/wpe-sfos/libexec/wpewebkit/WPEGPUProcess
 ```
+
+> ℹ️ The script can also be run with no arguments to patch the original
+> workspace build tree at `BUILD_ROOT` / `ARTIFACTS_ROOT` defined at the
+> top of `patch-glibc-versions.py` — edit those variables if your paths differ.
 
 ### 6. sailfish-browser
 

@@ -159,7 +159,30 @@ def patch_no_pthread(path: Path):
     if changed:
         path.write_bytes(bytes(data))
 
-build = Path('/workspace/wpewebkit-2.50.5/WebKitBuild/Release')
+# If explicit paths are given on the command line, patch only those files.
+if len(sys.argv) > 1:
+    for arg in sys.argv[1:]:
+        p = Path(arg)
+        if not p.exists():
+            print(f"warning: {p} does not exist, skipping", file=sys.stderr)
+            continue
+        if p.is_symlink():
+            print(f"warning: {p} is a symlink, skipping", file=sys.stderr)
+            continue
+        # Use patch_no_pthread for libstdc++/libgcc_s/libEGL, patch for everything else
+        if any(p.name.startswith(n) for n in ('libstdc++', 'libgcc_s', 'libcxx-compat', 'libEGL')):
+            patch_no_pthread(p)
+        else:
+            patch(p)
+    print("Done.")
+    sys.exit(0)
+
+# --- Legacy mode: no arguments — patch the hardcoded workspace build tree ---
+# Set BUILD_ROOT and ARTIFACTS_ROOT to match your environment if they differ.
+BUILD_ROOT     = Path('/workspace/wpewebkit-2.50.5/WebKitBuild/Release')
+ARTIFACTS_ROOT = Path('/workspace/wpe-sfos-artifacts')
+
+build = BUILD_ROOT
 targets = list((build / 'bin').glob('WPE*')) + \
           [build / 'bin' / 'MiniBrowser', build / 'bin' / 'jsc'] + \
           list((build / 'lib').glob('libWPEWebKit*.so*')) + \
@@ -170,7 +193,7 @@ for t in sorted(set(targets)):
         patch(t)
 
 # Also patch any existing artifact bins/libs (may be stale copies)
-arts = Path('/workspace/wpe-sfos-artifacts')
+arts = ARTIFACTS_ROOT
 art_targets = list((arts / 'bin').glob('WPE*')) + \
               [arts / 'bin' / 'MiniBrowser'] + \
               list((arts / 'lib').glob('libWPEWebKit*.so*')) + \
@@ -193,7 +216,7 @@ for t in qtwpe_targets:
         patch(t)
 
 # Also patch libstdc++ and libgcc_s that we ship in artifacts
-artifact_lib = Path('/workspace/wpe-sfos-artifacts/lib')
+artifact_lib = ARTIFACTS_ROOT / 'lib'
 for name in ['libstdc++.so.6.0.33', 'libgcc_s.so.1', 'libcxx-compat.so', 'libEGL.so.1']:
     p = artifact_lib / name
     if p.exists() and not p.is_symlink():
