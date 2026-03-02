@@ -124,12 +124,11 @@ ninja -C build install
 ```bash
 git clone https://github.com/igalia/WPEBackend-fdo
 cd WPEBackend-fdo
-PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig \
 meson setup build \
     --cross-file /path/to/wpe-sfos-build/sfos-meson-cross.ini \
     --prefix /opt/wpe-sfos \
     --buildtype release
-PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig ninja -C build install
+ninja -C build install
 ```
 
 ### 4. WPE WebKit 2.50.5
@@ -363,7 +362,7 @@ Deploy `content-blocker.json` to the device and load it in WPEWebPage via
 | File downloads | 🔴 Not implemented | `webkit_download_*` API hookup planned |
 | ARMv8.1+ instruction probes | ✅ Mitigated | `libsigill_skip*.so` shims handle `SIGILL` from CPU feature detection |
 | glibc 2.29+ symbols | ✅ Mitigated | `libglibc-compat.so` + `patch-glibc-versions.py` |
-| JPEG ABI mismatch | ✅ Fixed | `libjpeg_safe.so` intercepts libjpeg calls |
+| JPEG ABI mismatch | ⚠️ Investigate | `libjpeg_safe.so` shim noted but source not in repo; may be resolved by WPEWebKit static link |
 
 ---
 
