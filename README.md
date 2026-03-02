@@ -202,7 +202,8 @@ PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig \
 cmake -B build -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=/path/to/wpe-sfos-build/sfos-toolchain.cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/opt/wpe-sfos
+    -DCMAKE_INSTALL_PREFIX=/opt/wpe-sfos \
+    -DCMAKE_INSTALL_LIBDIR=lib
 ninja -C build install
 ```
 
@@ -251,9 +252,51 @@ python3 patch-glibc-versions.py \
 
 ### 6. sailfish-browser
 
-See [SpecSierra/sailfish-browser](https://github.com/SpecSierra/sailfish-browser)
-(branch `next`) for build instructions. It uses `qmake` with Qt 5.6 and links
-against `libqtwpe.so` and `libWPEWebKit-2.0.so` from `/opt/wpe-sfos`.
+Clone the browser source (branch `next`):
+
+```bash
+git clone -b next https://github.com/SpecSierra/sailfish-browser
+cd sailfish-browser
+```
+
+qmake from the SFOS sysroot expects to find Qt5 module definitions at `/usr/share/qt5`
+and `/usr/lib64/qt5`. Symlink the sysroot paths once:
+
+```bash
+sudo ln -sfn /opt/sfos-sysroot/usr/share/qt5 /usr/share/qt5
+sudo ln -sfn /opt/sfos-sysroot/usr/lib64/qt5 /usr/lib64/qt5
+sudo ln -sfn /opt/sfos-sysroot/usr/include/qt5 /usr/include/qt5
+```
+
+Configure and build:
+
+```bash
+export PATH="/opt/sfos-sysroot/usr/lib64/qt5/bin:$PATH"
+export PKG_CONFIG_SYSROOT_DIR=/opt/sfos-sysroot
+export PKG_CONFIG_PATH=/opt/sfos-sysroot/usr/lib64/pkgconfig:/opt/wpe-sfos/lib/pkgconfig
+
+mkdir build && cd build
+qmake -spec /opt/sfos-sysroot/usr/share/qt5/mkspecs/linux-g++ \
+    ../sailfish-browser.pro \
+    "CONFIG+=release" \
+    "QMAKE_CXX=g++ --sysroot=/opt/sfos-sysroot" \
+    "QMAKE_CC=gcc --sysroot=/opt/sfos-sysroot" \
+    "QMAKE_LINK=g++ --sysroot=/opt/sfos-sysroot" \
+    "WPE_SFOS_PREFIX=/opt/wpe-sfos" \
+    "SFOS_SYSROOT=/opt/sfos-sysroot" \
+    "WPE_SOURCE_DIR=/path/to/wpewebkit-2.50.5"
+make -j$(nproc)
+```
+
+> **Note:** The top-level `sailfish-browser.pro` includes `settings/` and
+> `backup-unit/` sub-projects that may fail if optional SFOS packages
+> (`vault`, etc.) are absent from the sysroot. These sub-projects are not
+> needed for the browser to run — build only the core library and binary if
+> the top-level make fails:
+> ```bash
+> make -C apps/lib
+> make -C apps/browser
+> ```
 
 ---
 
