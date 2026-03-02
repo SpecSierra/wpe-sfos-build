@@ -186,6 +186,20 @@ cmake -B WebKitBuild/Release -G Ninja \
 
 ninja -C WebKitBuild/Release
 ninja -C WebKitBuild/Release install
+
+# libWPEInjectedBundle.so is not installed by ninja install — copy manually
+cp WebKitBuild/Release/lib/libWPEInjectedBundle.so /opt/wpe-sfos/lib/
+```
+
+After installing, patch all binaries to downgrade GLIBC version requirements:
+
+```bash
+python3 /path/to/wpe-sfos-build/patch-glibc-versions.py \
+    /opt/wpe-sfos/lib/libWPEWebKit-2.0.so.1.*.* \
+    /opt/wpe-sfos/lib/libWPEInjectedBundle.so \
+    /opt/wpe-sfos/libexec/wpe-webkit-2.0/WPEWebProcess \
+    /opt/wpe-sfos/libexec/wpe-webkit-2.0/WPENetworkProcess \
+    /opt/wpe-sfos/libexec/wpe-webkit-2.0/WPEGPUProcess
 ```
 
 > ⚠️ WPE WebKit is a large build. Expect 60–90 minutes on an 8-core machine.
