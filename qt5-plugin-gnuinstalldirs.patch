@@ -1,0 +1,9 @@
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/CMakeLists.txt
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/CMakeLists.txt
+@@ -1,6 +1,8 @@
+ cmake_minimum_required(VERSION 3.18)
+ project(qtwpe LANGUAGES CXX)
+ 
++include(GNUInstallDirs)
++
+ find_package(Qt5 REQUIRED COMPONENTS Core Quick Gui)

@@ -198,6 +198,10 @@ The Qt5 WPE plugin source lives inside the WPE WebKit tarball at
 export PATH="/opt/sfos-sysroot/usr/lib64/qt5/bin:$PATH"
 
 cd wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5
+
+# Apply GNUInstallDirs patch (fixes libqtwpe.so install path)
+patch -p4 < /path/to/wpe-sfos-build/qt5-plugin-gnuinstalldirs.patch
+
 PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig \
 cmake -B build -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=/path/to/wpe-sfos-build/sfos-toolchain.cmake \
