@@ -119,11 +119,28 @@ mkdir -p "${S}/usr/lib64/wpe-webkit-2.0"
 cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
       "${S}/usr/lib64/wpe-webkit-2.0/"
 
-# Helper processes
+# Helper process binaries
 mkdir -p "${S}/usr/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
     cp -a "${WPE_PREFIX}/libexec/wpe-webkit-2.0/${helper}" \
           "${S}/usr/libexec/wpe-webkit-2.0/"
+done
+
+# Wrapper scripts for helper processes (set LD_PRELOAD, GStreamer paths, etc.)
+mkdir -p "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0"
+for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
+    cat > "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}" << WRAPPER
+#!/bin/sh
+export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
+export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
+export XDG_RUNTIME_DIR=/run/user/100000
+export WAYLAND_DISPLAY=../../display/wayland-0
+export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
+export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
+export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
+exec /usr/libexec/wpe-webkit-2.0/${helper} \$@
+WRAPPER
+    chmod 755 "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}"
 done
 
 # Inspector resource (not MiniBrowser)
@@ -205,13 +222,14 @@ mkdir -p "${S}/usr/lib64/wpe-compat"
 for so in "${COMPAT_BUILD}"/*.so; do
     cp -a "$so" "${S}/usr/lib64/wpe-compat/"
 done
+# Prebuilt cow_string compat shim (extracted from libstdc++.a for __cow_string symbol)
+cp -a "${SCRIPT_DIR}/prebuilt/libcow_string_compat.so" "${S}/usr/lib64/wpe-compat/"
 
 # Environment file — sets LD_PRELOAD for all nemo/user sessions
 mkdir -p "${S}/var/lib/environment/nemo"
 cat > "${S}/var/lib/environment/nemo/70-wpe-compat.conf" << 'EOF'
 # WPE SFOS compatibility shims — loaded for all nemo user sessions.
-# Order: glibc-compat first, then getauxval, then sigill, then egl stubs.
-LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libgetauxval_fix.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libegl-stubs.so
+LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
 EOF
 
 fpm_rpm wpe-sfos-compat 1.0.0 "SFOS compatibility shims for WPE WebKit" "$S"
@@ -225,6 +243,24 @@ S="${STAGING}/sailfish-browser"; rm -rf "$S"; mkdir -p "$S"
 # Binary
 mkdir -p "${S}/usr/bin"
 cp -a "${BROWSER_SRC}/build_browser/sailfish-browser" "${S}/usr/bin/"
+
+# WPE launcher wrapper script
+cat > "${S}/usr/bin/sailfish-browser-wpe" << 'LAUNCHER'
+#!/bin/sh
+export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
+export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
+export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+export QT_QPA_PLATFORM=wayland
+export XDG_RUNTIME_DIR=/run/user/100000
+export WAYLAND_DISPLAY=../../display/wayland-0
+export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
+export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
+export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
+# Disable droid hardware decoders (crash via binder IPC) - use software libav/vpx instead
+export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
+exec /usr/bin/sailfish-browser "$@"
+LAUNCHER
+chmod 755 "${S}/usr/bin/sailfish-browser-wpe"
 
 # libsailfishbrowser (versioned + symlinks)
 mkdir -p "${S}/usr/lib64"
@@ -246,9 +282,22 @@ mkdir -p "${S}/usr/share/sailfish-browser/data"
 cp -a "${BROWSER_SRC}/data/prefs.js"                 "${S}/usr/share/sailfish-browser/data/"
 cp -a "${BROWSER_SRC}/data/ua-update.json"           "${S}/usr/share/sailfish-browser/data/"
 
-# Desktop files
+# Desktop files — use WPE launcher
 mkdir -p "${S}/usr/share/applications"
-cp -a "${BROWSER_SRC}/sailfish-browser.desktop"      "${S}/usr/share/applications/"
+cat > "${S}/usr/share/applications/sailfish-browser.desktop" << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Web Browser
+X-MeeGo-Logical-Id=sailfish-browser-ap-name
+X-MeeGo-Translation-Catalog=sailfish-browser
+Icon=icon-launcher-browser
+Exec=/usr/bin/sailfish-browser-wpe %U
+Comment=Sailfish Browser (WPE WebKit)
+MimeType=text/html;application/xhtml+xml;application/xml;text/xml;x-scheme-handler/http;x-scheme-handler/https;
+X-Maemo-Service=org.sailfishos.browser.ui
+X-Maemo-Object-Path=/ui
+X-Maemo-Method=org.sailfishos.browser.ui.openUrl
+DESKTOP
 cp -a "${BROWSER_SRC}/sailfish-captiveportal.desktop" "${S}/usr/share/applications/"
 
 # DBus service files
