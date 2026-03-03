@@ -306,7 +306,16 @@ export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
 export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
 # Disable droid hardware decoders (crash via binder IPC) - use software libav/vpx instead
 export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
-exec /usr/bin/atlantic-browser.bin "$@"
+# Use invoker -s (single-instance) -F (notify Lipstick) so the window appears
+# in the app switcher and subsequent icon taps raise the existing window.
+# Fall back to direct exec if invoker is missing (e.g., in developer shell).
+if [ -x /usr/bin/invoker ]; then
+    exec /usr/bin/invoker --type=generic -s \
+        -F /usr/share/applications/atlantic-browser.desktop \
+        -- /usr/bin/atlantic-browser.bin "$@"
+else
+    exec /usr/bin/atlantic-browser.bin "$@"
+fi
 LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser"
 # Move actual binary to .bin so wrapper takes the main name
