@@ -235,17 +235,17 @@ EOF
 fpm_rpm wpe-sfos-compat 1.0.0 "SFOS compatibility shims for WPE WebKit" "$S"
 
 # ===========================================================================
-# 7. sailfish-browser 2.3.30
+# 7. atlantic-browser 1.0.0
 # ===========================================================================
-echo "--- Staging sailfish-browser ---"
-S="${STAGING}/sailfish-browser"; rm -rf "$S"; mkdir -p "$S"
+echo "--- Staging atlantic-browser ---"
+S="${STAGING}/atlantic-browser"; rm -rf "$S"; mkdir -p "$S"
 
 # Binary
 mkdir -p "${S}/usr/bin"
-cp -a "${BROWSER_SRC}/build_browser/sailfish-browser" "${S}/usr/bin/"
+cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/"
 
 # WPE launcher wrapper script
-cat > "${S}/usr/bin/sailfish-browser-wpe" << 'LAUNCHER'
+cat > "${S}/usr/bin/atlantic-browser" << 'LAUNCHER'
 #!/bin/sh
 export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
 export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
@@ -258,90 +258,82 @@ export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
 export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
 # Disable droid hardware decoders (crash via binder IPC) - use software libav/vpx instead
 export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
-exec /usr/bin/sailfish-browser "$@"
+exec /usr/bin/atlantic-browser.bin "$@"
 LAUNCHER
-chmod 755 "${S}/usr/bin/sailfish-browser-wpe"
+chmod 755 "${S}/usr/bin/atlantic-browser"
+# Move actual binary to .bin so wrapper takes the main name
+mv "${S}/usr/bin/atlantic-browser" "${S}/usr/bin/atlantic-browser.launcher"
+cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/atlantic-browser.bin"
+mv "${S}/usr/bin/atlantic-browser.launcher" "${S}/usr/bin/atlantic-browser"
 
-# libsailfishbrowser (versioned + symlinks)
+# libatlanticbrowser (versioned + symlinks)
 mkdir -p "${S}/usr/lib64"
-cp -a "${BROWSER_SRC}/build_wpe/libsailfishbrowser.so.1.0.0" "${S}/usr/lib64/"
-ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so.1.0"
-ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so.1"
-ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so"
+cp -a "${BROWSER_SRC}/build_wpe/libatlanticbrowser.so.1.0.0" "${S}/usr/lib64/"
+ln -sfn libatlanticbrowser.so.1.0.0 "${S}/usr/lib64/libatlanticbrowser.so.1.0"
+ln -sfn libatlanticbrowser.so.1.0.0 "${S}/usr/lib64/libatlanticbrowser.so.1"
+ln -sfn libatlanticbrowser.so.1.0.0 "${S}/usr/lib64/libatlanticbrowser.so"
 
 # QML files
-mkdir -p "${S}/usr/share/sailfish-browser"
-cp -a "${BROWSER_SRC}/apps/browser/qml/browser.qml" "${S}/usr/share/sailfish-browser/"
-cp -a "${BROWSER_SRC}/apps/browser/qml/pages"        "${S}/usr/share/sailfish-browser/"
-cp -a "${BROWSER_SRC}/apps/browser/qml/cover"        "${S}/usr/share/sailfish-browser/"
-mkdir -p "${S}/usr/share/sailfish-browser/shared"
-cp -a "${BROWSER_SRC}/apps/shared/"*.qml             "${S}/usr/share/sailfish-browser/shared/"
+mkdir -p "${S}/usr/share/atlantic-browser"
+cp -a "${BROWSER_SRC}/apps/browser/qml/browser.qml" "${S}/usr/share/atlantic-browser/"
+cp -a "${BROWSER_SRC}/apps/browser/qml/pages"        "${S}/usr/share/atlantic-browser/"
+cp -a "${BROWSER_SRC}/apps/browser/qml/cover"        "${S}/usr/share/atlantic-browser/"
+mkdir -p "${S}/usr/share/atlantic-browser/shared"
+cp -a "${BROWSER_SRC}/apps/shared/"*.qml             "${S}/usr/share/atlantic-browser/shared/"
 
 # Data files
-mkdir -p "${S}/usr/share/sailfish-browser/data"
-cp -a "${BROWSER_SRC}/data/prefs.js"                 "${S}/usr/share/sailfish-browser/data/"
-cp -a "${BROWSER_SRC}/data/ua-update.json"           "${S}/usr/share/sailfish-browser/data/"
+mkdir -p "${S}/usr/share/atlantic-browser/data"
+cp -a "${BROWSER_SRC}/data/prefs.js"                 "${S}/usr/share/atlantic-browser/data/"
+cp -a "${BROWSER_SRC}/data/ua-update.json"           "${S}/usr/share/atlantic-browser/data/"
 
-# Desktop files — use WPE launcher
+# Desktop file
 mkdir -p "${S}/usr/share/applications"
-cat > "${S}/usr/share/applications/sailfish-browser.desktop" << 'DESKTOP'
+cat > "${S}/usr/share/applications/atlantic-browser.desktop" << 'DESKTOP'
 [Desktop Entry]
 Type=Application
-Name=Web Browser
-X-MeeGo-Logical-Id=sailfish-browser-ap-name
-X-MeeGo-Translation-Catalog=sailfish-browser
+Name=Atlantic
 Icon=icon-launcher-browser
-Exec=/usr/bin/sailfish-browser-wpe %U
-Comment=Sailfish Browser (WPE WebKit)
+Exec=/usr/bin/atlantic-browser %U
+Comment=Atlantic Browser (WPE WebKit)
 MimeType=text/html;application/xhtml+xml;application/xml;text/xml;x-scheme-handler/http;x-scheme-handler/https;
-X-Maemo-Service=org.sailfishos.browser.ui
+X-Maemo-Service=org.atlantic.browser.ui
 X-Maemo-Object-Path=/ui
-X-Maemo-Method=org.sailfishos.browser.ui.openUrl
+X-Maemo-Method=org.atlantic.browser.ui.openUrl
 DESKTOP
-cp -a "${BROWSER_SRC}/sailfish-captiveportal.desktop" "${S}/usr/share/applications/"
 
 # DBus service files
 mkdir -p "${S}/usr/share/dbus-1/services"
-cp -a "${BROWSER_SRC}/org.sailfishos.browser.service"    "${S}/usr/share/dbus-1/services/"
-cp -a "${BROWSER_SRC}/org.sailfishos.browser.ui.service" "${S}/usr/share/dbus-1/services/"
-cp -a "${BROWSER_SRC}/org.sailfishos.captiveportal.service" "${S}/usr/share/dbus-1/services/"
+cat > "${S}/usr/share/dbus-1/services/org.atlantic.browser.service" << 'DBUS'
+[D-BUS Service]
+Name=org.atlantic.browser
+Exec=/usr/bin/atlantic-browser
+DBUS
+cat > "${S}/usr/share/dbus-1/services/org.atlantic.browser.ui.service" << 'DBUS'
+[D-BUS Service]
+Name=org.atlantic.browser.ui
+Exec=/usr/bin/atlantic-browser
+DBUS
 
 # Translation
 mkdir -p "${S}/usr/share/translations"
-cp -a "${BROWSER_SRC}/build_browser/sailfish-browser_eng_en.qm" "${S}/usr/share/translations/"
-
-# Oneshot scripts
-mkdir -p "${S}/usr/lib/oneshot.d"
-cp -a "${BROWSER_SRC}/oneshot.d/browser-update-default-data"    "${S}/usr/lib/oneshot.d/"
-cp -a "${BROWSER_SRC}/oneshot.d/browser-cleanup-startup-cache"  "${S}/usr/lib/oneshot.d/"
-chmod +x "${S}/usr/lib/oneshot.d/"*
-
-# Systemd user session drop-in
-mkdir -p "${S}/usr/lib/systemd/user/user-session.target.d"
-cp -a "${BROWSER_SRC}/50-sailfish-browser.conf" \
-      "${S}/usr/lib/systemd/user/user-session.target.d/"
-
-# Environment file
-mkdir -p "${S}/var/lib/environment/nemo"
-cp -a "${BROWSER_SRC}/data/70-browser.conf" "${S}/var/lib/environment/nemo/"
+cp -a "${BROWSER_SRC}/build_browser/atlantic-browser_eng_en.qm" "${S}/usr/share/translations/"
 
 # Sailjail profile
 mkdir -p "${S}/etc/sailjail/applications"
-cat > "${S}/etc/sailjail/applications/sailfish-browser.profile" << 'EOF'
+cat > "${S}/etc/sailjail/applications/atlantic-browser.profile" << 'EOF'
 [sailfish]
 Sandboxing=disabled
 
 [X-Sailjail]
 Permissions=Internet;Audio
-OrganizationName=org.sailfishos
-ApplicationName=sailfish-browser
+OrganizationName=org.atlantic
+ApplicationName=atlantic-browser
 EOF
 
-fpm_rpm sailfish-browser 2.3.30 "Sailfish Browser (WPE WebKit engine)" "$S" \
+fpm_rpm atlantic-browser 1.0.0 "Atlantic Browser (WPE WebKit engine)" "$S" \
     --depends wpewebkit2 \
     --depends wpewebkit2-qt5 \
-    --depends wpe-sfos-compat \
-    --depends "sailfishsilica-qt5 >= 1.2.33"
+    --depends wpe-sfos-compat
 
 # ===========================================================================
 echo ""
