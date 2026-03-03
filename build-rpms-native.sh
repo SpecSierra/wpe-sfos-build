@@ -55,6 +55,53 @@ fpm_rpm() {
 }
 
 # ===========================================================================
+# 0. bubblewrap 0.11.0 (static build — no glibc version issues)
+# ===========================================================================
+echo "--- Building bubblewrap (static) ---"
+BWRAP_SRC="/tmp/bubblewrap-0.11.0"
+if [ ! -d "$BWRAP_SRC" ]; then
+    curl -sL https://github.com/containers/bubblewrap/releases/download/v0.11.0/bubblewrap-0.11.0.tar.xz \
+        | tar -xJ -C /tmp
+fi
+
+(
+    cd "$BWRAP_SRC"
+    rm -rf build-static-rpm
+    # fake libcap.pc so meson finds it for pkg-config check
+    mkdir -p /tmp/fake-pkgconfig-bwrap
+    cat > /tmp/fake-pkgconfig-bwrap/libcap.pc << 'PCEOF'
+prefix=/usr
+libdir=/usr/lib/aarch64-linux-gnu
+includedir=/usr/include
+Name: libcap
+Description: POSIX capabilities library
+Version: 2.66
+Libs: -L/usr/lib/aarch64-linux-gnu /usr/lib/aarch64-linux-gnu/libcap.a
+Cflags: -I/usr/include
+PCEOF
+    PKG_CONFIG_LIBDIR=/tmp/fake-pkgconfig-bwrap \
+    CFLAGS="-D__GLIBC_USE_ISOC23=0" LDFLAGS="-static" \
+    meson setup build-static-rpm --prefix /usr \
+        -Dbash_completion=disabled -Dzsh_completion=disabled \
+        -Dman=disabled -Dtests=false -Dselinux=disabled
+    ninja -C build-static-rpm
+    strip build-static-rpm/bwrap
+    # Rename any remaining __isoc23_* symbols (shouldn't be needed for static, but defensive)
+    python3 "${SCRIPT_DIR}/patch-isoc23.py" build-static-rpm/bwrap 2>/dev/null || true
+)
+
+S="${STAGING}/bubblewrap"; rm -rf "$S"; mkdir -p "${S}/usr/bin"
+cp "$BWRAP_SRC/build-static-rpm/bwrap" "${S}/usr/bin/"
+chmod 4755 "${S}/usr/bin/bwrap"
+
+fpm -s dir -t rpm -n bubblewrap -v 0.11.0 --iteration 1 -a aarch64 \
+    --description "Unprivileged sandboxing tool (static) used by WPE WebKit" \
+    --force \
+    -p "${OUT}/bubblewrap-0.11.0-1.aarch64.rpm" \
+    -C "$S" usr/bin/bwrap
+echo "    -> ${OUT}/bubblewrap-0.11.0-1.aarch64.rpm"
+
+# ===========================================================================
 # 1. libwpe 1.17.0
 # ===========================================================================
 echo "--- Staging libwpe ---"
@@ -249,7 +296,6 @@ cat > "${S}/usr/bin/atlantic-browser" << 'LAUNCHER'
 #!/bin/sh
 export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
 export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
-export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
 export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
@@ -333,7 +379,8 @@ EOF
 fpm_rpm atlantic-browser 1.0.0 "Atlantic Browser (WPE WebKit engine)" "$S" \
     --depends wpewebkit2 \
     --depends wpewebkit2-qt5 \
-    --depends wpe-sfos-compat
+    --depends wpe-sfos-compat \
+    --depends bubblewrap
 
 # ===========================================================================
 echo ""
