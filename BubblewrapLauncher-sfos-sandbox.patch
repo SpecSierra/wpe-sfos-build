@@ -1,0 +1,49 @@
+This patch modifies BubblewrapLauncher.cpp in WPE WebKit 2.50.5 for SFOS/Android
+kernel 4.14 compatibility. Apply to:
+  Source/WebKit/UIProcess/Launcher/glib/BubblewrapLauncher.cpp
+
+Two issues fixed:
+
+1. pivot_root(2) is not supported inside user namespaces on Android kernel 4.14.
+   The normal WPE sandbox creates a new minimal tmpfs root and calls pivot_root,
+   which fails on this kernel even for root. Workaround: use --dev-bind / / to
+   bind the entire host filesystem instead of selective bind-mounts. This gives
+   up filesystem isolation but keeps seccomp + namespace separation.
+
+   Do NOT use --dev /dev after --dev-bind / / — it would mount a minimal
+   devtmpfs that hides GPU device nodes (/dev/kgsl-3d0, /dev/dri, /dev/ion)
+   that WPEWebProcess needs to render web content.
+
+2. /.flatpak-info cannot be written into the sandbox root because SFOS root fs
+   is read-only. Since SFOS does not use desktop portals, skip flatpak-info
+   creation entirely by setting flatpakInfoFd = -1.
+
+--- BubblewrapLauncher.cpp.orig
++++ BubblewrapLauncher.cpp
+@@ sandboxArgs initialization (search for "Vector<CString> sandboxArgs")
+ Replace the entire sandboxArgs initialization block with:
+
+     // SFOS/Android kernel 4.14 does not support pivot_root(2) inside a user
+     // namespace, so we cannot create a minimal new root via the normal
+     // selective bind-mount approach.  Instead, bind the whole host filesystem
+     // read-write and rely on seccomp + namespace isolation for security.
+     Vector<CString> sandboxArgs = {
+         "--unshare-uts",
+
+         "--dev-bind", "/", "/",
+         // Do NOT use "--dev /dev" here: it would mount a minimal devtmpfs that
+         // hides GPU device nodes (/dev/kgsl-3d0, /dev/dri, /dev/ion, etc.)
+         // that WPEWebProcess needs to render.  The host /dev is already
+         // available via --dev-bind / / above.
+         "--proc", "/proc",
+         "--tmpfs", "/tmp",
+         "--unsetenv", "TMPDIR",
+         "--dir", runDir,
+         "--setenv", "XDG_RUNTIME_DIR", runDir,
+     };
+
+@@ flatpakInfoFd creation (search for "createFlatpakInfo")
+ Set flatpakInfoFd = -1 unconditionally to skip /.flatpak-info creation:
+
+     // SFOS root filesystem is read-only; skip flatpak-info (not needed anyway).
+     int flatpakInfoFd = -1;

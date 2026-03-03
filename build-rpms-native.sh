@@ -156,7 +156,9 @@ fpm_rpm wpebackend-fdo 1.17.0 "WPE backend (freedesktop.org/Wayland) for Sailfis
 echo "--- Staging wpewebkit2 ---"
 S="${STAGING}/wpewebkit2"; rm -rf "$S"; mkdir -p "$S"
 
-# Main library
+# Main library — patch glibc version requirements before staging
+python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
+    "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"
 stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"    /usr/lib64 "$S"
 stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1"         /usr/lib64 "$S"
 stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so"           /usr/lib64 "$S"
@@ -179,7 +181,7 @@ for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
     cat > "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}" << WRAPPER
 #!/bin/sh
 export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
-export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
+export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64:/opt/wpe-sfos/lib
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
 export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
@@ -295,7 +297,7 @@ cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/"
 cat > "${S}/usr/bin/atlantic-browser" << 'LAUNCHER'
 #!/bin/sh
 export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
-export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
+export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64:/opt/wpe-sfos/lib
 export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
