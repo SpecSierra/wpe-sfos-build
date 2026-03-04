@@ -137,15 +137,16 @@ fpm_rpm libepoxy 1.5.11 "OpenGL function pointer management for Sailfish OS" "$S
 # ===========================================================================
 echo "--- Staging wpebackend-fdo ---"
 S="${STAGING}/wpebackend-fdo"; rm -rf "$S"; mkdir -p "$S"
-cp -a "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1.11.0" /usr/lib64 "$S"  2>/dev/null; true
 mkdir -p "${S}/usr/lib64"
-cp -a "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1.11.0" "${S}/usr/lib64/"
+cp "${WPE_PREFIX}/lib/aarch64-linux-gnu/libWPEBackend-fdo-1.0.so.1.11.0" "${S}/usr/lib64/"
+python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1.11.0"
 ln -sfn libWPEBackend-fdo-1.0.so.1.11.0 "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1"
 ln -sfn libWPEBackend-fdo-1.0.so.1      "${S}/usr/lib64/libWPEBackend-fdo-1.0.so"
-cp -a "${WPE_PREFIX}/include/wpe-fdo-1.0"                 /usr/include "$S"
+stage_cp "${WPE_PREFIX}/include/wpe-fdo-1.0"              /usr/include "$S"
 mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/wpebackend-fdo-1.0.pc"    "${S}/usr/lib64/pkgconfig/"
-sed -i "s|${WPE_PREFIX}|/usr|g"                               "${S}/usr/lib64/pkgconfig/wpebackend-fdo-1.0.pc"
+sed -i "s|${WPE_PREFIX}|/usr|g; s|/lib/aarch64-linux-gnu|/lib64|g" \
+    "${S}/usr/lib64/pkgconfig/wpebackend-fdo-1.0.pc"
 
 fpm_rpm wpebackend-fdo 1.17.0 "WPE backend (freedesktop.org/Wayland) for Sailfish OS" "$S" \
     --depends libwpe --depends libepoxy
@@ -260,25 +261,63 @@ done
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap.so"  "${COMPAT_SRC}/libexecve_wrap.c"  -ldl
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap2.so" "${COMPAT_SRC}/libexecve_wrap2.c" -ldl
 
-# Patch glibc version symbols in all compat shims (built with host glibc > 2.30)
-for f in "${COMPAT_BUILD}"/*.so; do
-    python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$f"
+# Stub: libgssapi_krb5.so.2 (GSSAPI for libsoup3 — always returns unavailable on SFOS)
+$CC $CFLAGS $SHARED \
+    -Wl,--version-script="${COMPAT_SRC}/libgssapi_krb5.map" \
+    -Wl,-soname,libgssapi_krb5.so.2 \
+    -o "${COMPAT_BUILD}/libgssapi_krb5.so.2" "${COMPAT_SRC}/libgssapi_krb5_stub.c"
+ln -sfn libgssapi_krb5.so.2 "${COMPAT_BUILD}/libgssapi_krb5.so"
+
+# Stub: libharfbuzz-icu.so.0 (avoids pulling in libicuuc.so.74 which SFOS doesn't have)
+$CC $CFLAGS $SHARED \
+    -Wl,-soname,libharfbuzz-icu.so.0 \
+    -o "${COMPAT_BUILD}/libharfbuzz-icu.so.0" "${COMPAT_SRC}/libharfbuzz_icu_stub.c"
+ln -sfn libharfbuzz-icu.so.0 "${COMPAT_BUILD}/libharfbuzz-icu.so"
+
+# Copy missing runtime libs from Ubuntu (not present on SFOS) into compat dir
+UBUNTU_LIBS=/usr/lib/aarch64-linux-gnu
+for lib in \
+    libsoup-3.0.so.0.7.1 \
+    libbrotlidec.so.1.1.0 \
+    libbrotlicommon.so.1.1.0 \
+    libatomic.so.1.2.0 \
+    libjpeg.so.8.2.2 \
+    libgbm.so.1.0.0; do
+    cp "${UBUNTU_LIBS}/${lib}" "${COMPAT_BUILD}/${lib}"
+done
+
+# Patch glibc version symbols in all compat shims and bundled libs
+for f in "${COMPAT_BUILD}"/*.so "${COMPAT_BUILD}"/*.so.[0-9]*; do
+    [ -f "$f" ] && python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$f"
 done
 
 echo "--- Staging wpe-sfos-compat ---"
 S="${STAGING}/wpe-sfos-compat"; rm -rf "$S"; mkdir -p "$S"
 mkdir -p "${S}/usr/lib64/wpe-compat"
-for so in "${COMPAT_BUILD}"/*.so; do
-    cp -a "$so" "${S}/usr/lib64/wpe-compat/"
+# Copy all compat shims
+for so in "${COMPAT_BUILD}"/*.so "${COMPAT_BUILD}"/*.so.[0-9]*; do
+    [ -f "$so" ] && cp -a "$so" "${S}/usr/lib64/wpe-compat/"
 done
 # Prebuilt cow_string compat shim (extracted from libstdc++.a for __cow_string symbol)
 cp -a "${SCRIPT_DIR}/prebuilt/libcow_string_compat.so" "${S}/usr/lib64/wpe-compat/"
 
-# Environment file — sets LD_PRELOAD for all nemo/user sessions
+# Create versioned symlinks for bundled runtime libs
+(cd "${S}/usr/lib64/wpe-compat"
+    ln -sfn libsoup-3.0.so.0.7.1    libsoup-3.0.so.0
+    ln -sfn libsoup-3.0.so.0.7.1    libsoup-3.0.so
+    ln -sfn libbrotlidec.so.1.1.0   libbrotlidec.so.1
+    ln -sfn libbrotlicommon.so.1.1.0 libbrotlicommon.so.1
+    ln -sfn libatomic.so.1.2.0      libatomic.so.1
+    ln -sfn libjpeg.so.8.2.2        libjpeg.so.8
+    ln -sfn libgbm.so.1.0.0         libgbm.so.1
+)
+
+# Environment file — sets LD_PRELOAD and LD_LIBRARY_PATH for all nemo/user sessions
 mkdir -p "${S}/var/lib/environment/nemo"
 cat > "${S}/var/lib/environment/nemo/70-wpe-compat.conf" << 'EOF'
 # WPE SFOS compatibility shims — loaded for all nemo user sessions.
 LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
+LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
 EOF
 
 fpm_rpm wpe-sfos-compat 1.0.0 "SFOS compatibility shims for WPE WebKit" "$S"
@@ -323,12 +362,12 @@ mv "${S}/usr/bin/atlantic-browser" "${S}/usr/bin/atlantic-browser.launcher"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/atlantic-browser.bin"
 mv "${S}/usr/bin/atlantic-browser.launcher" "${S}/usr/bin/atlantic-browser"
 
-# libatlanticbrowser (versioned + symlinks)
+# libsailfishbrowser (versioned + symlinks — SONAME is libsailfishbrowser.so.1)
 mkdir -p "${S}/usr/lib64"
-cp -a "${BROWSER_SRC}/build_wpe/libatlanticbrowser.so.1.0.0" "${S}/usr/lib64/"
-ln -sfn libatlanticbrowser.so.1.0.0 "${S}/usr/lib64/libatlanticbrowser.so.1.0"
-ln -sfn libatlanticbrowser.so.1.0.0 "${S}/usr/lib64/libatlanticbrowser.so.1"
-ln -sfn libatlanticbrowser.so.1.0.0 "${S}/usr/lib64/libatlanticbrowser.so"
+cp -a "${BROWSER_SRC}/build_wpe/libsailfishbrowser.so.1.0.0" "${S}/usr/lib64/"
+ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so.1.0"
+ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so.1"
+ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so"
 
 # QML files
 mkdir -p "${S}/usr/share/atlantic-browser"

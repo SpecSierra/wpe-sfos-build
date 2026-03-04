@@ -1,0 +1,43 @@
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.h
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.h
+@@ -63,6 +63,9 @@ public:
+     WebKitWebView* webView() const;
+ 
++    void setUserAgent(const QString& userAgent);
++    void setDeviceScaleFactor(qreal scale);
++
+ public Q_SLOTS:
+     void goBack();
+     void goForward();
+@@ -76,6 +79,13 @@ Q_SIGNALS:
+     void titleChanged();
+     void loadingChanged(WPEQtViewLoadRequest* loadRequest);
+     void loadProgressChanged();
++    void scrollPositionChanged(qreal scrollY, qreal scrollHeight, qreal innerHeight);
++    void faviconUrlChanged(const QString& url);
++    void selectedTextChanged(const QString& text);
++    void selectionHandlesChanged(qreal startX, qreal startY, qreal endX, qreal endY);
++    void enterFullscreenRequested();
++    void leaveFullscreenRequested();
+ 
+ protected:
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
+@@ -520,3 +520,16 @@ WebKitWebView* WPEQtView::webView() const
+     return m_webView;
+ }
++
++void WPEQtView::setUserAgent(const QString& userAgent)
++{
++    if (!m_webView)
++        return;
++    WebKitSettings* settings = webkit_web_view_get_settings(m_webView);
++    webkit_settings_set_user_agent(settings, userAgent.toUtf8().constData());
++}
++
++void WPEQtView::setDeviceScaleFactor(qreal scale)
++{
++    if (!m_webView)
++        return;
++    webkit_web_view_set_zoom_level(m_webView, scale);
++}

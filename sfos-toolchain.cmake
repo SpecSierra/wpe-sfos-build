@@ -14,7 +14,7 @@ add_compile_definitions(U_DISABLE_RENAMING=1)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a -mno-outline-atomics")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a -mno-outline-atomics")
 set(ENV{PKG_CONFIG_SYSROOT_DIR} /opt/sfos-sysroot)
-set(ENV{PKG_CONFIG_PATH} /opt/sfos-sysroot/usr/lib64/pkgconfig:/opt/wpe-sfos/lib/pkgconfig)
+set(ENV{PKG_CONFIG_PATH} /opt/sfos-sysroot/usr/lib64/pkgconfig:/opt/wpe-sfos/lib/pkgconfig:/opt/wpe-sfos/lib/aarch64-linux-gnu/pkgconfig)
 
 # Static-link libstdc++ and libgcc into every binary and shared lib.
 # Eliminates GLIBCXX_3.4.29/30 version requirements and removes the need
