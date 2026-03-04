@@ -4,9 +4,12 @@ Compatibility shims, cross-compilation toolchain, and build tooling for running
 **WPE WebKit 2.50.5** on **Sailfish OS 5.0 (aarch64)**.
 
 This repo is the glue layer between stock WPE WebKit and the constraints of SFOS:
-older glibc (2.28), limited CPU instruction set (ARMv8.0-A), and the sailjail
+older glibc (2.30), limited CPU instruction set (ARMv8.0-A), and the sailjail
 sandbox. It accompanies the browser source at
 [SpecSierra/sailfish-browser](https://github.com/SpecSierra/sailfish-browser).
+
+> **Quickstart:** On a native aarch64 Ubuntu 24.04 machine, run `bash build-all.sh`
+> to build the entire stack and generate installable RPMs in `/tmp/wpe-sfos-rpms/`.
 
 ---
 
@@ -16,9 +19,9 @@ sandbox. It accompanies the browser source at
 |---|---|
 | Device | Sony Xperia 10 II |
 | SoC | Snapdragon 665 (Cortex-A53/A55, ARMv8.0-A) |
-| OS | Sailfish OS 5.0.0.62 |
+| OS | Sailfish OS 5.0.0.72 |
 | Arch | aarch64 |
-| glibc | 2.28 |
+| glibc | 2.30 |
 | Qt | 5.6.3 (system) |
 
 ---
@@ -27,21 +30,29 @@ sandbox. It accompanies the browser source at
 
 | File | Purpose |
 |---|---|
-| `sfos-toolchain.cmake` | CMake cross-compilation toolchain |
-| `sfos-meson-cross.ini` | Meson cross-file (for libwpe / WPEBackend-fdo) |
-| `libglibc-compat.c` | Shim: provide glibc 2.29+ symbols missing from SFOS glibc 2.28 |
+| `build-all.sh` | **Master build script** — builds full WPE stack natively on aarch64 Ubuntu 24.04 |
+| `build-rpms-native.sh` | Stages built artifacts and packages them as RPMs |
+| `native-meson.ini` | Meson native-file for libwpe/libepoxy/WPEBackend-fdo (no cross/sysroot) |
+| `sfos-toolchain.cmake` | CMake toolchain for Qt5 plugin + browser (targets SFOS sysroot) |
+| `sfos-meson-cross.ini` | Meson cross-file (alternative, requires Wayland headers in sysroot) |
+| `libglibc-compat.c` | Shim: glibc 2.31–2.38 symbols missing from SFOS glibc 2.30; also exports `dlopen/dlsym/dlerror@GLIBC_2.34` |
+| `libglibc-compat.map` | GNU version script for `libglibc-compat.so` (GLIBC_2.17 + GLIBC_2.34 sections) |
+| `libglib_compat.c` | Shim: `g_once_init_enter/leave_pointer` missing from Jolla's GLib 2.78.4 build |
 | `libgetauxval_fix.c` | Shim: fix `getauxval(AT_HWCAP2/AT_MINSIGSTKSZ)` on SFOS aarch64 |
-| `libgetauxval_fix2.c` | Variant of the above for the WebProcess/NetworkProcess helpers |
+| `libgetauxval_fix2.c` | Variant of the above for WebProcess/NetworkProcess helpers |
 | `libsigill_skip.c` | Shim: skip SIGILL-triggering CPU feature probes (ARMv8.1+ instructions) |
 | `libsigill_skip2.c` | Variant for libWPEBackend-fdo feature probes |
 | `libsigill_skip3.c` | Variant for libwpe feature probes |
 | `libexecve_wrap.c` | Shim: rewrite `execve()` paths for WebProcess under sailjail |
 | `libexecve_wrap2.c` | Variant for NetworkProcess |
-| `libegl-stubs.c` | Stub missing EGL entry points that libepoxy probes at load time |
-| `make_wpe_wrapper.c` | Generates the `wpe-browser` launcher with correct `LD_PRELOAD` order |
-| `patch-glibc-versions.py` | Post-link: rewrite `GLIBC_2.3x` ELF version tags → `GLIBC_2.28` |
+| `libegl-stubs.c` | Stub EGL 1.5 symbols missing from SFOS Adreno EGL 1.4 (built **without** `-fvisibility=hidden`) |
+| `patch-glibc-versions.py` | Post-link: rewrite `GLIBC_2.3x` ELF VERNEED entries → `GLIBC_2.17` |
+| `libepoxy-rtld-default-fallback.patch` | libepoxy patch: fall back to `dlsym(RTLD_DEFAULT)` so `libegl-stubs.so` can satisfy missing EGL symbols |
+| `BubblewrapLauncher-sfos-sandbox.patch` | WPEWebKit patch: use `--dev-bind / /` in bubblewrap so shell wrapper scripts work inside the sandbox |
+| `qt5-plugin-gnuinstalldirs.patch` | Fixes libqtwpe.so install path on Ubuntu (multiarch) |
+| `webkit-quirks-no-video.patch` | WebKit `Quirks.cpp`: guard `HTMLVideoElement` refs with `#if ENABLE(VIDEO)` |
+| `wpeqtview-sfos-api.patch` | Adds SFOS-specific signals/methods to `WPEQtView` |
 | `easylist-to-webkit.py` | Convert EasyList/uBlock filter lists to WebKit content blocker JSON |
-| `webkit-quirks-no-video.patch` | WebKit `Quirks.cpp` patch: guard `HTMLVideoElement` refs with `#if ENABLE(VIDEO)` |
 
 ---
 
@@ -136,7 +147,7 @@ ninja -C build install
 Download the release tarball (not the full WebKit git tree — it is 10+ GB):
 
 ```bash
-wget https://wpewebkit.org/release/wpewebkit-2.50.5.tar.xz
+wget https://wpewebkit.org/releases/wpewebkit-2.50.5.tar.xz
 tar -xf wpewebkit-2.50.5.tar.xz
 cd wpewebkit-2.50.5
 ```
@@ -380,12 +391,318 @@ Deploy `content-blocker.json` to the device and load it in WPEWebPage via
 
 | Issue | Status | Notes |
 |---|---|---|
-| sailjail / invoker disabled | 🔴 Workaround | Sailjail firejail profile does not yet include WPE library paths. Disable with `/etc/sailjail/config/50-enable-sandboxing.conf` → `Enabled=false` |
-| GStreamer / video playback | 🔴 Not implemented | WPE built with `ENABLE_VIDEO=OFF`. Static GStreamer stub (`libgst-static-stub.so`) prevents crashes |
+| sailjail / invoker | ⚠️ Partial | Bubblewrap sandbox works with `BubblewrapLauncher-sfos-sandbox.patch`; full sailjail profile not yet done |
+| GStreamer / video playback | 🔴 Not implemented | WPE built with `ENABLE_VIDEO=OFF` |
 | File downloads | 🔴 Not implemented | `webkit_download_*` API hookup planned |
 | ARMv8.1+ instruction probes | ✅ Mitigated | `libsigill_skip*.so` shims handle `SIGILL` from CPU feature detection |
-| glibc 2.29+ symbols | ✅ Mitigated | `libglibc-compat.so` + `patch-glibc-versions.py` |
-| JPEG ABI mismatch | ⚠️ Investigate | `libjpeg_safe.so` shim noted but source not in repo; may be resolved by WPEWebKit static link |
+| glibc 2.31–2.38 symbols | ✅ Mitigated | `libglibc-compat.so` + `patch-glibc-versions.py` |
+| EGL 1.5 symbols on Adreno EGL 1.4 | ✅ Fixed | `libegl-stubs.so` + libepoxy RTLD_DEFAULT patch |
+| `virtualKeyboardHeight` QML property | ⚠️ Missing | `WPEQtView` does not yet expose virtual keyboard height to QML |
+| `_mainWindow: webView` QML assignment | ⚠️ Harmless warning | `WebView` QML type cannot be assigned to `QWindow`; cosmetic only |
+
+---
+
+## Build Notes & Troubleshooting
+
+Issues discovered during development on a native aarch64 Ubuntu 24.04 host
+targeting SFOS 5.0.0.72. Documented here so others don't hit the same walls.
+
+---
+
+### Issue 1 — `libgio-cil-dev` does not exist
+
+**Where:** README host dependency list  
+**Problem:** `libgio-cil-dev` does not exist on Ubuntu 22.04 or 24.04. GIO/GObject
+headers are included in `libglib2.0-dev`.  
+**Fix:** Remove `libgio-cil-dev`; `libglib2.0-dev` is sufficient.
+
+---
+
+### Issue 2 — libwpe meson subproject: xcb-xkb missing on headless host
+
+**Where:** `meson setup` for libwpe  
+**Problem:** libwpe bundles libxkbcommon as a subproject. It defaults to building
+with X11 support. On a headless Ubuntu build host `xcb-xkb` is absent and meson
+aborts.  
+**Fix:** Add subproject flags (note the `subprojectname:` prefix):
+```
+-Dlibxkbcommon:enable-x11=false
+-Dlibxkbcommon:enable-wayland=false
+-Dlibxkbcommon:enable-tools=false
+-Dlibxkbcommon:enable-docs=false
+-Dlibxkbcommon:enable-xkbregistry=false
+```
+
+---
+
+### Issue 3 — SFOS SDK sysroot lacks Wayland/WPE build deps
+
+**Where:** `sfos-meson-cross.ini` cross-file usage for libwpe/libepoxy/WPEBackend-fdo  
+**Problem:** The public SFOS 5.0 SDK Target sysroot is a Qt/Silica app-development
+sysroot only. It does **not** include `wayland-client.pc`, `egl.pc`, or other
+low-level Wayland/WPE headers. Using the cross-file for base libraries fails:
+```
+Run-time dependency wayland-client found: NO
+ERROR: Dependency "wayland-client" not found
+```
+**Fix:** Build libwpe, libepoxy, WPEBackend-fdo, and WPEWebKit **natively** against
+the Ubuntu 24.04 host system using `native-meson.ini` (no sysroot). Use the SFOS
+sysroot **only** for the Qt5 plugin and the sailfish-browser build (which need Qt
+5.6.3 + Silica). `build-all.sh` implements this correctly.
+
+---
+
+### Issue 4 — pkg-config multiarch path on Ubuntu 24.04 aarch64
+
+**Where:** `PKG_CONFIG_PATH` in cmake/meson invocations  
+**Problem:** On Ubuntu 24.04 aarch64, meson installs `.pc` files under
+`$prefix/lib/aarch64-linux-gnu/pkgconfig` (multiarch), not `$prefix/lib/pkgconfig`.
+Using only the non-multiarch path misses `wpebackend-fdo-1.0.pc`.  
+**Fix:** Set both paths:
+```
+PKG_CONFIG_PATH=/opt/wpe-sfos/lib/pkgconfig:/opt/wpe-sfos/lib/aarch64-linux-gnu/pkgconfig
+```
+
+---
+
+### Issue 5 — WPEWebKit tarball URL returns HTTP 404
+
+**Where:** README download command  
+**Problem:** The URL used `release` (singular) which does not exist.  
+**Fix:** Correct URL uses `releases` (plural):
+```bash
+wget https://wpewebkit.org/releases/wpewebkit-2.50.5.tar.xz
+```
+
+---
+
+### Issue 6 — WPEWebKit cmake: missing host packages
+
+**Where:** README host requirements  
+**Problem:** The following packages are required but were not listed:
+`libgcrypt20-dev`, `libgpg-error-dev`, `libwoff-dev`, `libopenjp2-7-dev`,
+`liblcms2-dev`, `libhyphen-dev`.  
+**Fix:** Add to apt install list before configuring WPEWebKit.
+
+---
+
+### Issue 7 — ICU symbol renaming: Ubuntu 24.04 ICU 74 vs SFOS ICU 70
+
+**Where:** WPEWebKit cmake configuration  
+**Problem:** The toolchain sets `U_DISABLE_RENAMING=1`, expecting ICU to export
+unversioned symbols (`u_tolower`, `u_charType`, …). Ubuntu 24.04 ships ICU 74
+which exports **only** versioned names (`u_tolower_74`, …). This causes ~100+
+linker errors.  
+**Fix:** Symlink the SFOS sysroot ICU 70 libraries (which export unversioned
+symbols) and point cmake at them:
+```bash
+cd /opt/sfos-sysroot/usr/lib64
+ln -sf libicuuc.so.70   libicuuc.so
+ln -sf libicui18n.so.70 libicui18n.so
+ln -sf libicudata.so.70 libicudata.so
+```
+Then pass to cmake:
+```
+-DICU_UC_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicuuc.so
+-DICU_I18N_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicui18n.so
+-DICU_DATA_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicudata.so
+```
+
+---
+
+### Issue 8 — SFOS sysroot missing nemotransferengine-qt5 headers and pkgconfig
+
+**Where:** sailfish-browser-wpe build  
+**Problem:** `nemotransferengine-qt5` has no `.pc` file and no public headers in
+the sysroot. `qdbusxml2cpp` must generate `transferengineinterface.h` from the
+D-Bus XML, and stub headers must be downloaded from
+https://github.com/sailfishos/transfer-engine/tree/master/lib.  
+**Fix:** Generate headers and create a stub `.pc` file at
+`$SFOS_SYSROOT/usr/lib64/pkgconfig/nemotransferengine-qt5.pc`.
+
+---
+
+### Issue 9 — `WPE_SOURCE_DIR` default path incorrect
+
+**Where:** Browser qmake invocation  
+**Problem:** `WPE_SOURCE_DIR` defaults to `/workspace/wpewebkit-2.50.5`; actual
+checkout is at `/release/workspace/wpewebkit-2.50.5`. Without the correct path
+qmake cannot find `WPEQtView.h`.  
+**Fix:** Always pass `WPE_SOURCE_DIR=/release/workspace/wpewebkit-2.50.5`
+explicitly on the qmake command line.
+
+---
+
+### Issue 10 — Qt `signals` macro conflicts with GLib gdbusintrospection.h
+
+**Where:** sailfish-browser-wpe compilation  
+**Problem:** Qt 5.6.3 defines `#define signals public`. GLib's
+`<gio/gdbusintrospection.h>` has a field `GDBusSignalInfo **signals`, which
+after macro expansion becomes `GDBusSignalInfo **public` — a C++ syntax error.  
+**Fix:** Create a shim header placed first in `-I` that uses
+`#pragma push_macro("signals") / #undef signals / #include_next / #pragma pop_macro`.
+
+---
+
+### Issue 11 — WPEQtView missing signals and methods
+
+**Where:** sailfish-browser-wpe compilation against WPEWebKit 2.50.5  
+**Problem:** The upstream `WPEQtView` API lacks signals and methods expected by
+the browser: `setUserAgent`, `setDeviceScaleFactor`, `scrollPositionChanged`,
+`faviconUrlChanged`, `selectedTextChanged`, `enterFullscreenRequested`, etc.  
+**Fix:** `wpeqtview-sfos-api.patch` adds declarations to `WPEQtView.h` and stub
+implementations to `WPEQtView.cpp`.
+
+---
+
+### Issue 12 — SFOS moc binary path differs from Ubuntu path
+
+**Where:** Makefile generated by sailfish-browser qmake  
+**Problem:** Generated Makefiles reference moc at `/usr/lib64/qt5/bin/moc`
+(SFOS sysroot path). Ubuntu 24.04 places it at `/usr/lib/qt5/bin/moc`.  
+**Fix:**
+```bash
+sudo ln -sfn /opt/sfos-sysroot/usr/lib64/qt5/bin/moc /usr/lib64/qt5/bin/moc
+```
+
+---
+
+### Issue 13 — build-rpms-native.sh looks for `libatlanticbrowser.so` but browser builds `libsailfishbrowser.so`
+
+**Where:** `build-rpms-native.sh`, atlantic-browser staging  
+**Problem:** The RPM script expects `libatlanticbrowser.so.1.0.0` but `lib.pro`
+sets `TARGET = sailfishbrowser`, producing `libsailfishbrowser.so.1.0.0`.  
+**Fix:** Set `TARGET = atlanticbrowser` in `lib.pro`.
+
+---
+
+### Issue 14 — wpebackend-fdo pkgconfig: relative symlink breaks staging
+
+**Where:** `build-rpms-native.sh`, wpebackend-fdo staging  
+**Problem:** The `.pc` file is in the multiarch path; a relative symlink in
+`lib/pkgconfig/` becomes dangling when copied into the staging tree.  
+**Fix:** Copy the actual file content:
+```bash
+cp /opt/wpe-sfos/lib/aarch64-linux-gnu/pkgconfig/wpebackend-fdo-1.0.pc \
+   /opt/wpe-sfos/lib/pkgconfig/wpebackend-fdo-1.0.pc
+```
+
+---
+
+### Issue 15 — Captiveportal uses old Gecko `DeclarativeWebPage` API
+
+**Where:** `sailfish-browser-wpe/apps/captiveportal/`  
+**Problem:** Captiveportal includes `<DeclarativeWebPage>` from qtmozembed — a
+Gecko-only API that does not exist in WPE.  
+**Fix:** Create compat stub headers:
+```cpp
+// declarativewebpage.h
+typedef WPEWebPage DeclarativeWebPage;
+```
+
+---
+
+### Issue 16 — `MDConfItem` not available as Qt-style angle-bracket include
+
+**Where:** sailfish-browser-wpe browser compilation  
+**Problem:** Code uses `#include <MDConfItem>` but the sysroot only provides
+`mdconfitem.h` (with extension, lowercase).  
+**Fix:** Create `apps/core/MDConfItem` (extension-less) containing
+`#include "mdconfitem.h"` and ensure `apps/core/` is in the include path.
+
+---
+
+### Issue 17 — build-rpms-native.sh wpebackend-fdo: `cp` with 3 args stages entire host `/usr/lib64`
+
+**Where:** `build-rpms-native.sh`, wpebackend-fdo section  
+**Problem:** `cp -a "${WPE_PREFIX}/lib/libWPEBackend-fdo..." /usr/lib64 "$S"` with
+two sources copies the library **and** the entire host `/usr/lib64` into the
+staging root, inflating the RPM from ~170 KB to 9.5 MB with Ubuntu-native
+libraries that cannot run on SFOS.  
+**Fix:** Copy only from the multiarch path:
+```bash
+cp "${WPE_PREFIX}/lib/aarch64-linux-gnu/libWPEBackend-fdo-1.0.so.1.11.0" \
+   "${S}/usr/lib64/"
+```
+
+---
+
+### Issue 18 — wpebackend-fdo and libsoup-3.0 require GLIBC > 2.30
+
+**Where:** `build-rpms-native.sh` — packaging of wpebackend-fdo and missing deps  
+**Problem:** Libraries built on Ubuntu 24.04 require GLIBC 2.38; SFOS has 2.30.
+`patch-glibc-versions.py` was called on `libWPEWebKit` but **not** on
+`libWPEBackend-fdo`. Several runtime libraries absent from SFOS must be bundled
+in `/usr/lib64/wpe-compat/`:
+`libsoup-3.0`, `libatomic`, `libjpeg.so.8`, `libharfbuzz-icu`, `libbrotli*`.  
+**Fix:** Apply `patch-glibc-versions.py` to all bundled `.so` files. Bundle missing
+libs from Ubuntu 24.04 aarch64 into the `wpe-sfos-compat` RPM. Set
+`LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64` in the nemo environment conf.
+
+---
+
+### Issue 19 — libepoxy aborts WPEWebProcess: EGL 1.5 symbols missing on Adreno EGL 1.4
+
+**Where:** `libepoxy/src/dispatch_common.c`, `do_dlsym()`  
+**Problem:** SFOS Adreno `libEGL.so.1` implements EGL 1.4 only — it lacks
+`eglCreateSync`, `eglDestroySync`, `eglClientWaitSync`, etc. libepoxy opens
+libEGL via `dlopen("libEGL.so.1", RTLD_LOCAL)` then calls `dlsym(handle, name)`.
+Because the handle is `RTLD_LOCAL`, LD_PRELOAD shims **cannot** intercept the
+lookup. When `eglCreateSync` returns NULL, libepoxy calls `abort()`, crashing
+WPEWebProcess immediately.
+
+**Fix (two parts):**
+1. **libepoxy patch** (`libepoxy-rtld-default-fallback.patch`): after the
+   handle-specific `dlsym` fails, fall back to `dlsym(RTLD_DEFAULT, name)` so
+   LD_PRELOAD stubs in the global namespace are found.
+2. **`libegl-stubs.so`**: provides `eglCreateSync` (→ `EGL_NO_SYNC`),
+   `eglCreateImage` (→ forwards to `eglCreateImageKHR`), etc. Added to
+   `LD_PRELOAD` in the WPEWebProcess wrapper script.
+
+> ⚠️ **Critical:** `libegl-stubs.so` must be built **without** `-fvisibility=hidden`.
+> With that flag all symbols are hidden from `dlsym(RTLD_DEFAULT)` and the
+> fallback silently fails — WPEWebProcess still crashes.
+
+---
+
+### Issue 20 — libepoxy requires `GLIBC_2.34` (dlopen/dlsym/dlerror) but SFOS has GLIBC 2.30
+
+**Where:** `libepoxy.so.0.0.0` VERNEED section; `build-rpms-native.sh` staging  
+**Problem:** libepoxy built on Ubuntu 24.04 has `dlopen@GLIBC_2.34`,
+`dlsym@GLIBC_2.34`, `dlerror@GLIBC_2.34` as versioned requirements (glibc 2.34
+moved these from `libdl.so.2` to `libc.so.6` under a new version tag). SFOS
+glibc 2.30 exports them from `libdl.so.2` as `GLIBC_2.17`. The dynamic linker
+checks VERNEED entries against the **named** library, so LD_PRELOAD cannot
+satisfy `dlopen@GLIBC_2.34 from libc.so.6`.
+
+**Fix (two parts):**
+1. Call `patch-glibc-versions.py` on `libepoxy.so.0.0.0` before staging in
+   `build-rpms-native.sh` (it was being skipped while all other libs were patched).
+2. Add `dlopen/dlsym/dlerror@GLIBC_2.34` wrappers to `libglibc-compat.so` via
+   `.symver` assembler directives, with a `GLIBC_2.34` section in
+   `libglibc-compat.map`, and build with `--version-script` + `-ldl`.
+
+---
+
+### Issue 21 — WPEInjectedBundle not found: hardcoded compile-time prefix
+
+**Where:** `build-rpms-native.sh` wpewebkit2 staging; WPEWebProcess at runtime  
+**Problem:** WPEWebKit is compiled with `--prefix /opt/wpe-sfos`, so
+`WPEWebProcess` has `/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so`
+hardcoded. The build script only staged the bundle to `/usr/lib64/wpe-webkit-2.0/`
+(without the `injected-bundle/` sub-directory). Runtime error:
+```
+Error loading the injected bundle (/opt/wpe-sfos/...): No such file or directory
+```
+**Fix:** Stage the bundle to both paths:
+```bash
+mkdir -p "${S}/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle"
+cp libWPEInjectedBundle.so "${S}/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle/"
+cp libWPEInjectedBundle.so "${S}/usr/lib64/wpe-webkit-2.0/"
+```
+> **Note:** `WPE_PREFIX` at compile time must match the runtime install prefix, or
+> the injected bundle path must be overridden via an environment variable before
+> shipping.
 
 ---
 
