@@ -7,6 +7,4 @@ Icon=icon-launcher-browser
 Exec=/usr/bin/sailfish-browser-wpe %U
 Comment=Sailfish Browser (WPE WebKit)
 MimeType=text/html;application/xhtml+xml;application/xml;text/xml;x-scheme-handler/http;x-scheme-handler/https;
-X-Maemo-Service=org.sailfishos.browser.ui
-X-Maemo-Object-Path=/ui
-X-Maemo-Method=org.sailfishos.browser.ui.openUrl
+X-Nemo-Single-Instance=no
