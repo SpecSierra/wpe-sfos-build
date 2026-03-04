@@ -1,0 +1,43 @@
+From 3bb9de6b2758660a46c4fe9c7f8ea641eda0d96e Mon Sep 17 00:00:00 2001
+From: SpecSierra <mrbn100ful@neonroot.net>
+Date: Wed, 4 Mar 2026 23:00:06 +0000
+Subject: [PATCH] SFOS compat: fall back to RTLD_DEFAULT for missing EGL
+ symbols
+
+SFOS Adreno libEGL 1.4 lacks EGL 1.5 symbols (eglCreateSync, eglCreateImage,
+etc). When dlsym() on the EGL handle fails, fall back to dlsym(RTLD_DEFAULT)
+so that LD_PRELOAD shims (libegl-stubs.so) can satisfy these references without
+replacing the real libEGL.so.1 (which would break Qt Wayland display).
+
+Without this patch, WPEWebProcess crashes with SIGABRT immediately on start
+because epoxy_egl_dlsym() calls abort() when eglCreateSync is not found.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+---
+ src/dispatch_common.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/dispatch_common.c b/src/dispatch_common.c
+index 9f3dac4..6ac6419 100644
+--- a/src/dispatch_common.c
++++ b/src/dispatch_common.c
+@@ -337,6 +337,16 @@ do_dlsym(void **handle, const char *name, bool exit_on_fail)
+     result = dlsym(*handle, name);
+     if (!result)
+         error = dlerror();
++    /* SFOS compat: Adreno libEGL 1.4 lacks EGL 1.5 symbols (eglCreateSync etc).
++     * Fall back to RTLD_DEFAULT so LD_PRELOAD shims can provide them without
++     * replacing libEGL.so.1 (which would break Qt Wayland). */
++    if (!result) {
++        void *fallback = dlsym(RTLD_DEFAULT, name);
++        if (fallback) {
++            result = fallback;
++            error = "";
++        }
++    }
+ #endif
+     if (!result && exit_on_fail) {
+         fprintf(stderr, "%s() not found: %s\n", name, error);
+-- 
+2.43.0
+
