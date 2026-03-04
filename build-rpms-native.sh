@@ -14,6 +14,7 @@ BROWSER_SRC="/release/workspace/sailfish-browser-wpe"
 WPE_PREFIX="/opt/wpe-sfos"
 OUT="/tmp/wpe-sfos-rpms"
 STAGING="/tmp/wpe-sfos-stage"
+SFOS_SYSROOT="/opt/sfos-sysroot"
 
 mkdir -p "$OUT"
 
@@ -122,6 +123,7 @@ fpm_rpm libwpe 1.17.0 "WPE platform library for Sailfish OS" "$S"
 # ===========================================================================
 echo "--- Staging libepoxy ---"
 S="${STAGING}/libepoxy"; rm -rf "$S"; mkdir -p "$S"
+python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "${WPE_PREFIX}/lib/libepoxy.so.0.0.0"
 stage_cp "${WPE_PREFIX}/lib/libepoxy.so.0.0.0"       /usr/lib64  "$S"
 stage_cp "${WPE_PREFIX}/lib/libepoxy.so.0"           /usr/lib64  "$S"
 stage_cp "${WPE_PREFIX}/lib/libepoxy.so"             /usr/lib64  "$S"
@@ -164,10 +166,14 @@ stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"    /usr/lib64 "$S"
 stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1"         /usr/lib64 "$S"
 stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so"           /usr/lib64 "$S"
 
-# InjectedBundle (in both locations for safety)
+# InjectedBundle — staged in both the install path AND the compile-time prefix
+# (WPEWebProcess binary has /opt/wpe-sfos hard-coded as the injected-bundle dir)
 mkdir -p "${S}/usr/lib64/wpe-webkit-2.0"
+mkdir -p "${S}/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle"
 cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
       "${S}/usr/lib64/wpe-webkit-2.0/"
+cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
+      "${S}/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle/"
 
 # Helper process binaries
 mkdir -p "${S}/usr/libexec/wpe-webkit-2.0"
@@ -181,7 +187,7 @@ mkdir -p "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
     cat > "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}" << WRAPPER
 #!/bin/sh
-export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
+export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libglib-compat.so:/usr/lib64/wpe-compat/libegl-stubs.so
 export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64:/opt/wpe-sfos/lib
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
@@ -247,29 +253,50 @@ CFLAGS="-O2 -march=armv8-a -fPIC -fvisibility=hidden"
 SHARED="-shared -Wl,--allow-shlib-undefined"
 
 for lib in \
-    "libglibc-compat.so:libglibc-compat.c" \
     "libgetauxval_fix.so:libgetauxval_fix.c" \
     "libgetauxval_fix2.so:libgetauxval_fix2.c" \
     "libsigill_skip.so:libsigill_skip.c" \
     "libsigill_skip2.so:libsigill_skip2.c" \
-    "libsigill_skip3.so:libsigill_skip3.c" \
-    "libegl-stubs.so:libegl-stubs.c"
+    "libsigill_skip3.so:libsigill_skip3.c"
 do
     name="${lib%%:*}"; src="${lib##*:}"
     $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/${name}" "${COMPAT_SRC}/${src}"
 done
+
+# libegl-stubs.so: must NOT use -fvisibility=hidden — symbols must be globally
+# visible so dlsym(RTLD_DEFAULT, "eglCreateSync") finds them in patched libepoxy
+$CC -O2 -march=armv8-a -fPIC $SHARED \
+    -o "${COMPAT_BUILD}/libegl-stubs.so" "${COMPAT_SRC}/libegl-stubs.c"
+
+# libglibc-compat.so: needs version script (GLIBC_2.17 + GLIBC_2.34 sections)
+# and must export dlopen/dlsym/dlerror@GLIBC_2.34 for binaries built on glibc 2.34+
+$CC -O2 -march=armv8-a -fPIC $SHARED \
+    -Wl,--version-script="${COMPAT_SRC}/libglibc-compat.map" \
+    -o "${COMPAT_BUILD}/libglibc-compat.so" "${COMPAT_SRC}/libglibc-compat.c" \
+    -ldl
+
+# GLib compat: provides g_once_init_enter/leave_pointer absent from Jolla's GLib 2.78.4 build
+# Must link against SFOS libglib-2.0 so the wrappers call the real SFOS implementation
+$CC -O2 -march=armv8-a -fPIC $SHARED \
+    --sysroot="${SFOS_SYSROOT}" \
+    -Wl,-soname,libglib-compat.so \
+    -o "${COMPAT_BUILD}/libglib-compat.so" "${COMPAT_SRC}/libglib_compat.c" \
+    -L"${SFOS_SYSROOT}/usr/lib64" -lglib-2.0
+ln -sfn libglib-compat.so "${COMPAT_BUILD}/libglib-compat-preload.so"
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap.so"  "${COMPAT_SRC}/libexecve_wrap.c"  -ldl
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap2.so" "${COMPAT_SRC}/libexecve_wrap2.c" -ldl
 
 # Stub: libgssapi_krb5.so.2 (GSSAPI for libsoup3 — always returns unavailable on SFOS)
-$CC $CFLAGS $SHARED \
+# Note: must NOT use -fvisibility=hidden here — version-script requires GLOBAL symbols
+$CC -O2 -march=armv8-a -fPIC $SHARED \
     -Wl,--version-script="${COMPAT_SRC}/libgssapi_krb5.map" \
     -Wl,-soname,libgssapi_krb5.so.2 \
     -o "${COMPAT_BUILD}/libgssapi_krb5.so.2" "${COMPAT_SRC}/libgssapi_krb5_stub.c"
 ln -sfn libgssapi_krb5.so.2 "${COMPAT_BUILD}/libgssapi_krb5.so"
 
 # Stub: libharfbuzz-icu.so.0 (avoids pulling in libicuuc.so.74 which SFOS doesn't have)
-$CC $CFLAGS $SHARED \
+# Note: must NOT use -fvisibility=hidden here — symbols must be globally visible
+$CC -O2 -march=armv8-a -fPIC $SHARED \
     -Wl,-soname,libharfbuzz-icu.so.0 \
     -o "${COMPAT_BUILD}/libharfbuzz-icu.so.0" "${COMPAT_SRC}/libharfbuzz_icu_stub.c"
 ln -sfn libharfbuzz-icu.so.0 "${COMPAT_BUILD}/libharfbuzz-icu.so"
@@ -316,7 +343,7 @@ cp -a "${SCRIPT_DIR}/prebuilt/libcow_string_compat.so" "${S}/usr/lib64/wpe-compa
 mkdir -p "${S}/var/lib/environment/nemo"
 cat > "${S}/var/lib/environment/nemo/70-wpe-compat.conf" << 'EOF'
 # WPE SFOS compatibility shims — loaded for all nemo user sessions.
-LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
+LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libglib-compat.so:/usr/lib64/wpe-compat/libegl-stubs.so
 LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
 EOF
 
@@ -335,7 +362,7 @@ cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/"
 # WPE launcher wrapper script
 cat > "${S}/usr/bin/atlantic-browser" << 'LAUNCHER'
 #!/bin/sh
-export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so
+export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libglib-compat.so:/usr/lib64/wpe-compat/libegl-stubs.so
 export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64:/opt/wpe-sfos/lib
 export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR=/run/user/100000

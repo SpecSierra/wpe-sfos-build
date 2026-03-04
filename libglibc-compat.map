@@ -1,0 +1,35 @@
+/* Version script for libglibc-compat.so — provides missing glibc symbols
+ * versioned as GLIBC_2.17 (the baseline we patch all binaries down to).
+ * The dynamic linker will use these when resolving versioned references. */
+GLIBC_2.17 {
+    global:
+        __libc_single_threaded;
+        arc4random;
+        arc4random_buf;
+        __isoc23_strtol;
+        __isoc23_strtoll;
+        __isoc23_strtoul;
+        __isoc23_strtoull;
+        __isoc23_fscanf;
+        __isoc23_sscanf;
+        __isoc23_scanf;
+        fstat;
+        fstat64;
+        stat;
+        stat64;
+        lstat;
+        lstat64;
+        strlcpy;
+        strlcat;
+        _dl_find_object;
+    local: *;
+};
+
+/* dlopen/dlsym/dlerror moved from libdl to libc in glibc 2.34; re-export.
+ * The internal compat_ names must be global so .symver creates visible exports. */
+GLIBC_2.34 {
+    global:
+        compat_dlopen_2_34;
+        compat_dlsym_2_34;
+        compat_dlerror_2_34;
+};
