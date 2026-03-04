@@ -2,7 +2,7 @@ This patch modifies BubblewrapLauncher.cpp in WPE WebKit 2.50.5 for SFOS/Android
 kernel 4.14 compatibility. Apply to:
   Source/WebKit/UIProcess/Launcher/glib/BubblewrapLauncher.cpp
 
-Two issues fixed:
+Three issues fixed:
 
 1. pivot_root(2) is not supported inside user namespaces on Android kernel 4.14.
    The normal WPE sandbox creates a new minimal tmpfs root and calls pivot_root,
@@ -10,13 +10,23 @@ Two issues fixed:
    bind the entire host filesystem instead of selective bind-mounts. This gives
    up filesystem isolation but keeps seccomp + namespace separation.
 
-   Do NOT use --dev /dev after --dev-bind / / — it would mount a minimal
-   devtmpfs that hides GPU device nodes (/dev/kgsl-3d0, /dev/dri, /dev/ion)
-   that WPEWebProcess needs to render web content.
+   CRITICAL: Do NOT use "--dev /dev" after "--dev-bind / /" — it mounts a
+   fresh minimal devtmpfs over /dev, hiding Android-specific device nodes
+   (ashmem, binder, etc.) that libhybris/Adreno GPU drivers need. The
+   --dev-bind-try entries only re-add a few known devices (kgsl-3d0, dri, ion)
+   but miss others. This causes a black screen (EGL renders but frames never
+   export to the UI process). The host /dev is already available via
+   --dev-bind / / and must not be overlaid.
 
 2. /.flatpak-info cannot be written into the sandbox root because SFOS root fs
    is read-only. Since SFOS does not use desktop portals, skip flatpak-info
    creation entirely by setting flatpakInfoFd = -1.
+
+3. Network namespace isolation (--unshare-net) is disabled for Web and GPU
+   processes. Android GPU drivers communicate with vendor HAL services over
+   abstract Unix sockets which are per-network-namespace. While not the
+   primary cause of the black screen, disabling this avoids potential GPU
+   communication issues on libhybris platforms.
 
 --- BubblewrapLauncher.cpp.orig
 +++ BubblewrapLauncher.cpp
@@ -47,3 +57,15 @@ Two issues fixed:
 
      // SFOS root filesystem is read-only; skip flatpak-info (not needed anyway).
      int flatpakInfoFd = -1;
+
+@@ shouldUnshareNetwork (search for "shouldUnshareNetwork")
+ Add before the final "return true;" at the end of the function:
+
+    // SFOS/Hybris: Android GPU drivers (e.g. Adreno via libhybris) communicate
+    // with vendor HAL services over abstract Unix sockets.  Abstract sockets are
+    // per-network-namespace, so --unshare-net makes them unreachable, causing
+    // EGL initialisation to fail silently and producing a black screen.
+    // Disable network namespace isolation for processes that need GPU access.
+    if (processType == ProcessLauncher::ProcessType::Web
+        || processType == ProcessLauncher::ProcessType::GPU)
+        return false;
