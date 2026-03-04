@@ -28,6 +28,10 @@ Three issues fixed:
    primary cause of the black screen, disabling this avoids potential GPU
    communication issues on libhybris platforms.
 
+4. --die-with-parent ensures sandboxed child processes (bwrap, WPEWebProcess,
+   xdg-dbus-proxy) are killed when the browser exits. Without this, orphaned
+   processes hold sockets/resources that prevent the browser from restarting.
+
 --- BubblewrapLauncher.cpp.orig
 +++ BubblewrapLauncher.cpp
 @@ sandboxArgs initialization (search for "Vector<CString> sandboxArgs")
@@ -38,6 +42,7 @@ Three issues fixed:
      // selective bind-mount approach.  Instead, bind the whole host filesystem
      // read-write and rely on seccomp + namespace isolation for security.
      Vector<CString> sandboxArgs = {
+         "--die-with-parent",
          "--unshare-uts",
 
          "--dev-bind", "/", "/",
