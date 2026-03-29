@@ -163,8 +163,9 @@ S="${STAGING}/wpewebkit2"; rm -rf "$S"; mkdir -p "$S"
 python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
     "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"
 stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"    /usr/lib64 "$S"
-stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1"         /usr/lib64 "$S"
-stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so"           /usr/lib64 "$S"
+# Recreate .so.1 pointing to the GLIBC-patched filename (not the original 1.9.5)
+ln -sfn libWPEWebKit-2.0.so.1.6.10 "${S}/usr/lib64/libWPEWebKit-2.0.so.1"
+ln -sfn libWPEWebKit-2.0.so.1      "${S}/usr/lib64/libWPEWebKit-2.0.so"
 
 # InjectedBundle — staged in both the install path AND the compile-time prefix
 # (WPEWebProcess binary has /opt/wpe-sfos hard-coded as the injected-bundle dir)
@@ -175,11 +176,13 @@ cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so"
 cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
       "${S}/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle/"
 
-# Helper process binaries
+# Helper process binaries — patch GLIBC version requirements (2.34→2.17) so they run on SFOS
 mkdir -p "${S}/usr/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
     cp -a "${WPE_PREFIX}/libexec/wpe-webkit-2.0/${helper}" \
           "${S}/usr/libexec/wpe-webkit-2.0/"
+    python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
+            "${S}/usr/libexec/wpe-webkit-2.0/${helper}"
 done
 
 # Wrapper scripts for helper processes (set LD_PRELOAD, GStreamer paths, etc.)
