@@ -298,6 +298,7 @@ if [ ! -f "$WPE_PREFIX/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     QT5_PLUGIN_DIR="$WORK/wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5"
     cd "$QT5_PLUGIN_DIR"
     patch -p4 --forward < "$BUILD_TOOLS/qt5-plugin-gnuinstalldirs.patch" || true
+    patch -p4 --forward < "$BUILD_TOOLS/wpeqtview-viewport-scale.patch" || true
 
     PKG_CONFIG_PATH="$WPE_PREFIX/lib/pkgconfig:$WPE_PREFIX/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B build -G Ninja \

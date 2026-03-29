@@ -1,0 +1,27 @@
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.h
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.h
+@@ -122,6 +122,7 @@ private:
+     QSizeF m_size;
+     WPEQtViewBackend* m_backend { nullptr };
+     bool m_errorOccured { false };
++    qreal m_pendingDeviceScaleFactor { 1.0 };
+ };
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
+@@ -116,6 +116,9 @@ void WPEQtView::createWebView()
+     g_signal_connect(m_webView, "load-changed", G_CALLBACK(notifyLoadChangedCallback), this);
+     g_signal_connect(m_webView, "load-failed", G_CALLBACK(notifyLoadFailedCallback), this);
+ 
++    if (m_pendingDeviceScaleFactor != 1.0)
++        webkit_web_view_set_zoom_level(m_webView, m_pendingDeviceScaleFactor);
++
+     if (!m_url.isEmpty())
+         webkit_web_view_load_uri(m_webView, m_url.toString().toUtf8().constData());
+     else if (!m_html.isEmpty())
+@@ -533,6 +536,7 @@ void WPEQtView::setUserAgent(const QString& userAgent)
+ void WPEQtView::setDeviceScaleFactor(qreal scale)
+ {
++    m_pendingDeviceScaleFactor = scale;
+     if (!m_webView)
+         return;
+     webkit_web_view_set_zoom_level(m_webView, scale);
