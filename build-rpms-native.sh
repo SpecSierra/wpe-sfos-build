@@ -154,7 +154,7 @@ fpm_rpm wpebackend-fdo 1.17.0 "WPE backend (freedesktop.org/Wayland) for Sailfis
     --depends libwpe --depends libepoxy
 
 # ===========================================================================
-# 4. wpewebkit2 2.50.5
+# 4. wpewebkit2 2.52.1
 # ===========================================================================
 echo "--- Staging wpewebkit2 ---"
 S="${STAGING}/wpewebkit2"; rm -rf "$S"; mkdir -p "$S"
@@ -212,11 +212,11 @@ for pc in wpe-webkit-2.0.pc wpe-web-process-extension-2.0.pc; do
     sed -i "s|${WPE_PREFIX}|/usr|g"          "${S}/usr/lib64/pkgconfig/${pc}"
 done
 
-fpm_rpm wpewebkit2 2.50.5 "WPE WebKit 2.50.5 for Sailfish OS" "$S" \
+fpm_rpm wpewebkit2 2.52.1 "WPE WebKit 2.52.1 for Sailfish OS" "$S" \
     --depends libwpe --depends libepoxy --depends wpebackend-fdo
 
 # ===========================================================================
-# 5. wpewebkit2-qt5 2.50.5
+# 5. wpewebkit2-qt5 2.52.1
 # ===========================================================================
 echo "--- Staging wpewebkit2-qt5 ---"
 S="${STAGING}/wpewebkit2-qt5"; rm -rf "$S"; mkdir -p "$S"
@@ -237,7 +237,7 @@ cp -a "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/qmldir" \
 ln -sfn /usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so \
         "${S}/usr/lib64/libqtwpe.so"
 
-fpm_rpm wpewebkit2-qt5 2.50.5 "WPE WebKit Qt5 QML plugin for Sailfish OS" "$S" \
+fpm_rpm wpewebkit2-qt5 2.52.1 "WPE WebKit Qt5 QML plugin for Sailfish OS" "$S" \
     --depends wpewebkit2
 
 # ===========================================================================

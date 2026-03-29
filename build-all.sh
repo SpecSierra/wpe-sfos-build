@@ -201,21 +201,21 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 8. WPEWebKit 2.50.5  (long step — 60-90 min)
+# 8. WPEWebKit 2.52.1  (long step — 60-90 min)
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- [8] Building WPEWebKit 2.50.5 (expect 60-90 min) ---"
+echo "--- [8] Building WPEWebKit 2.52.1 (expect 60-90 min) ---"
 if [ ! -f "$WPE_PREFIX/lib/libWPEWebKit-2.0.so" ]; then
     cd "$WORK"
-    if [ ! -d wpewebkit-2.50.5 ]; then
+    if [ ! -d wpewebkit-2.52.1 ]; then
         echo "  Downloading tarball..."
         wget -q --show-progress \
-            "https://wpewebkit.org/releases/wpewebkit-2.50.5.tar.xz" \
-            -O /tmp/wpewebkit-2.50.5.tar.xz
-        tar -xf /tmp/wpewebkit-2.50.5.tar.xz
-        rm -f /tmp/wpewebkit-2.50.5.tar.xz
+            "https://wpewebkit.org/releases/wpewebkit-2.52.1.tar.xz" \
+            -O /tmp/wpewebkit-2.52.1.tar.xz
+        tar -xf /tmp/wpewebkit-2.52.1.tar.xz
+        rm -f /tmp/wpewebkit-2.52.1.tar.xz
     fi
-    cd wpewebkit-2.50.5
+    cd wpewebkit-2.52.1
 
     patch -p1 --forward < "$BUILD_TOOLS/webkit-quirks-no-video.patch" || true
 
@@ -243,6 +243,7 @@ if [ ! -f "$WPE_PREFIX/lib/libWPEWebKit-2.0.so" ]; then
         -DENABLE_WEBDRIVER=OFF \
         -DENABLE_XSLT=OFF \
         -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+        -DENABLE_WPE_LEGACY_API=ON \
         -DUSE_ATK=OFF \
         -DUSE_GSTREAMER=OFF \
         -DUSE_GSTREAMER_GL=OFF \
@@ -253,12 +254,18 @@ if [ ! -f "$WPE_PREFIX/lib/libWPEWebKit-2.0.so" ]; then
         -DUSE_OPENJPEG=OFF \
         -DUSE_WOFF2=OFF \
         -DUSE_AVIF=OFF \
-        -DUSE_SKIA=ON \
-        -DUSE_SYSPROF_CAPTURE=ON \
         -DUSE_SYSTEM_SYSPROF_CAPTURE=NO
 
     ninja -C WebKitBuild/Release -j"$NPROC"
     ninja -C WebKitBuild/Release install
+
+    # wpewebkit-2.52.1 requires libsoup-3.0 in wpe-webkit-2.0.pc, but SFOS only has libsoup-2.4.
+    # The Qt5 plugin doesn't use soup directly, so remove it from the pkgconfig Requires.
+    sed -i 's/libsoup-3\.0 //' "$WPE_PREFIX/lib/pkgconfig/wpe-webkit-2.0.pc" 2>/dev/null || true
+
+    # Provide a config.h shim for the standalone Qt5 plugin build
+    ln -sf "$WPE_PREFIX/../../../release/workspace/wpewebkit-2.52.1/WebKitBuild/Release/cmakeconfig.h" \
+       /release/workspace/wpewebkit-2.52.1/WebKitBuild/Release/config.h 2>/dev/null || true
 
     # libWPEInjectedBundle.so is not installed by ninja install
     mkdir -p "$WPE_PREFIX/lib/wpe-webkit-2.0/injected-bundle"
@@ -295,17 +302,30 @@ echo "--- [10] Building Qt5 WPE plugin ---"
 if [ ! -f "$WPE_PREFIX/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     export PATH="$SYSROOT/usr/lib64/qt5/bin:$PATH"
 
-    QT5_PLUGIN_DIR="$WORK/wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5"
+    # 2.52.1 removed the qt5/ directory; copy it from 2.50.5 if needed
+    if [ ! -d "$WORK/wpewebkit-2.52.1/Source/WebKit/UIProcess/API/wpe/qt5" ]; then
+        if [ ! -d "$WORK/wpewebkit-2.50.5" ]; then
+            echo "ERROR: $WORK/wpewebkit-2.50.5 not found; required to copy Qt5 plugin into 2.52.1" >&2
+            exit 1
+        fi
+        echo "  Copying Qt5 plugin from 2.50.5 (removed in 2.52.1)..."
+        cp -a "$WORK/wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5" \
+              "$WORK/wpewebkit-2.52.1/Source/WebKit/UIProcess/API/wpe/qt5"
+    fi
+
+    QT5_PLUGIN_DIR="$WORK/wpewebkit-2.52.1/Source/WebKit/UIProcess/API/wpe/qt5"
     cd "$QT5_PLUGIN_DIR"
     patch -p4 --forward < "$BUILD_TOOLS/qt5-plugin-gnuinstalldirs.patch" || true
     patch -p4 --forward < "$BUILD_TOOLS/wpeqtview-viewport-scale.patch" || true
+    patch -p4 --forward < "$BUILD_TOOLS/qt5-plugin-epoxy-gl-fix.patch" || true
 
     PKG_CONFIG_PATH="$WPE_PREFIX/lib/pkgconfig:$WPE_PREFIX/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B build -G Ninja \
         -DCMAKE_TOOLCHAIN_FILE="$BUILD_TOOLS/sfos-toolchain.cmake" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="$WPE_PREFIX" \
-        -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DWPE_WEBKIT_BUILD_DIR="$WPE_SOURCE_DIR/WebKitBuild/Release"
     ninja -C build -j"$NPROC" install
     echo "  Qt5 WPE plugin installed."
 else
@@ -346,7 +366,7 @@ qmake -spec "$SYSROOT/usr/share/qt5/mkspecs/linux-g++" \
     "QMAKE_LINK=g++ --sysroot=$SYSROOT" \
     "WPE_SFOS_PREFIX=$WPE_PREFIX" \
     "SFOS_SYSROOT=$SYSROOT" \
-    "WPE_SOURCE_DIR=$WORK/wpewebkit-2.50.5"
+    "WPE_SOURCE_DIR=$WORK/wpewebkit-2.52.1"
 
 # captiveportal won't build (not ported to WPE), build only core + browser
 make -C apps/lib   -j"$NPROC"
