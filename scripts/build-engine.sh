@@ -43,7 +43,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libepoxy.so" ]; then
         git clone --depth=1 https://github.com/anholt/libepoxy libepoxy
     fi
     cd libepoxy
-    patch -p1 --forward < "${BUILD_TOOLS}/libepoxy-rtld-default-fallback.patch" || true
+    apply_repo_patches 1 "${PWD}" "${ENGINE_SOURCE_PATCHES[@]}"
     rm -rf build
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig" \
     meson setup build \

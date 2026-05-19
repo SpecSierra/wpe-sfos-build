@@ -21,7 +21,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     fi
 
     cd "${WPE_SOURCE_DIR}"
-    patch -p1 --forward < "${BUILD_TOOLS}/webkit-quirks-no-video.patch" || true
+    apply_repo_patches 1 "${PWD}" "${WEBKIT_SOURCE_PATCHES[@]}"
 
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B WebKitBuild/Release -G Ninja \
@@ -107,10 +107,8 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     fi
 
     qt5_plugin_dir="${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5"
+    apply_repo_patches 4 "${qt5_plugin_dir}" "${QT5_PLUGIN_PATCHES[@]}"
     cd "${qt5_plugin_dir}"
-    patch -p4 --forward < "${BUILD_TOOLS}/qt5-plugin-gnuinstalldirs.patch" || true
-    patch -p4 --forward < "${BUILD_TOOLS}/wpeqtview-viewport-scale.patch" || true
-    patch -p4 --forward < "${BUILD_TOOLS}/qt5-plugin-epoxy-gl-fix.patch" || true
 
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B build -G Ninja \

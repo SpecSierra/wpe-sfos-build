@@ -2,6 +2,7 @@
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${REPO_ROOT}/versions.env"
+source "${REPO_ROOT}/scripts/patches.sh"
 
 export REPO_ROOT
 export WORK="${WORK:-$(cd "${REPO_ROOT}/.." && pwd)}"

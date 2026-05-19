@@ -106,8 +106,8 @@ These are the repo-local patches currently relevant to the live build flow.
 | `webkit-quirks-no-video.patch` | `re-check` | only relevant while the scripted baseline still builds WebKit with `ENABLE_VIDEO=OFF` |
 | `qt5-plugin-gnuinstalldirs.patch` | `keep temporarily` | still wired into the standalone Qt5 bridge build for install-path correctness |
 | `qt5-plugin-epoxy-gl-fix.patch` | `keep temporarily` | still wired into the Qt5 bridge build to avoid epoxy/Qt OpenGL header conflicts |
-| `wpeqtview-viewport-scale.patch` | `re-check` | currently wired into the Qt5 bridge build; keep only if still needed once the 2.52.3 carry-forward is rebased cleanly |
-| `wpeqtview-sfos-api.patch` | `re-check` | not wired into the current scripted build, but likely still relevant if the UI still depends on those legacy Qt-facing methods/signals |
+| `wpeqtview-viewport-scale.patch` | `keep temporarily` | required by the live UI flow because `WPEWebContainer` sets device scale before the web view is created, so the deferred scale behavior still matters |
+| `wpeqtview-sfos-api.patch` | `keep temporarily` | required by the live UI code: `WPEWebPage` and `WPEWebContainer` directly use `setUserAgent`, `setDeviceScaleFactor`, and multiple extra `WPEQtView` signals |
 | `BubblewrapLauncher-sfos-sandbox.patch` | `drop from default path` | historical SFOS 5.0 isolation workaround; no longer part of the main build flow |
 
 ## Practical next steps
