@@ -10,6 +10,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/versions.env"
+
 BROWSER_SRC="/release/workspace/sailfish-browser-wpe"
 WPE_PREFIX="/opt/wpe-sfos"
 OUT="/tmp/wpe-sfos-rpms"
@@ -56,54 +58,7 @@ fpm_rpm() {
 }
 
 # ===========================================================================
-# 0. bubblewrap 0.11.0 (static build — no glibc version issues)
-# ===========================================================================
-echo "--- Building bubblewrap (static) ---"
-BWRAP_SRC="/tmp/bubblewrap-0.11.0"
-if [ ! -d "$BWRAP_SRC" ]; then
-    curl -sL https://github.com/containers/bubblewrap/releases/download/v0.11.0/bubblewrap-0.11.0.tar.xz \
-        | tar -xJ -C /tmp
-fi
-
-(
-    cd "$BWRAP_SRC"
-    rm -rf build-static-rpm
-    # fake libcap.pc so meson finds it for pkg-config check
-    mkdir -p /tmp/fake-pkgconfig-bwrap
-    cat > /tmp/fake-pkgconfig-bwrap/libcap.pc << 'PCEOF'
-prefix=/usr
-libdir=/usr/lib/aarch64-linux-gnu
-includedir=/usr/include
-Name: libcap
-Description: POSIX capabilities library
-Version: 2.66
-Libs: -L/usr/lib/aarch64-linux-gnu /usr/lib/aarch64-linux-gnu/libcap.a
-Cflags: -I/usr/include
-PCEOF
-    PKG_CONFIG_LIBDIR=/tmp/fake-pkgconfig-bwrap \
-    CFLAGS="-D__GLIBC_USE_ISOC23=0" LDFLAGS="-static" \
-    meson setup build-static-rpm --prefix /usr \
-        -Dbash_completion=disabled -Dzsh_completion=disabled \
-        -Dman=disabled -Dtests=false -Dselinux=disabled
-    ninja -C build-static-rpm
-    strip build-static-rpm/bwrap
-    # Rename any remaining __isoc23_* symbols (shouldn't be needed for static, but defensive)
-    python3 "${SCRIPT_DIR}/patch-isoc23.py" build-static-rpm/bwrap 2>/dev/null || true
-)
-
-S="${STAGING}/bubblewrap"; rm -rf "$S"; mkdir -p "${S}/usr/bin"
-cp "$BWRAP_SRC/build-static-rpm/bwrap" "${S}/usr/bin/"
-chmod 4755 "${S}/usr/bin/bwrap"
-
-fpm -s dir -t rpm -n bubblewrap -v 0.11.0 --iteration 1 -a aarch64 \
-    --description "Unprivileged sandboxing tool (static) used by WPE WebKit" \
-    --force \
-    -p "${OUT}/bubblewrap-0.11.0-1.aarch64.rpm" \
-    -C "$S" usr/bin/bwrap
-echo "    -> ${OUT}/bubblewrap-0.11.0-1.aarch64.rpm"
-
-# ===========================================================================
-# 1. libwpe 1.17.0
+# 1. libwpe
 # ===========================================================================
 echo "--- Staging libwpe ---"
 S="${STAGING}/libwpe"; rm -rf "$S"; mkdir -p "$S"
@@ -116,10 +71,10 @@ mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/wpe-1.0.pc"      "${S}/usr/lib64/pkgconfig/"
 sed -i "s|${WPE_PREFIX}|/usr|g"                      "${S}/usr/lib64/pkgconfig/wpe-1.0.pc"
 
-fpm_rpm libwpe 1.17.0 "WPE platform library for Sailfish OS" "$S"
+fpm_rpm libwpe "$LIBWPE_VERSION" "WPE platform library for Sailfish OS" "$S"
 
 # ===========================================================================
-# 2. libepoxy 1.5.11
+# 2. libepoxy
 # ===========================================================================
 echo "--- Staging libepoxy ---"
 S="${STAGING}/libepoxy"; rm -rf "$S"; mkdir -p "$S"
@@ -132,10 +87,10 @@ mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/epoxy.pc"         "${S}/usr/lib64/pkgconfig/"
 sed -i "s|${WPE_PREFIX}|/usr|g"                      "${S}/usr/lib64/pkgconfig/epoxy.pc"
 
-fpm_rpm libepoxy 1.5.11 "OpenGL function pointer management for Sailfish OS" "$S"
+fpm_rpm libepoxy "$LIBEPOXY_VERSION" "OpenGL function pointer management for Sailfish OS" "$S"
 
 # ===========================================================================
-# 3. wpebackend-fdo 1.17.0
+# 3. wpebackend-fdo
 # ===========================================================================
 echo "--- Staging wpebackend-fdo ---"
 S="${STAGING}/wpebackend-fdo"; rm -rf "$S"; mkdir -p "$S"
@@ -150,11 +105,11 @@ cp -a "${WPE_PREFIX}/lib/pkgconfig/wpebackend-fdo-1.0.pc"    "${S}/usr/lib64/pkg
 sed -i "s|${WPE_PREFIX}|/usr|g; s|/lib/aarch64-linux-gnu|/lib64|g" \
     "${S}/usr/lib64/pkgconfig/wpebackend-fdo-1.0.pc"
 
-fpm_rpm wpebackend-fdo 1.17.0 "WPE backend (freedesktop.org/Wayland) for Sailfish OS" "$S" \
+fpm_rpm wpebackend-fdo "$WPEBACKEND_FDO_VERSION" "WPE backend (freedesktop.org/Wayland) for Sailfish OS" "$S" \
     --depends libwpe --depends libepoxy
 
 # ===========================================================================
-# 4. wpewebkit2 2.52.1
+# 4. wpewebkit2
 # ===========================================================================
 echo "--- Staging wpewebkit2 ---"
 S="${STAGING}/wpewebkit2"; rm -rf "$S"; mkdir -p "$S"
@@ -215,11 +170,11 @@ for pc in wpe-webkit-2.0.pc wpe-web-process-extension-2.0.pc; do
     sed -i "s|${WPE_PREFIX}|/usr|g"          "${S}/usr/lib64/pkgconfig/${pc}"
 done
 
-fpm_rpm wpewebkit2 2.52.1 "WPE WebKit 2.52.1 for Sailfish OS" "$S" \
+fpm_rpm wpewebkit2 "$LEGACY_WPEWEBKIT_VERSION" "WPE WebKit ${LEGACY_WPEWEBKIT_VERSION} for Sailfish OS" "$S" \
     --depends libwpe --depends libepoxy --depends wpebackend-fdo
 
 # ===========================================================================
-# 5. wpewebkit2-qt5 2.52.1
+# 5. wpewebkit2-qt5
 # ===========================================================================
 echo "--- Staging wpewebkit2-qt5 ---"
 S="${STAGING}/wpewebkit2-qt5"; rm -rf "$S"; mkdir -p "$S"
@@ -240,11 +195,11 @@ cp -a "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/qmldir" \
 ln -sfn /usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so \
         "${S}/usr/lib64/libqtwpe.so"
 
-fpm_rpm wpewebkit2-qt5 2.52.1 "WPE WebKit Qt5 QML plugin for Sailfish OS" "$S" \
+fpm_rpm wpewebkit2-qt5 "$LEGACY_WPEWEBKIT_VERSION" "WPE WebKit Qt5 QML plugin for Sailfish OS" "$S" \
     --depends wpewebkit2
 
 # ===========================================================================
-# 6. wpe-sfos-compat 1.0.0  (compiled from source)
+# 6. wpe-sfos-compat  (compiled from source)
 # ===========================================================================
 echo "--- Building wpe-sfos-compat shims ---"
 COMPAT_SRC="${SCRIPT_DIR}"
@@ -350,10 +305,10 @@ LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow
 LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
 EOF
 
-fpm_rpm wpe-sfos-compat 1.0.0 "SFOS compatibility shims for WPE WebKit" "$S"
+fpm_rpm wpe-sfos-compat "$WPE_SFOS_COMPAT_VERSION" "SFOS compatibility shims for WPE WebKit" "$S"
 
 # ===========================================================================
-# 7. atlantic-browser 1.0.0
+# 7. atlantic-browser
 # ===========================================================================
 echo "--- Staging atlantic-browser ---"
 S="${STAGING}/atlantic-browser"; rm -rf "$S"; mkdir -p "$S"
@@ -456,11 +411,10 @@ OrganizationName=org.atlantic
 ApplicationName=atlantic-browser
 EOF
 
-fpm_rpm atlantic-browser 1.0.0 "Atlantic Browser (WPE WebKit engine)" "$S" \
+fpm_rpm atlantic-browser "$ATLANTIC_BROWSER_VERSION" "Atlantic Browser (WPE WebKit engine)" "$S" \
     --depends wpewebkit2 \
     --depends wpewebkit2-qt5 \
-    --depends wpe-sfos-compat \
-    --depends bubblewrap
+    --depends wpe-sfos-compat
 
 # ===========================================================================
 echo ""

@@ -3,6 +3,9 @@
 # Logs to /tmp/wpe-build.log
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/versions.env"
+
 LOG=/tmp/wpe-build.log
 # Append all output to log file (caller redirects stdout/stderr here)
 
@@ -12,11 +15,14 @@ BUILD_TOOLS="$WORK/wpe-sfos-build"
 BROWSER_SRC="$WORK/sailfish-browser-wpe"
 WPE_PREFIX=/opt/wpe-sfos
 SYSROOT=/opt/sfos-sysroot
+WPE_SOURCE_DIR="$WORK/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}"
 NPROC=$(nproc)
 
 echo "================================================================"
 echo "=== WPE SFOS Build started at $(date)"
 echo "=== CPUs: $NPROC"
+echo "=== Scripted baseline: SFOS ${LEGACY_SFOS_SYSROOT_VERSION} / WPE WebKit ${LEGACY_WPEWEBKIT_VERSION}"
+echo "=== Migration target: SFOS ${TARGET_SFOS_VERSION} / WPE WebKit ${TARGET_WPEWEBKIT_VERSION}"
 echo "================================================================"
 
 # ---------------------------------------------------------------------------
@@ -72,13 +78,13 @@ gem list fpm | grep -q fpm || gem install --no-document fpm
 echo "Build tools ready."
 
 # ---------------------------------------------------------------------------
-# 2. SFOS 5.0.0.62 sysroot
+# 2. SFOS sysroot
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- [2] Setting up SFOS 5.0.0.62 aarch64 sysroot ---"
+echo "--- [2] Setting up SFOS ${LEGACY_SFOS_SYSROOT_VERSION} aarch64 sysroot ---"
 if [ ! -d "$SYSROOT/usr/include" ]; then
     mkdir -p "$SYSROOT"
-    SYSROOT_URL="https://releases.sailfishos.org/sdk/targets/Sailfish_OS-5.0.0.62-Sailfish_SDK_Target-aarch64.tar.7z"
+    SYSROOT_URL="https://releases.sailfishos.org/sdk/targets/Sailfish_OS-${LEGACY_SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar.7z"
     echo "  Downloading sysroot (177 MB)..."
     curl -L --progress-bar "$SYSROOT_URL" -o /tmp/sfos-sysroot.tar.7z
     echo "  Extracting..."
@@ -86,7 +92,7 @@ if [ ! -d "$SYSROOT/usr/include" ]; then
     cd "$SYSROOT"
     7z x /tmp/sfos-sysroot.tar.7z -so | tar -x --numeric-owner 2>/dev/null || \
         { 7z e /tmp/sfos-sysroot.tar.7z -o/tmp -y && \
-          tar -xf /tmp/Sailfish_OS-5.0.0.62-Sailfish_SDK_Target-aarch64.tar -C "$SYSROOT" --numeric-owner; }
+          tar -xf "/tmp/Sailfish_OS-${LEGACY_SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar" -C "$SYSROOT" --numeric-owner; }
     rm -f /tmp/sfos-sysroot.tar.7z
     echo "  Sysroot ready."
 else
@@ -118,14 +124,14 @@ fi
 mkdir -p "$WPE_PREFIX"
 
 # ---------------------------------------------------------------------------
-# 5. libwpe 1.17.0
+# 5. libwpe
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- [5] Building libwpe ---"
 if [ ! -f "$WPE_PREFIX/lib/libwpe-1.0.so" ]; then
     cd "$WORK"
     if [ ! -d libwpe ]; then
-        git clone --depth=1 --branch 1.17.0 \
+        git clone --depth=1 --branch "$LIBWPE_VERSION" \
             https://github.com/WebPlatformForEmbedded/libwpe libwpe 2>/dev/null || \
         git clone --depth=1 https://github.com/WebPlatformForEmbedded/libwpe libwpe
     fi
@@ -148,14 +154,14 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 6. libepoxy 1.5.11
+# 6. libepoxy
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- [6] Building libepoxy ---"
 if [ ! -f "$WPE_PREFIX/lib/libepoxy.so" ]; then
     cd "$WORK"
     if [ ! -d libepoxy ]; then
-        git clone --depth=1 --branch 1.5.11 \
+        git clone --depth=1 --branch "$LIBEPOXY_VERSION" \
             https://github.com/anholt/libepoxy libepoxy 2>/dev/null || \
         git clone --depth=1 https://github.com/anholt/libepoxy libepoxy
     fi
@@ -176,14 +182,14 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 7. WPEBackend-fdo 1.17.0
+# 7. WPEBackend-fdo
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- [7] Building WPEBackend-fdo ---"
 if [ ! -f "$WPE_PREFIX/lib/libWPEBackend-fdo-1.0.so" ]; then
     cd "$WORK"
     if [ ! -d WPEBackend-fdo ]; then
-        git clone --depth=1 --branch 1.17.0 \
+        git clone --depth=1 --branch "$WPEBACKEND_FDO_VERSION" \
             https://github.com/igalia/WPEBackend-fdo WPEBackend-fdo 2>/dev/null || \
         git clone --depth=1 https://github.com/igalia/WPEBackend-fdo WPEBackend-fdo
     fi
@@ -201,21 +207,21 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 8. WPEWebKit 2.52.1  (long step — 60-90 min)
+# 8. WPEWebKit  (long step — 60-90 min)
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- [8] Building WPEWebKit 2.52.1 (expect 60-90 min) ---"
+echo "--- [8] Building WPEWebKit ${LEGACY_WPEWEBKIT_VERSION} (expect 60-90 min) ---"
 if [ ! -f "$WPE_PREFIX/lib/libWPEWebKit-2.0.so" ]; then
     cd "$WORK"
-    if [ ! -d wpewebkit-2.52.1 ]; then
+    if [ ! -d "$WPE_SOURCE_DIR" ]; then
         echo "  Downloading tarball..."
         wget -q --show-progress \
-            "https://wpewebkit.org/releases/wpewebkit-2.52.1.tar.xz" \
-            -O /tmp/wpewebkit-2.52.1.tar.xz
-        tar -xf /tmp/wpewebkit-2.52.1.tar.xz
-        rm -f /tmp/wpewebkit-2.52.1.tar.xz
+            "https://wpewebkit.org/releases/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz" \
+            -O "/tmp/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz"
+        tar -xf "/tmp/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz"
+        rm -f "/tmp/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz"
     fi
-    cd wpewebkit-2.52.1
+    cd "$WPE_SOURCE_DIR"
 
     patch -p1 --forward < "$BUILD_TOOLS/webkit-quirks-no-video.patch" || true
 
@@ -259,13 +265,13 @@ if [ ! -f "$WPE_PREFIX/lib/libWPEWebKit-2.0.so" ]; then
     ninja -C WebKitBuild/Release -j"$NPROC"
     ninja -C WebKitBuild/Release install
 
-    # wpewebkit-2.52.1 requires libsoup-3.0 in wpe-webkit-2.0.pc, but SFOS only has libsoup-2.4.
+    # The legacy WPE WebKit build requires libsoup-3.0 in wpe-webkit-2.0.pc, but SFOS only has libsoup-2.4.
     # The Qt5 plugin doesn't use soup directly, so remove it from the pkgconfig Requires.
     sed -i 's/libsoup-3\.0 //' "$WPE_PREFIX/lib/pkgconfig/wpe-webkit-2.0.pc" 2>/dev/null || true
 
     # Provide a config.h shim for the standalone Qt5 plugin build
-    ln -sf "$WPE_PREFIX/../../../release/workspace/wpewebkit-2.52.1/WebKitBuild/Release/cmakeconfig.h" \
-       /release/workspace/wpewebkit-2.52.1/WebKitBuild/Release/config.h 2>/dev/null || true
+    ln -sf "$WPE_SOURCE_DIR/WebKitBuild/Release/cmakeconfig.h" \
+       "$WPE_SOURCE_DIR/WebKitBuild/Release/config.h" 2>/dev/null || true
 
     # libWPEInjectedBundle.so is not installed by ninja install
     mkdir -p "$WPE_PREFIX/lib/wpe-webkit-2.0/injected-bundle"
@@ -302,18 +308,19 @@ echo "--- [10] Building Qt5 WPE plugin ---"
 if [ ! -f "$WPE_PREFIX/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     export PATH="$SYSROOT/usr/lib64/qt5/bin:$PATH"
 
-    # 2.52.1 removed the qt5/ directory; copy it from 2.50.5 if needed
-    if [ ! -d "$WORK/wpewebkit-2.52.1/Source/WebKit/UIProcess/API/wpe/qt5" ]; then
-        if [ ! -d "$WORK/wpewebkit-2.50.5" ]; then
-            echo "ERROR: $WORK/wpewebkit-2.50.5 not found; required to copy Qt5 plugin into 2.52.1" >&2
+    # The Qt5 plugin directory was removed upstream; copy the legacy source tree only
+    # for the currently scripted baseline until the 2.52.3 migration narrows this down.
+    if [ ! -d "$WPE_SOURCE_DIR/Source/WebKit/UIProcess/API/wpe/qt5" ]; then
+        if [ ! -d "$WORK/wpewebkit-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}" ]; then
+            echo "ERROR: $WORK/wpewebkit-${LEGACY_QT5_PLUGIN_SOURCE_VERSION} not found; required to copy Qt5 plugin into ${LEGACY_WPEWEBKIT_VERSION}" >&2
             exit 1
         fi
-        echo "  Copying Qt5 plugin from 2.50.5 (removed in 2.52.1)..."
-        cp -a "$WORK/wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5" \
-              "$WORK/wpewebkit-2.52.1/Source/WebKit/UIProcess/API/wpe/qt5"
+        echo "  Copying Qt5 plugin from ${LEGACY_QT5_PLUGIN_SOURCE_VERSION}..."
+        cp -a "$WORK/wpewebkit-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}/Source/WebKit/UIProcess/API/wpe/qt5" \
+              "$WPE_SOURCE_DIR/Source/WebKit/UIProcess/API/wpe/qt5"
     fi
 
-    QT5_PLUGIN_DIR="$WORK/wpewebkit-2.52.1/Source/WebKit/UIProcess/API/wpe/qt5"
+    QT5_PLUGIN_DIR="$WPE_SOURCE_DIR/Source/WebKit/UIProcess/API/wpe/qt5"
     cd "$QT5_PLUGIN_DIR"
     patch -p4 --forward < "$BUILD_TOOLS/qt5-plugin-gnuinstalldirs.patch" || true
     patch -p4 --forward < "$BUILD_TOOLS/wpeqtview-viewport-scale.patch" || true
@@ -358,15 +365,15 @@ export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib64/pkgconfig:$WPE_PREFIX/lib/pkgconfig"
 
 rm -rf build && mkdir build && cd build
-qmake -spec "$SYSROOT/usr/share/qt5/mkspecs/linux-g++" \
-    ../sailfish-browser.pro \
-    "CONFIG+=release" \
+    qmake -spec "$SYSROOT/usr/share/qt5/mkspecs/linux-g++" \
+        ../sailfish-browser.pro \
+        "CONFIG+=release" \
     "QMAKE_CXX=g++ --sysroot=$SYSROOT" \
     "QMAKE_CC=gcc --sysroot=$SYSROOT" \
-    "QMAKE_LINK=g++ --sysroot=$SYSROOT" \
-    "WPE_SFOS_PREFIX=$WPE_PREFIX" \
-    "SFOS_SYSROOT=$SYSROOT" \
-    "WPE_SOURCE_DIR=$WORK/wpewebkit-2.52.1"
+        "QMAKE_LINK=g++ --sysroot=$SYSROOT" \
+        "WPE_SFOS_PREFIX=$WPE_PREFIX" \
+        "SFOS_SYSROOT=$SYSROOT" \
+        "WPE_SOURCE_DIR=$WPE_SOURCE_DIR"
 
 # captiveportal won't build (not ported to WPE), build only core + browser
 make -C apps/lib   -j"$NPROC"
