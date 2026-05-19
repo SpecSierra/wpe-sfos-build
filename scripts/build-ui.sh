@@ -37,8 +37,18 @@ qmake -spec "${SYSROOT}/usr/share/qt5/mkspecs/linux-g++" \
     "SFOS_SYSROOT=${SYSROOT}" \
     "WPE_SOURCE_DIR=${WPE_SOURCE_DIR}"
 
-make -C apps/lib -j"${NPROC}"
-make -C apps/browser -j"${NPROC}"
+mkdir -p apps
+cd apps
+qmake -spec "${SYSROOT}/usr/share/qt5/mkspecs/linux-g++" \
+    "${BROWSER_SRC}/apps/apps.pro" \
+    "CONFIG+=release" \
+    "QMAKE_CXX=g++ --sysroot=${SYSROOT}" \
+    "QMAKE_CC=gcc --sysroot=${SYSROOT}" \
+    "QMAKE_LINK=g++ --sysroot=${SYSROOT}" \
+    "WPE_SFOS_PREFIX=${WPE_PREFIX}" \
+    "SFOS_SYSROOT=${SYSROOT}" \
+    "WPE_SOURCE_DIR=${WPE_SOURCE_DIR}"
+make -j"${NPROC}" sub-browser-all
 
 cd "${BROWSER_SRC}"
 find build -name "atlantic-browser" -not -name "*.o" -type f \

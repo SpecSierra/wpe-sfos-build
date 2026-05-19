@@ -18,6 +18,12 @@ snapshot. Those pins are explicit in `versions.env` so the remaining runtime wor
 can happen deliberately instead of chasing hard-coded versions scattered through the
 scripts.
 
+The repo-side validation baseline is now stronger than it was on the old line:
+
+- the engine, WebKit, Qt5 bridge, and Atlantic UI all build cleanly against a fresh **2.52.3** temp prefix
+- the native RPM path can package that validated temp prefix directly without hard-coded soname drift
+- `setup-rpmbuild.sh` and the WebKit RPM specs now stage the **2.52.3** engine source plus the explicit **2.52.1** Qt5 carry-forward snapshot
+
 ## Live workspace
 
 Current checkouts on the build host:
@@ -79,6 +85,12 @@ important things:
 5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.5 / WPE 2.52.3 line without editing one rescue-style script.
 6. Makes the Qt5 bridge carry-forward explicit by sourcing it from the existing `wpewebkit-2.52.1` snapshot instead of pretending a clean `2.50.5` tarball is sufficient on its own.
 
+Recent validation tightened the live flow further:
+
+1. `scripts/build-ui.sh` now drives the qmake-generated `apps/` subproject correctly and builds only the Atlantic browser targets instead of tripping over unrelated subapps.
+2. `build-rpms-native.sh` now stages shared-library families dynamically, avoids mutating the source prefix in place, and can package from an alternate validated prefix while keeping the runtime `/opt/wpe-sfos` paths explicit.
+3. `setup-rpmbuild.sh`, `rpm/wpewebkit2.spec`, and `rpm/wpewebkit2-qt5.spec` now reflect the real **2.52.3 + 2.52.1 carry-forward** source layout instead of the stale **2.50.5** assumptions.
+
 That last point is intentional: isolation work is out of the default path for this migration
 unless it becomes a release requirement again later.
 
@@ -121,10 +133,10 @@ These are the repo-local patches currently relevant to the live build flow.
 
 The next useful repo changes should be:
 
-1. Build and validate the default **SFOS 5.1.0.5 / WPE 2.52.3** line end to end.
+1. Run device/runtime validation for the rebuilt **SFOS 5.1.0.5 / WPE 2.52.3** packages.
 2. Re-check the remaining explicit shims (`libcow_string_compat.so`, `libsigill_skip.so`, `libegl-stubs.so`) against real runtime behavior.
 3. Make fresh install match the staged tree exactly, with no manual device-side fixes.
-4. Align or retire the older `setup-rpmbuild.sh` / `rpm/*.spec` path once the scripted baseline is fully proven.
+4. Decide whether the remaining older RPM specs beyond the WebKit pair should be aligned further or retired in favor of the native packaging path.
 
 ## Build philosophy
 

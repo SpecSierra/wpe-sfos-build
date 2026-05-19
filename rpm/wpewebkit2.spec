@@ -1,15 +1,17 @@
 Name:       wpewebkit2
-Summary:    WPE WebKit 2.50.5 for Sailfish OS
-Version:    2.50.5
+Summary:    WPE WebKit 2.52.3 for Sailfish OS
+Version:    2.52.3
 Release:    1
 License:    LGPLv2+ and BSD and MPLv2.0
 URL:        https://wpewebkit.org
-# Download from: https://wpewebkit.org/release/wpewebkit-2.50.5.tar.xz
+# Download from: https://wpewebkit.org/release/wpewebkit-2.52.3.tar.xz
 Source0:    wpewebkit-%{version}.tar.xz
 Source1:    sfos-toolchain.cmake
 Source2:    webkit-quirks-no-video.patch
 Source3:    patch-glibc-versions.py
-Source4:    qt5-plugin-gnuinstalldirs.patch
+Source4:    webkit-icu-imported-targets.patch
+Source5:    webkit-renderbox-isnan.patch
+Source6:    webkit-shapeoutside-isnan.patch
 
 BuildRequires:  cmake >= 3.20
 BuildRequires:  ninja
@@ -43,7 +45,7 @@ BuildRequires:  pkgconfig(epoxy)
 Requires:       wpe-sfos-compat
 
 %description
-WPE WebKit 2.50.5 built for Sailfish OS 5.0 aarch64 (Snapdragon 665,
+WPE WebKit 2.52.3 built for Sailfish OS 5.1 aarch64 (Snapdragon 665,
 ARMv8.0-A). This is the engine used by the WPE Sailfish Browser as a
 replacement for the Gecko/EmbedLite engine.
 
@@ -54,17 +56,20 @@ Build configuration:
   - glibc version tags downgraded to GLIBC_2.17
 
 %package devel
-Summary:    Development files for WPE WebKit 2.50.5
+Summary:    Development files for WPE WebKit 2.52.3
 Requires:   %{name} = %{version}-%{release}
 
 %description devel
-Headers and pkg-config file for building against WPE WebKit 2.50.5
+Headers and pkg-config files for building against WPE WebKit 2.52.3
 on Sailfish OS.
 
 # ===========================================================================
 %prep
 %setup -q -n wpewebkit-%{version}
 patch -p1 < %{SOURCE2}
+patch -p1 < %{SOURCE4}
+patch -p1 < %{SOURCE5}
+patch -p1 < %{SOURCE6}
 
 %build
 cmake -B WebKitBuild/Release -G Ninja \
@@ -103,12 +108,17 @@ cmake -B WebKitBuild/Release -G Ninja \
 ninja -C WebKitBuild/Release %{?_smp_mflags}
 
 %install
-DESTDIR=%{buildroot} ninja -C WebKitBuild/Release install
+DESTDIR=%{buildroot} cmake --install WebKitBuild/Release --prefix %{_prefix}
 
-# libWPEInjectedBundle.so is not installed by ninja install — copy manually
-install -d %{buildroot}%{_libdir}/wpe-webkit-2.0
+# The injected bundle and generated pkg-config files still need manual staging.
+install -d %{buildroot}%{_libdir}/wpe-webkit-2.0/injected-bundle
 install -m 755 WebKitBuild/Release/lib/libWPEInjectedBundle.so \
-    %{buildroot}%{_libdir}/wpe-webkit-2.0/libWPEInjectedBundle.so
+    %{buildroot}%{_libdir}/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so
+install -d %{buildroot}%{_libdir}/pkgconfig
+install -m 644 WebKitBuild/Release/wpe-webkit-2.0.pc \
+    %{buildroot}%{_libdir}/pkgconfig/wpe-webkit-2.0.pc
+install -m 644 WebKitBuild/Release/wpe-web-process-extension-2.0.pc \
+    %{buildroot}%{_libdir}/pkgconfig/wpe-web-process-extension-2.0.pc
 
 # Patch GLIBC_2.34+ version tags down to GLIBC_2.17 in all installed binaries
 python3 %{SOURCE3} \
@@ -128,7 +138,8 @@ python3 %{SOURCE3} \
 %license Source/WebKit/LICENSE
 %{_libdir}/libWPEWebKit-2.0.so.*
 %dir %{_libdir}/wpe-webkit-2.0
-%{_libdir}/wpe-webkit-2.0/libWPEInjectedBundle.so
+%dir %{_libdir}/wpe-webkit-2.0/injected-bundle
+%{_libdir}/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so
 %dir %{_libexecdir}/wpe-webkit-2.0
 %{_libexecdir}/wpe-webkit-2.0/WPEWebProcess
 %{_libexecdir}/wpe-webkit-2.0/WPENetworkProcess
@@ -138,3 +149,4 @@ python3 %{SOURCE3} \
 %{_libdir}/libWPEWebKit-2.0.so
 %{_includedir}/wpe-webkit-2.0
 %{_libdir}/pkgconfig/wpe-webkit-2.0.pc
+%{_libdir}/pkgconfig/wpe-web-process-extension-2.0.pc

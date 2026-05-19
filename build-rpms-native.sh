@@ -10,13 +10,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "${SCRIPT_DIR}/versions.env"
+source "${SCRIPT_DIR}/scripts/common.sh"
 
-BROWSER_SRC="/release/workspace/sailfish-browser-wpe"
-WPE_PREFIX="/opt/wpe-sfos"
-OUT="/tmp/wpe-sfos-rpms"
-STAGING="/tmp/wpe-sfos-stage"
-SFOS_SYSROOT="/opt/sfos-sysroot"
+OUT="${OUT:-/tmp/wpe-sfos-rpms}"
+STAGING="${STAGING:-/tmp/wpe-sfos-stage}"
+PACKAGE_RUNTIME_PREFIX="${PACKAGE_RUNTIME_PREFIX:-/opt/wpe-sfos}"
 
 mkdir -p "$OUT"
 
@@ -43,7 +41,7 @@ build_ld_preload() {
 
 WPE_COMPAT_PRELOAD="$(build_ld_preload)"
 WPE_COMPAT_LIBRARY_PATH="/usr/lib64/wpe-compat:/usr/lib64"
-WPE_HELPER_LIBRARY_PATH="${WPE_COMPAT_LIBRARY_PATH}:/opt/wpe-sfos/lib"
+WPE_HELPER_LIBRARY_PATH="${WPE_COMPAT_LIBRARY_PATH}:${PACKAGE_RUNTIME_PREFIX}/lib"
 
 if [ -n "${WPE_COMPAT_PRELOAD}" ]; then
     WPE_PRELOAD_EXPORT="export LD_PRELOAD=${WPE_COMPAT_PRELOAD}"
@@ -58,6 +56,24 @@ stage_cp() {
     local src="$1" dst_dir="$2" root="$3"
     mkdir -p "${root}${dst_dir}"
     cp -a "$src" "${root}${dst_dir}/"
+}
+
+stage_shared_library_family() {
+    local source_stem="$1" dst_dir="$2" root="$3"
+    local matches=("${source_stem}"*)
+
+    if [ ! -e "${matches[0]}" ]; then
+        echo "ERROR: no shared-library files found for ${source_stem}" >&2
+        return 1
+    fi
+
+    mkdir -p "${root}${dst_dir}"
+    cp -a "${matches[@]}" "${root}${dst_dir}/"
+}
+
+patch_staged_library_family() {
+    local staged_symlink="$1"
+    maybe_patch_glibc_versions "$(readlink -f "${staged_symlink}")"
 }
 
 # ---------------------------------------------------------------------------
@@ -93,10 +109,8 @@ fpm_rpm() {
 # ===========================================================================
 echo "--- Staging libwpe ---"
 S="${STAGING}/libwpe"; rm -rf "$S"; mkdir -p "$S"
-stage_cp "${WPE_PREFIX}/lib/libwpe-1.0.so.1.10.0"   /usr/lib64  "$S"
-stage_cp "${WPE_PREFIX}/lib/libwpe-1.0.so.1"         /usr/lib64  "$S"
+stage_shared_library_family "${WPE_PREFIX}/lib/libwpe-1.0.so" /usr/lib64 "$S"
 # devel files (include in same RPM for simplicity)
-stage_cp "${WPE_PREFIX}/lib/libwpe-1.0.so"           /usr/lib64  "$S"
 stage_cp "${WPE_PREFIX}/include/wpe-1.0"             /usr/include "$S"
 mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/wpe-1.0.pc"      "${S}/usr/lib64/pkgconfig/"
@@ -109,10 +123,8 @@ fpm_rpm libwpe "$LIBWPE_VERSION" "WPE platform library for Sailfish OS" "$S"
 # ===========================================================================
 echo "--- Staging libepoxy ---"
 S="${STAGING}/libepoxy"; rm -rf "$S"; mkdir -p "$S"
-maybe_patch_glibc_versions "${WPE_PREFIX}/lib/libepoxy.so.0.0.0"
-stage_cp "${WPE_PREFIX}/lib/libepoxy.so.0.0.0"       /usr/lib64  "$S"
-stage_cp "${WPE_PREFIX}/lib/libepoxy.so.0"           /usr/lib64  "$S"
-stage_cp "${WPE_PREFIX}/lib/libepoxy.so"             /usr/lib64  "$S"
+stage_shared_library_family "${WPE_PREFIX}/lib/libepoxy.so" /usr/lib64 "$S"
+patch_staged_library_family "${S}/usr/lib64/libepoxy.so"
 stage_cp "${WPE_PREFIX}/include/epoxy"               /usr/include "$S"
 mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/epoxy.pc"         "${S}/usr/lib64/pkgconfig/"
@@ -125,10 +137,8 @@ fpm_rpm libepoxy "$LIBEPOXY_VERSION" "OpenGL function pointer management for Sai
 # ===========================================================================
 echo "--- Staging wpebackend-fdo ---"
 S="${STAGING}/wpebackend-fdo"; rm -rf "$S"; mkdir -p "$S"
-stage_cp "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1.11.0" /usr/lib64 "$S"
-maybe_patch_glibc_versions "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1.11.0"
-ln -sfn libWPEBackend-fdo-1.0.so.1.11.0 "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1"
-ln -sfn libWPEBackend-fdo-1.0.so.1      "${S}/usr/lib64/libWPEBackend-fdo-1.0.so"
+stage_shared_library_family "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so" /usr/lib64 "$S"
+patch_staged_library_family "${S}/usr/lib64/libWPEBackend-fdo-1.0.so"
 stage_cp "${WPE_PREFIX}/include/wpe-fdo-1.0"              /usr/include "$S"
 mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/wpebackend-fdo-1.0.pc"    "${S}/usr/lib64/pkgconfig/"
@@ -143,21 +153,18 @@ fpm_rpm wpebackend-fdo "$WPEBACKEND_FDO_VERSION" "WPE backend (freedesktop.org/W
 echo "--- Staging wpewebkit2 ---"
 S="${STAGING}/wpewebkit2"; rm -rf "$S"; mkdir -p "$S"
 
-# Main library — patch glibc version requirements before staging
-maybe_patch_glibc_versions "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"
-stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"    /usr/lib64 "$S"
-# Recreate .so.1 pointing to the GLIBC-patched filename (not the original 1.9.5)
-ln -sfn libWPEWebKit-2.0.so.1.6.10 "${S}/usr/lib64/libWPEWebKit-2.0.so.1"
-ln -sfn libWPEWebKit-2.0.so.1      "${S}/usr/lib64/libWPEWebKit-2.0.so"
+# Main library — patch the staged copy rather than mutating the source prefix.
+stage_shared_library_family "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" /usr/lib64 "$S"
+patch_staged_library_family "${S}/usr/lib64/libWPEWebKit-2.0.so"
 
 # InjectedBundle — staged in both the install path AND the compile-time prefix
 # (WPEWebProcess binary has /opt/wpe-sfos hard-coded as the injected-bundle dir)
 mkdir -p "${S}/usr/lib64/wpe-webkit-2.0"
-mkdir -p "${S}/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle"
+mkdir -p "${S}${PACKAGE_RUNTIME_PREFIX}/lib/wpe-webkit-2.0/injected-bundle"
 cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
       "${S}/usr/lib64/wpe-webkit-2.0/"
 cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
-      "${S}/opt/wpe-sfos/lib/wpe-webkit-2.0/injected-bundle/"
+      "${S}${PACKAGE_RUNTIME_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/"
 
 # Helper process binaries — patch GLIBC version requirements (2.34→2.17) so they run on SFOS
 mkdir -p "${S}/usr/libexec/wpe-webkit-2.0"
@@ -168,9 +175,9 @@ for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
 done
 
 # Wrapper scripts for helper processes (set LD_PRELOAD, GStreamer paths, etc.)
-mkdir -p "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0"
+mkdir -p "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
-    cat > "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}" <<WRAPPER
+    cat > "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0/${helper}" <<WRAPPER
 #!/bin/sh
 ${WPE_PRELOAD_EXPORT}
 export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
@@ -181,7 +188,7 @@ export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
 export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
 exec /usr/libexec/wpe-webkit-2.0/${helper} \$@
 WRAPPER
-    chmod 755 "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}"
+    chmod 755 "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0/${helper}"
 done
 
 # Inspector resource (not MiniBrowser)
@@ -206,17 +213,16 @@ fpm_rpm wpewebkit2 "$LEGACY_WPEWEBKIT_VERSION" "WPE WebKit ${LEGACY_WPEWEBKIT_VE
 echo "--- Staging wpewebkit2-qt5 ---"
 S="${STAGING}/wpewebkit2-qt5"; rm -rf "$S"; mkdir -p "$S"
 
-# Patch glibc version symbols in libqtwpe.so before packaging
-maybe_patch_glibc_versions "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
-# Add libEGL.so.1 as DT_NEEDED (EGL symbols are directly referenced)
-patchelf --add-needed libEGL.so.1 \
-    "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" 2>/dev/null || true
-
 mkdir -p "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe"
 cp -a "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" \
       "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe/"
 cp -a "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/qmldir" \
       "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe/"
+maybe_patch_glibc_versions "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
+if ! patchelf --print-needed "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" | grep -qx 'libEGL.so.1'; then
+    patchelf --add-needed libEGL.so.1 \
+        "${S}/usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
+fi
 # Flat symlink so the browser binary can find libqtwpe.so via ldconfig
 ln -sfn /usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so \
         "${S}/usr/lib64/libqtwpe.so"

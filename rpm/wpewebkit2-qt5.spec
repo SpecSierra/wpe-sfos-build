@@ -1,15 +1,14 @@
+%global qt5_snapshot_version 2.52.1
+
 Name:       wpewebkit2-qt5
-Summary:    Qt5 QML plugin for WPE WebKit 2.50.5
-Version:    2.50.5
+Summary:    Qt5 QML plugin for WPE WebKit 2.52.3
+Version:    2.52.3
 Release:    1
 License:    LGPLv2+
 URL:        https://wpewebkit.org
-# Source is the qt5/ subdirectory inside the wpewebkit tarball.
-# Extract with: tar -xf wpewebkit-2.50.5.tar.xz
-#   wpewebkit-2.50.5/Source/WebKit/UIProcess/API/wpe/qt5/
-Source0:    wpewebkit-%{version}.tar.xz
+# Source is the carried-forward Qt5 bridge snapshot from the validated 2.52.1 tree.
+Source0:    wpewebkit-qt5-%{qt5_snapshot_version}.tar.xz
 Source1:    sfos-toolchain.cmake
-Source2:    qt5-plugin-gnuinstalldirs.patch
 
 BuildRequires:  cmake >= 3.20
 BuildRequires:  ninja
@@ -38,11 +37,9 @@ Import in QML:
 
 # ===========================================================================
 %prep
-%setup -q -n wpewebkit-%{version}
-patch -p1 < %{SOURCE2}
+%setup -q -n wpewebkit-qt5-%{qt5_snapshot_version}
 
 %build
-cd Source/WebKit/UIProcess/API/wpe/qt5
 cmake -B build -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=%{SOURCE1} \
     -DCMAKE_BUILD_TYPE=Release \
@@ -51,8 +48,10 @@ cmake -B build -G Ninja \
 ninja -C build %{?_smp_mflags}
 
 %install
-cd Source/WebKit/UIProcess/API/wpe/qt5
-DESTDIR=%{buildroot} ninja -C build install
+DESTDIR=%{buildroot} cmake --install build --prefix %{_prefix}
+install -d %{buildroot}%{_libdir}
+ln -sfn /usr/lib64/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so \
+    %{buildroot}%{_libdir}/libqtwpe.so
 
 %post
 /sbin/ldconfig || :
@@ -61,6 +60,7 @@ DESTDIR=%{buildroot} ninja -C build install
 /sbin/ldconfig || :
 
 %files
+%{_libdir}/libqtwpe.so
 %dir %{_libdir}/qt5/qml/org/wpewebkit
 %dir %{_libdir}/qt5/qml/org/wpewebkit/qtwpe
 %{_libdir}/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so

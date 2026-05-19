@@ -16,6 +16,7 @@ SOURCES_DIR="${1:-$HOME/rpmbuild/SOURCES}"
 mkdir -p "$SOURCES_DIR"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/scripts/common.sh"
 
 echo "==> Staging RPM sources to: $SOURCES_DIR"
 
@@ -36,81 +37,103 @@ echo "--- wpe-sfos-compat 1.0.0 ---"
 )
 
 # ---------------------------------------------------------------------------
-# 2. libwpe 1.17.0
+# 2. libwpe
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- libwpe 1.17.0 ---"
-if [ ! -f "$SOURCES_DIR/libwpe-1.17.0.tar.xz" ]; then
+echo "--- libwpe ${LIBWPE_VERSION} ---"
+if [ ! -f "$SOURCES_DIR/libwpe-${LIBWPE_VERSION}.tar.xz" ]; then
   TMP=$(mktemp -d)
-  git clone --depth=1 --branch 1.17.0 \
+  git clone --depth=1 --branch "${LIBWPE_VERSION}" \
     https://github.com/WebPlatformForEmbedded/libwpe "$TMP/libwpe" \
     2>/dev/null || {
-      echo "  Tag 1.17.0 not found, cloning HEAD..."
+      echo "  Tag ${LIBWPE_VERSION} not found, cloning HEAD..."
       git clone --depth=1 https://github.com/WebPlatformForEmbedded/libwpe "$TMP/libwpe"
     }
-  git -C "$TMP/libwpe" archive --prefix=libwpe-1.17.0/ HEAD \
-    | xz > "$SOURCES_DIR/libwpe-1.17.0.tar.xz"
+  git -C "$TMP/libwpe" archive --prefix="libwpe-${LIBWPE_VERSION}/" HEAD \
+    | xz > "$SOURCES_DIR/libwpe-${LIBWPE_VERSION}.tar.xz"
   rm -rf "$TMP"
-  echo "  Created libwpe-1.17.0.tar.xz"
+  echo "  Created libwpe-${LIBWPE_VERSION}.tar.xz"
 else
-  echo "  Already present: libwpe-1.17.0.tar.xz"
+  echo "  Already present: libwpe-${LIBWPE_VERSION}.tar.xz"
 fi
 
 # ---------------------------------------------------------------------------
-# 3. libepoxy 1.5.11
+# 3. libepoxy
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- libepoxy 1.5.11 ---"
-if [ ! -f "$SOURCES_DIR/libepoxy-1.5.11.tar.xz" ]; then
+echo "--- libepoxy ${LIBEPOXY_VERSION} ---"
+if [ ! -f "$SOURCES_DIR/libepoxy-${LIBEPOXY_VERSION}.tar.xz" ]; then
   TMP=$(mktemp -d)
-  git clone --depth=1 --branch 1.5.11 \
+  git clone --depth=1 --branch "${LIBEPOXY_VERSION}" \
     https://github.com/anholt/libepoxy "$TMP/libepoxy" \
     2>/dev/null || {
-      echo "  Tag 1.5.11 not found, cloning HEAD..."
+      echo "  Tag ${LIBEPOXY_VERSION} not found, cloning HEAD..."
       git clone --depth=1 https://github.com/anholt/libepoxy "$TMP/libepoxy"
     }
-  git -C "$TMP/libepoxy" archive --prefix=libepoxy-1.5.11/ HEAD \
-    | xz > "$SOURCES_DIR/libepoxy-1.5.11.tar.xz"
+  git -C "$TMP/libepoxy" archive --prefix="libepoxy-${LIBEPOXY_VERSION}/" HEAD \
+    | xz > "$SOURCES_DIR/libepoxy-${LIBEPOXY_VERSION}.tar.xz"
   rm -rf "$TMP"
-  echo "  Created libepoxy-1.5.11.tar.xz"
+  echo "  Created libepoxy-${LIBEPOXY_VERSION}.tar.xz"
 else
-  echo "  Already present: libepoxy-1.5.11.tar.xz"
+  echo "  Already present: libepoxy-${LIBEPOXY_VERSION}.tar.xz"
 fi
 
 # ---------------------------------------------------------------------------
-# 4. WPEBackend-fdo 1.17.0
+# 4. WPEBackend-fdo
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- wpebackend-fdo 1.17.0 ---"
-if [ ! -f "$SOURCES_DIR/wpebackend-fdo-1.17.0.tar.xz" ]; then
+echo "--- wpebackend-fdo ${WPEBACKEND_FDO_VERSION} ---"
+if [ ! -f "$SOURCES_DIR/wpebackend-fdo-${WPEBACKEND_FDO_VERSION}.tar.xz" ]; then
   TMP=$(mktemp -d)
-  git clone --depth=1 --branch 1.17.0 \
+  git clone --depth=1 --branch "${WPEBACKEND_FDO_VERSION}" \
     https://github.com/igalia/WPEBackend-fdo "$TMP/wpebackend-fdo" \
     2>/dev/null || {
-      echo "  Tag 1.17.0 not found, cloning HEAD..."
+      echo "  Tag ${WPEBACKEND_FDO_VERSION} not found, cloning HEAD..."
       git clone --depth=1 https://github.com/igalia/WPEBackend-fdo "$TMP/wpebackend-fdo"
     }
-  git -C "$TMP/wpebackend-fdo" archive --prefix=wpebackend-fdo-1.17.0/ HEAD \
-    | xz > "$SOURCES_DIR/wpebackend-fdo-1.17.0.tar.xz"
+  git -C "$TMP/wpebackend-fdo" archive --prefix="wpebackend-fdo-${WPEBACKEND_FDO_VERSION}/" HEAD \
+    | xz > "$SOURCES_DIR/wpebackend-fdo-${WPEBACKEND_FDO_VERSION}.tar.xz"
   rm -rf "$TMP"
-  echo "  Created wpebackend-fdo-1.17.0.tar.xz"
+  echo "  Created wpebackend-fdo-${WPEBACKEND_FDO_VERSION}.tar.xz"
 else
-  echo "  Already present: wpebackend-fdo-1.17.0.tar.xz"
+  echo "  Already present: wpebackend-fdo-${WPEBACKEND_FDO_VERSION}.tar.xz"
 fi
 
 # ---------------------------------------------------------------------------
-# 5. WPEWebKit 2.50.5
+# 5. WPEWebKit
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- wpewebkit 2.50.5 ---"
-if [ ! -f "$SOURCES_DIR/wpewebkit-2.50.5.tar.xz" ]; then
+echo "--- wpewebkit ${LEGACY_WPEWEBKIT_VERSION} ---"
+if [ ! -f "$SOURCES_DIR/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz" ]; then
   echo "  Downloading from wpewebkit.org..."
   curl -L --progress-bar \
-    "https://wpewebkit.org/release/wpewebkit-2.50.5.tar.xz" \
-    -o "$SOURCES_DIR/wpewebkit-2.50.5.tar.xz"
-  echo "  Downloaded wpewebkit-2.50.5.tar.xz"
+    "https://wpewebkit.org/release/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz" \
+    -o "$SOURCES_DIR/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz"
+  echo "  Downloaded wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz"
 else
-  echo "  Already present: wpewebkit-2.50.5.tar.xz"
+  echo "  Already present: wpewebkit-${LEGACY_WPEWEBKIT_VERSION}.tar.xz"
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Qt5 carry-forward snapshot (standalone qt5/ source tree)
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- wpewebkit-qt5 ${LEGACY_QT5_PLUGIN_SOURCE_VERSION} snapshot ---"
+QT5_SNAPSHOT_ROOT="${QT5_PLUGIN_SOURCE_DIR_DEFAULT}/Source/WebKit/UIProcess/API/wpe/qt5"
+QT5_SNAPSHOT_TARBALL="wpewebkit-qt5-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}.tar.xz"
+if [ ! -f "${SOURCES_DIR}/${QT5_SNAPSHOT_TARBALL}" ]; then
+  if [ ! -d "${QT5_SNAPSHOT_ROOT}" ]; then
+    echo "ERROR: Qt5 carry-forward snapshot not found at ${QT5_SNAPSHOT_ROOT}" >&2
+    exit 1
+  fi
+  TMP=$(mktemp -d)
+  cp -a "${QT5_SNAPSHOT_ROOT}" "${TMP}/wpewebkit-qt5-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}"
+  tar -C "${TMP}" -cJf "${SOURCES_DIR}/${QT5_SNAPSHOT_TARBALL}" \
+    "wpewebkit-qt5-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}"
+  rm -rf "${TMP}"
+  echo "  Created ${QT5_SNAPSHOT_TARBALL}"
+else
+  echo "  Already present: ${QT5_SNAPSHOT_TARBALL}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -122,7 +145,9 @@ for f in \
     sfos-toolchain.cmake \
     sfos-meson-cross.ini \
     webkit-quirks-no-video.patch \
-    qt5-plugin-gnuinstalldirs.patch \
+    webkit-icu-imported-targets.patch \
+    webkit-renderbox-isnan.patch \
+    webkit-shapeoutside-isnan.patch \
     patch-glibc-versions.py; do
   cp -v "$SCRIPT_DIR/$f" "$SOURCES_DIR/$f"
 done
