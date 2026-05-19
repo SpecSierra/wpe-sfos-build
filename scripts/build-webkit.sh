@@ -102,7 +102,7 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
 
     if [ ! -d "${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5" ]; then
         if [ ! -d "${QT5_PLUGIN_SOURCE_DIR}" ]; then
-            echo "ERROR: ${QT5_PLUGIN_SOURCE_DIR} not found; required to copy Qt5 plugin into ${WPE_WEBKIT_VERSION}" >&2
+            echo "ERROR: ${QT5_PLUGIN_SOURCE_DIR} not found; required to copy the carried-forward Qt5 plugin into ${WPE_WEBKIT_VERSION}" >&2
             exit 1
         fi
         echo "  Copying Qt5 plugin from $(basename "${QT5_PLUGIN_SOURCE_DIR}")..."
@@ -111,7 +111,7 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     fi
 
     qt5_plugin_dir="${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5"
-    apply_repo_patches 4 "${qt5_plugin_dir}" "${QT5_PLUGIN_PATCHES[@]}"
+    apply_repo_patches 7 "${qt5_plugin_dir}" "${QT5_PLUGIN_PATCHES[@]}"
     cd "${qt5_plugin_dir}"
 
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \

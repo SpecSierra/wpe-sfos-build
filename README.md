@@ -11,10 +11,12 @@ This repo is now being used to move Atlantic onto a cleaner baseline:
 - **Priority:** smaller patch queue, simpler packaging, faster engine updates
 - **Not a priority right now:** `bubblewrap`, `sailjail`, or growing the old preload stack
 
-The live scripts in this repo now target the **SFOS 5.1.0.5** sysroot while still
-building the older **WPE 2.52.1** engine line. That baseline is explicit in
-`versions.env` so the remaining engine migration can happen deliberately instead of
-chasing hard-coded versions scattered through the scripts.
+The live scripts in this repo now default to the **SFOS 5.1.0.5 / WPE 2.52.3**
+line. The older **WPE 2.52.1** line is still available by explicit override while
+the Qt5 bridge continues to be carried forward from the existing **2.52.1** source
+snapshot. Those pins are explicit in `versions.env` so the remaining runtime work
+can happen deliberately instead of chasing hard-coded versions scattered through the
+scripts.
 
 ## Live workspace
 
@@ -54,8 +56,8 @@ The important pins now live in `versions.env`.
 | libwpe | `1.17.0` |
 | libepoxy | `1.5.11` |
 | WPEBackend-fdo | `1.17.0` |
-| WPE WebKit | `2.52.1` |
-| Qt5 plugin source fallback | `2.50.5` |
+| WPE WebKit | `2.52.3` |
+| Qt5 plugin source fallback | `2.52.1` |
 
 ### Migration target
 
@@ -66,15 +68,16 @@ The important pins now live in `versions.env`.
 
 ## Current script behavior
 
-`build-all.sh` and `build-rpms-native.sh` still represent the old line, but the repo now
-has a real split between bootstrap, engine, WebKit, UI, and packaging entrypoints. The
-current cleanup pass does four important things:
+`build-all.sh` and `build-rpms-native.sh` now expose a real split between bootstrap,
+engine, WebKit, UI, and packaging entrypoints. The current cleanup pass does six
+important things:
 
 1. Removes hard-coded version drift by sourcing `versions.env`.
 2. Fixes the missing `WPE_SOURCE_DIR` wiring in `build-all.sh`.
 3. Stops packaging and depending on `bubblewrap` even though the current WPE build already sets `-DENABLE_BUBBLEWRAP_SANDBOX=OFF`.
 4. Drops `libglibc-compat.so`, `libglib-compat.so`, and default GLIBC retagging from the normal **SFOS 5.1.0.5** path while keeping the still-uncertain shims explicit.
-5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.5 / WPE 2.52.3 migration without editing one rescue-style script.
+5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.5 / WPE 2.52.3 line without editing one rescue-style script.
+6. Makes the Qt5 bridge carry-forward explicit by sourcing it from the existing `wpewebkit-2.52.1` snapshot instead of pretending a clean `2.50.5` tarball is sufficient on its own.
 
 That last point is intentional: isolation work is out of the default path for this migration
 unless it becomes a release requirement again later.
@@ -106,20 +109,19 @@ These are the repo-local patches currently relevant to the live build flow.
 | --- | --- | --- |
 | `libepoxy-rtld-default-fallback.patch` | `keep temporarily` | currently applied in the engine build so `libegl-stubs.so` can satisfy missing EGL symbols on Sailfish/hybris |
 | `webkit-quirks-no-video.patch` | `re-check` | only relevant while the scripted baseline still builds WebKit with `ENABLE_VIDEO=OFF` |
-| `qt5-plugin-gnuinstalldirs.patch` | `keep temporarily` | still wired into the standalone Qt5 bridge build for install-path correctness |
-| `qt5-plugin-epoxy-gl-fix.patch` | `keep temporarily` | still wired into the Qt5 bridge build to avoid epoxy/Qt OpenGL header conflicts |
-| `wpeqtview-viewport-scale.patch` | `keep temporarily` | required by the live UI flow because `WPEWebContainer` sets device scale before the web view is created, so the deferred scale behavior still matters |
-| `wpeqtview-sfos-api.patch` | `keep temporarily` | required by the live UI code: `WPEWebPage` and `WPEWebContainer` directly use `setUserAgent`, `setDeviceScaleFactor`, and multiple extra `WPEQtView` signals |
+| `qt5-plugin-gnuinstalldirs.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this install-path fix, so it is no longer re-applied in the default path |
+| `qt5-plugin-epoxy-gl-fix.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this header/include fix |
+| `wpeqtview-carryforward.patch` | `reference only` | records the SFOS API additions, deferred device scale, and Qt 5.6 touch guard already carried by the `wpewebkit-2.52.1` Qt5 source snapshot |
 | `BubblewrapLauncher-sfos-sandbox.patch` | `drop from default path` | historical SFOS 5.0 isolation workaround; no longer part of the main build flow |
 
 ## Practical next steps
 
 The next useful repo changes should be:
 
-1. Split the current rescue-style flow into explicit engine, WebKit, UI, and packaging scripts.
-2. Rebase the existing Qt bridge carry-forward onto **2.52.3** with the smallest possible local diff.
-3. Shrink the default runtime environment until helper processes launch without the old preload pile.
-4. Make fresh install match the staged tree exactly, with no manual device-side fixes.
+1. Build and validate the default **SFOS 5.1.0.5 / WPE 2.52.3** line end to end.
+2. Re-check the remaining explicit shims (`libcow_string_compat.so`, `libsigill_skip.so`, `libegl-stubs.so`) against real runtime behavior.
+3. Make fresh install match the staged tree exactly, with no manual device-side fixes.
+4. Align or retire the older `setup-rpmbuild.sh` / `rpm/*.spec` path once the scripted baseline is fully proven.
 
 ## Build philosophy
 

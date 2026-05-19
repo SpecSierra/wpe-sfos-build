@@ -1,6 +1,7 @@
 --- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.h
 +++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.h
-@@ -63,6 +63,9 @@ public:
+@@ -64,6 +64,9 @@
+ 
      WebKitWebView* webView() const;
  
 +    void setUserAgent(const QString& userAgent);
@@ -9,7 +10,7 @@
  public Q_SLOTS:
      void goBack();
      void goForward();
-@@ -76,6 +79,13 @@ Q_SIGNALS:
+@@ -78,6 +81,12 @@
      void titleChanged();
      void loadingChanged(WPEQtViewLoadRequest* loadRequest);
      void loadProgressChanged();
@@ -21,9 +22,37 @@
 +    void leaveFullscreenRequested();
  
  protected:
+     bool errorOccured() const { return m_errorOccured; };
+@@ -116,4 +125,5 @@
+     QSizeF m_size;
+     WPEQtViewBackend* m_backend { nullptr };
+     bool m_errorOccured { false };
++    qreal m_pendingDeviceScaleFactor { 1.0 };
+ };
 --- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
 +++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
-@@ -520,3 +520,16 @@ WebKitWebView* WPEQtView::webView() const
+@@ -52,7 +52,9 @@
+     setFlag(ItemHasContents, true);
+     setAcceptedMouseButtons(Qt::AllButtons);
+     setAcceptHoverEvents(true);
++#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+     setAcceptTouchEvents(true);
++#endif
+ }
+ 
+ WPEQtView::~WPEQtView()
+@@ -117,6 +119,9 @@
+     g_signal_connect(m_webView, "load-changed", G_CALLBACK(notifyLoadChangedCallback), this);
+     g_signal_connect(m_webView, "load-failed", G_CALLBACK(notifyLoadFailedCallback), this);
+ 
++    if (m_pendingDeviceScaleFactor != 1.0)
++        webkit_web_view_set_zoom_level(m_webView, m_pendingDeviceScaleFactor);
++
+     if (!m_url.isEmpty())
+         webkit_web_view_load_uri(m_webView, m_url.toString().toUtf8().constData());
+     else if (!m_html.isEmpty())
+@@ -519,3 +524,19 @@
+ {
      return m_webView;
  }
 +
@@ -37,6 +66,7 @@
 +
 +void WPEQtView::setDeviceScaleFactor(qreal scale)
 +{
++    m_pendingDeviceScaleFactor = scale;
 +    if (!m_webView)
 +        return;
 +    webkit_web_view_set_zoom_level(m_webView, scale);
