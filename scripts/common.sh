@@ -15,3 +15,8 @@ export NPROC="${NPROC:-$(nproc)}"
 export LEGACY_WPE_SOURCE_DIR="${WORK}/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}"
 export TARGET_WPE_SOURCE_DIR="${WORK}/wpewebkit-${TARGET_WPEWEBKIT_VERSION}"
 export QT5_PLUGIN_SOURCE_DIR_DEFAULT="${WORK}/wpewebkit-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}"
+
+maybe_patch_glibc_versions() {
+    [ "${PATCH_GLIBC_VERSIONS:-0}" = "1" ] || return 0
+    python3 "${BUILD_TOOLS}/patch-glibc-versions.py" "$@"
+}

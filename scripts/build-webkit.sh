@@ -79,17 +79,21 @@ else
 fi
 
 echo ""
-echo "--- [9] Patching GLIBC version tags ---"
-for file in \
-    "${WPE_PREFIX}"/lib/libWPEWebKit-2.0.so.*.*.* \
-    "${WPE_PREFIX}/lib/libWPEInjectedBundle.so" \
-    "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
-    "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPEWebProcess" \
-    "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPENetworkProcess" \
-    "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPEGPUProcess"
-do
-    [ -f "${file}" ] && python3 "${BUILD_TOOLS}/patch-glibc-versions.py" "${file}" || true
-done
+if [ "${PATCH_GLIBC_VERSIONS}" = "1" ]; then
+    echo "--- [9] Patching GLIBC version tags ---"
+    for file in \
+        "${WPE_PREFIX}"/lib/libWPEWebKit-2.0.so.*.*.* \
+        "${WPE_PREFIX}/lib/libWPEInjectedBundle.so" \
+        "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
+        "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPEWebProcess" \
+        "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPENetworkProcess" \
+        "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPEGPUProcess"
+    do
+        [ -f "${file}" ] && maybe_patch_glibc_versions "${file}" || true
+    done
+else
+    echo "--- [9] Skipping GLIBC version retagging for SFOS ${SFOS_SYSROOT_VERSION} ---"
+fi
 
 echo ""
 echo "--- [10] Building Qt5 WPE plugin ---"

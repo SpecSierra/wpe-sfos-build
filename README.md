@@ -73,7 +73,8 @@ current cleanup pass does four important things:
 1. Removes hard-coded version drift by sourcing `versions.env`.
 2. Fixes the missing `WPE_SOURCE_DIR` wiring in `build-all.sh`.
 3. Stops packaging and depending on `bubblewrap` even though the current WPE build already sets `-DENABLE_BUBBLEWRAP_SANDBOX=OFF`.
-4. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.5 / WPE 2.52.3 migration without editing one rescue-style script.
+4. Drops `libglibc-compat.so`, `libglib-compat.so`, and default GLIBC retagging from the normal **SFOS 5.1.0.5** path while keeping the still-uncertain shims explicit.
+5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.5 / WPE 2.52.3 migration without editing one rescue-style script.
 
 That last point is intentional: isolation work is out of the default path for this migration
 unless it becomes a release requirement again later.

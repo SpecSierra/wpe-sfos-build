@@ -21,6 +21,37 @@ SFOS_SYSROOT="/opt/sfos-sysroot"
 mkdir -p "$OUT"
 
 # ---------------------------------------------------------------------------
+# Helpers: compat flags and GLIBC retagging
+# ---------------------------------------------------------------------------
+maybe_patch_glibc_versions() {
+    [ "${PATCH_GLIBC_VERSIONS}" = "1" ] || return 0
+    python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$@"
+}
+
+build_ld_preload() {
+    local libs=()
+
+    [ "${USE_GLIBC_COMPAT}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libglibc-compat.so")
+    [ "${USE_COW_STRING_COMPAT}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libcow_string_compat.so")
+    [ "${USE_SIGILL_SKIP}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libsigill_skip.so")
+    [ "${USE_GLIB_COMPAT}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libglib-compat.so")
+    [ "${USE_EGL_STUBS}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libegl-stubs.so")
+
+    local IFS=:
+    printf '%s' "${libs[*]}"
+}
+
+WPE_COMPAT_PRELOAD="$(build_ld_preload)"
+WPE_COMPAT_LIBRARY_PATH="/usr/lib64/wpe-compat:/usr/lib64"
+WPE_HELPER_LIBRARY_PATH="${WPE_COMPAT_LIBRARY_PATH}:/opt/wpe-sfos/lib"
+
+if [ -n "${WPE_COMPAT_PRELOAD}" ]; then
+    WPE_PRELOAD_EXPORT="export LD_PRELOAD=${WPE_COMPAT_PRELOAD}"
+else
+    WPE_PRELOAD_EXPORT=""
+fi
+
+# ---------------------------------------------------------------------------
 # Helper: copy a file/symlink tree into staging root
 # ---------------------------------------------------------------------------
 stage_cp() {
@@ -78,7 +109,7 @@ fpm_rpm libwpe "$LIBWPE_VERSION" "WPE platform library for Sailfish OS" "$S"
 # ===========================================================================
 echo "--- Staging libepoxy ---"
 S="${STAGING}/libepoxy"; rm -rf "$S"; mkdir -p "$S"
-python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "${WPE_PREFIX}/lib/libepoxy.so.0.0.0"
+maybe_patch_glibc_versions "${WPE_PREFIX}/lib/libepoxy.so.0.0.0"
 stage_cp "${WPE_PREFIX}/lib/libepoxy.so.0.0.0"       /usr/lib64  "$S"
 stage_cp "${WPE_PREFIX}/lib/libepoxy.so.0"           /usr/lib64  "$S"
 stage_cp "${WPE_PREFIX}/lib/libepoxy.so"             /usr/lib64  "$S"
@@ -96,7 +127,7 @@ echo "--- Staging wpebackend-fdo ---"
 S="${STAGING}/wpebackend-fdo"; rm -rf "$S"; mkdir -p "$S"
 mkdir -p "${S}/usr/lib64"
 cp "${WPE_PREFIX}/lib/aarch64-linux-gnu/libWPEBackend-fdo-1.0.so.1.11.0" "${S}/usr/lib64/"
-python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1.11.0"
+maybe_patch_glibc_versions "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1.11.0"
 ln -sfn libWPEBackend-fdo-1.0.so.1.11.0 "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1"
 ln -sfn libWPEBackend-fdo-1.0.so.1      "${S}/usr/lib64/libWPEBackend-fdo-1.0.so"
 stage_cp "${WPE_PREFIX}/include/wpe-fdo-1.0"              /usr/include "$S"
@@ -115,8 +146,7 @@ echo "--- Staging wpewebkit2 ---"
 S="${STAGING}/wpewebkit2"; rm -rf "$S"; mkdir -p "$S"
 
 # Main library — patch glibc version requirements before staging
-python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
-    "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"
+maybe_patch_glibc_versions "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"
 stage_cp "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so.1.6.10"    /usr/lib64 "$S"
 # Recreate .so.1 pointing to the GLIBC-patched filename (not the original 1.9.5)
 ln -sfn libWPEWebKit-2.0.so.1.6.10 "${S}/usr/lib64/libWPEWebKit-2.0.so.1"
@@ -136,17 +166,16 @@ mkdir -p "${S}/usr/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
     cp -a "${WPE_PREFIX}/libexec/wpe-webkit-2.0/${helper}" \
           "${S}/usr/libexec/wpe-webkit-2.0/"
-    python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
-            "${S}/usr/libexec/wpe-webkit-2.0/${helper}"
+    maybe_patch_glibc_versions "${S}/usr/libexec/wpe-webkit-2.0/${helper}"
 done
 
 # Wrapper scripts for helper processes (set LD_PRELOAD, GStreamer paths, etc.)
 mkdir -p "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
-    cat > "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}" << WRAPPER
+    cat > "${S}/opt/wpe-sfos/libexec/wpe-webkit-2.0/${helper}" <<WRAPPER
 #!/bin/sh
-export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libglib-compat.so:/usr/lib64/wpe-compat/libegl-stubs.so
-export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64:/opt/wpe-sfos/lib
+${WPE_PRELOAD_EXPORT}
+export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
 export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
@@ -180,8 +209,7 @@ echo "--- Staging wpewebkit2-qt5 ---"
 S="${STAGING}/wpewebkit2-qt5"; rm -rf "$S"; mkdir -p "$S"
 
 # Patch glibc version symbols in libqtwpe.so before packaging
-python3 "${SCRIPT_DIR}/patch-glibc-versions.py" \
-    "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
+maybe_patch_glibc_versions "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
 # Add libEGL.so.1 as DT_NEEDED (EGL symbols are directly referenced)
 patchelf --add-needed libEGL.so.1 \
     "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" 2>/dev/null || true
@@ -228,19 +256,23 @@ $CC -O2 -march=armv8-a -fPIC $SHARED \
 
 # libglibc-compat.so: needs version script (GLIBC_2.17 + GLIBC_2.34 sections)
 # and must export dlopen/dlsym/dlerror@GLIBC_2.34 for binaries built on glibc 2.34+
-$CC -O2 -march=armv8-a -fPIC $SHARED \
-    -Wl,--version-script="${COMPAT_SRC}/libglibc-compat.map" \
-    -o "${COMPAT_BUILD}/libglibc-compat.so" "${COMPAT_SRC}/libglibc-compat.c" \
-    -ldl
+if [ "${USE_GLIBC_COMPAT}" = "1" ]; then
+    $CC -O2 -march=armv8-a -fPIC $SHARED \
+        -Wl,--version-script="${COMPAT_SRC}/libglibc-compat.map" \
+        -o "${COMPAT_BUILD}/libglibc-compat.so" "${COMPAT_SRC}/libglibc-compat.c" \
+        -ldl
+fi
 
 # GLib compat: provides g_once_init_enter/leave_pointer absent from Jolla's GLib 2.78.4 build
 # Must link against SFOS libglib-2.0 so the wrappers call the real SFOS implementation
-$CC -O2 -march=armv8-a -fPIC $SHARED \
-    --sysroot="${SFOS_SYSROOT}" \
-    -Wl,-soname,libglib-compat.so \
-    -o "${COMPAT_BUILD}/libglib-compat.so" "${COMPAT_SRC}/libglib_compat.c" \
-    -L"${SFOS_SYSROOT}/usr/lib64" -lglib-2.0
-ln -sfn libglib-compat.so "${COMPAT_BUILD}/libglib-compat-preload.so"
+if [ "${USE_GLIB_COMPAT}" = "1" ]; then
+    $CC -O2 -march=armv8-a -fPIC $SHARED \
+        --sysroot="${SFOS_SYSROOT}" \
+        -Wl,-soname,libglib-compat.so \
+        -o "${COMPAT_BUILD}/libglib-compat.so" "${COMPAT_SRC}/libglib_compat.c" \
+        -L"${SFOS_SYSROOT}/usr/lib64" -lglib-2.0
+    ln -sfn libglib-compat.so "${COMPAT_BUILD}/libglib-compat-preload.so"
+fi
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap.so"  "${COMPAT_SRC}/libexecve_wrap.c"  -ldl
 $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap2.so" "${COMPAT_SRC}/libexecve_wrap2.c" -ldl
 
@@ -272,9 +304,11 @@ for lib in \
 done
 
 # Patch glibc version symbols in all compat shims and bundled libs
-for f in "${COMPAT_BUILD}"/*.so "${COMPAT_BUILD}"/*.so.[0-9]*; do
-    [ -f "$f" ] && python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$f"
-done
+if [ "${PATCH_GLIBC_VERSIONS}" = "1" ]; then
+    for f in "${COMPAT_BUILD}"/*.so "${COMPAT_BUILD}"/*.so.[0-9]*; do
+        [ -f "$f" ] && maybe_patch_glibc_versions "$f"
+    done
+fi
 
 echo "--- Staging wpe-sfos-compat ---"
 S="${STAGING}/wpe-sfos-compat"; rm -rf "$S"; mkdir -p "$S"
@@ -284,7 +318,9 @@ for so in "${COMPAT_BUILD}"/*.so "${COMPAT_BUILD}"/*.so.[0-9]*; do
     [ -f "$so" ] && cp -a "$so" "${S}/usr/lib64/wpe-compat/"
 done
 # Prebuilt cow_string compat shim (extracted from libstdc++.a for __cow_string symbol)
-cp -a "${SCRIPT_DIR}/prebuilt/libcow_string_compat.so" "${S}/usr/lib64/wpe-compat/"
+if [ "${USE_COW_STRING_COMPAT}" = "1" ]; then
+    cp -a "${SCRIPT_DIR}/prebuilt/libcow_string_compat.so" "${S}/usr/lib64/wpe-compat/"
+fi
 
 # Create versioned symlinks for bundled runtime libs
 (cd "${S}/usr/lib64/wpe-compat"
@@ -299,11 +335,13 @@ cp -a "${SCRIPT_DIR}/prebuilt/libcow_string_compat.so" "${S}/usr/lib64/wpe-compa
 
 # Environment file — sets LD_PRELOAD and LD_LIBRARY_PATH for all nemo/user sessions
 mkdir -p "${S}/var/lib/environment/nemo"
-cat > "${S}/var/lib/environment/nemo/70-wpe-compat.conf" << 'EOF'
+cat > "${S}/var/lib/environment/nemo/70-wpe-compat.conf" <<EOF
 # WPE SFOS compatibility shims — loaded for all nemo user sessions.
-LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libglib-compat.so:/usr/lib64/wpe-compat/libegl-stubs.so
-LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
 EOF
+if [ -n "${WPE_COMPAT_PRELOAD}" ]; then
+    printf 'LD_PRELOAD=%s\n' "${WPE_COMPAT_PRELOAD}" >> "${S}/var/lib/environment/nemo/70-wpe-compat.conf"
+fi
+printf 'LD_LIBRARY_PATH=%s\n' "${WPE_COMPAT_LIBRARY_PATH}" >> "${S}/var/lib/environment/nemo/70-wpe-compat.conf"
 
 fpm_rpm wpe-sfos-compat "$WPE_SFOS_COMPAT_VERSION" "SFOS compatibility shims for WPE WebKit" "$S"
 
@@ -318,10 +356,10 @@ mkdir -p "${S}/usr/bin"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/"
 
 # WPE launcher wrapper script
-cat > "${S}/usr/bin/atlantic-browser" << 'LAUNCHER'
+cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
 #!/bin/sh
-export LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libglib-compat.so:/usr/lib64/wpe-compat/libegl-stubs.so
-export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64:/opt/wpe-sfos/lib
+${WPE_PRELOAD_EXPORT}
+export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
 export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
