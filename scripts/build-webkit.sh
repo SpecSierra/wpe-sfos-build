@@ -7,6 +7,30 @@ WPE_WEBKIT_VERSION="${WPE_WEBKIT_VERSION:-${LEGACY_WPEWEBKIT_VERSION}}"
 WPE_SOURCE_DIR="${WPE_SOURCE_DIR:-${WORK}/wpewebkit-${WPE_WEBKIT_VERSION}}"
 QT5_PLUGIN_SOURCE_DIR="${QT5_PLUGIN_SOURCE_DIR:-${QT5_PLUGIN_SOURCE_DIR_DEFAULT}}"
 
+resolve_sysroot_library() {
+    local stem="$1"
+    local direct="${SYSROOT}/usr/lib64/${stem}.so"
+    local candidate
+
+    if [ -e "${direct}" ]; then
+        printf '%s\n' "${direct}"
+        return 0
+    fi
+
+    for candidate in "${SYSROOT}/usr/lib64/${stem}.so".[0-9]*; do
+        [ -e "${candidate}" ] || continue
+        readlink -f "${candidate}"
+        return 0
+    done
+
+    echo "ERROR: unable to resolve ${stem}.so under ${SYSROOT}/usr/lib64" >&2
+    exit 1
+}
+
+ICU_UC_LIB="$(resolve_sysroot_library libicuuc)"
+ICU_I18N_LIB="$(resolve_sysroot_library libicui18n)"
+ICU_DATA_LIB="$(resolve_sysroot_library libicudata)"
+
 echo ""
 echo "--- [8] Building WPEWebKit ${WPE_WEBKIT_VERSION} (expect 60-90 min) ---"
 if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
@@ -28,10 +52,14 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain-native.cmake" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
-        -DICU_INCLUDE_DIR=/usr/include \
-        -DICU_UC_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicuuc.so \
-        -DICU_I18N_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicui18n.so \
-        -DICU_DATA_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicudata.so \
+        -DICU_INCLUDE_DIR="${SYSROOT}/usr/include" \
+        -DICU_INCLUDE_DIRS="${SYSROOT}/usr/include" \
+        -DICU_UC_LIBRARY="${ICU_UC_LIB}" \
+        -DICU_I18N_LIBRARY="${ICU_I18N_LIB}" \
+        -DICU_DATA_LIBRARY="${ICU_DATA_LIB}" \
+        -DICU_UC_LIBRARY_RELEASE="${ICU_UC_LIB}" \
+        -DICU_I18N_LIBRARY_RELEASE="${ICU_I18N_LIB}" \
+        -DICU_DATA_LIBRARY_RELEASE="${ICU_DATA_LIB}" \
         -DPORT=WPE \
         -DENABLE_VIDEO=OFF \
         -DENABLE_MEDIA_STREAM=OFF \

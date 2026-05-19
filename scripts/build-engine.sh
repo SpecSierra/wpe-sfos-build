@@ -21,6 +21,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libwpe-1.0.so" ]; then
     meson setup build \
         --native-file "${BUILD_TOOLS}/native-meson.ini" \
         --prefix "${WPE_PREFIX}" \
+        --libdir lib \
         --buildtype release \
         -Dlibxkbcommon:enable-x11=false \
         -Dlibxkbcommon:enable-wayland=false \
@@ -49,6 +50,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libepoxy.so" ]; then
     meson setup build \
         --native-file "${BUILD_TOOLS}/native-meson.ini" \
         --prefix "${WPE_PREFIX}" \
+        --libdir lib \
         --buildtype release \
         -Dx11=false -Dglx=no -Degl=yes
     ninja -C build -j"${NPROC}" install
@@ -72,6 +74,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so" ]; then
     meson setup build \
         --native-file "${BUILD_TOOLS}/native-meson.ini" \
         --prefix "${WPE_PREFIX}" \
+        --libdir lib \
         --buildtype release
     ninja -C build -j"${NPROC}" install
     echo "  WPEBackend-fdo installed."

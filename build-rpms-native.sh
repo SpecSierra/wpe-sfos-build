@@ -125,16 +125,14 @@ fpm_rpm libepoxy "$LIBEPOXY_VERSION" "OpenGL function pointer management for Sai
 # ===========================================================================
 echo "--- Staging wpebackend-fdo ---"
 S="${STAGING}/wpebackend-fdo"; rm -rf "$S"; mkdir -p "$S"
-mkdir -p "${S}/usr/lib64"
-cp "${WPE_PREFIX}/lib/aarch64-linux-gnu/libWPEBackend-fdo-1.0.so.1.11.0" "${S}/usr/lib64/"
+stage_cp "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so.1.11.0" /usr/lib64 "$S"
 maybe_patch_glibc_versions "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1.11.0"
 ln -sfn libWPEBackend-fdo-1.0.so.1.11.0 "${S}/usr/lib64/libWPEBackend-fdo-1.0.so.1"
 ln -sfn libWPEBackend-fdo-1.0.so.1      "${S}/usr/lib64/libWPEBackend-fdo-1.0.so"
 stage_cp "${WPE_PREFIX}/include/wpe-fdo-1.0"              /usr/include "$S"
 mkdir -p "${S}/usr/lib64/pkgconfig"
 cp -a "${WPE_PREFIX}/lib/pkgconfig/wpebackend-fdo-1.0.pc"    "${S}/usr/lib64/pkgconfig/"
-sed -i "s|${WPE_PREFIX}|/usr|g; s|/lib/aarch64-linux-gnu|/lib64|g" \
-    "${S}/usr/lib64/pkgconfig/wpebackend-fdo-1.0.pc"
+sed -i "s|${WPE_PREFIX}|/usr|g" "${S}/usr/lib64/pkgconfig/wpebackend-fdo-1.0.pc"
 
 fpm_rpm wpebackend-fdo "$WPEBACKEND_FDO_VERSION" "WPE backend (freedesktop.org/Wayland) for Sailfish OS" "$S" \
     --depends libwpe --depends libepoxy
