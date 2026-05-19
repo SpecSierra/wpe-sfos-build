@@ -48,11 +48,11 @@ gem list fpm | grep -q fpm || gem install --no-document fpm
 echo "Build tools ready."
 
 echo ""
-echo "--- [2] Setting up SFOS ${LEGACY_SFOS_SYSROOT_VERSION} aarch64 sysroot ---"
+echo "--- [2] Setting up SFOS ${SFOS_SYSROOT_VERSION} aarch64 sysroot ---"
 if [ ! -d "${SYSROOT}/usr/include" ]; then
     mkdir -p "${SYSROOT}"
-    sysroot_url="https://releases.sailfishos.org/sdk/targets/Sailfish_OS-${LEGACY_SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar.7z"
-    sysroot_tar="/tmp/Sailfish_OS-${LEGACY_SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar"
+    sysroot_url="https://releases.sailfishos.org/sdk/targets/Sailfish_OS-${SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar.7z"
+    sysroot_tar="/tmp/Sailfish_OS-${SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar"
     echo "  Downloading sysroot (177 MB)..."
     curl -L --progress-bar "${sysroot_url}" -o /tmp/sfos-sysroot.tar.7z
     echo "  Extracting..."

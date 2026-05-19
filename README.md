@@ -6,14 +6,15 @@ Build, packaging, and compatibility work for **Atlantic Browser** on **Sailfish 
 
 This repo is now being used to move Atlantic onto a cleaner baseline:
 
-- **Target OS:** Sailfish OS **5.1**
+- **Target OS:** Sailfish OS **5.1.0.5**
 - **Target engine:** WPE WebKit **2.52.3**
 - **Priority:** smaller patch queue, simpler packaging, faster engine updates
 - **Not a priority right now:** `bubblewrap`, `sailjail`, or growing the old preload stack
 
-The live scripts in this repo still build the older **SFOS 5.0 / WPE 2.52.1** line. That
-legacy baseline is now explicit in `versions.env` so the migration can replace it
-deliberately instead of chasing hard-coded versions scattered through the scripts.
+The live scripts in this repo now target the **SFOS 5.1.0.5** sysroot while still
+building the older **WPE 2.52.1** engine line. That baseline is explicit in
+`versions.env` so the remaining engine migration can happen deliberately instead of
+chasing hard-coded versions scattered through the scripts.
 
 ## Live workspace
 
@@ -49,7 +50,7 @@ The important pins now live in `versions.env`.
 
 | Item | Version |
 | --- | --- |
-| SFOS sysroot | `5.0.0.62` |
+| SFOS sysroot | `5.1.0.5` |
 | libwpe | `1.17.0` |
 | libepoxy | `1.5.11` |
 | WPEBackend-fdo | `1.17.0` |
@@ -60,7 +61,7 @@ The important pins now live in `versions.env`.
 
 | Item | Version |
 | --- | --- |
-| SFOS baseline | `5.1` |
+| SFOS baseline | `5.1.0.5` |
 | WPE WebKit | `2.52.3` |
 
 ## Current script behavior
@@ -72,7 +73,7 @@ current cleanup pass does four important things:
 1. Removes hard-coded version drift by sourcing `versions.env`.
 2. Fixes the missing `WPE_SOURCE_DIR` wiring in `build-all.sh`.
 3. Stops packaging and depending on `bubblewrap` even though the current WPE build already sets `-DENABLE_BUBBLEWRAP_SANDBOX=OFF`.
-4. Makes the build flow easier to rework incrementally for the SFOS 5.1 / WPE 2.52.3 migration without editing one rescue-style script.
+4. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.5 / WPE 2.52.3 migration without editing one rescue-style script.
 
 That last point is intentional: isolation work is out of the default path for this migration
 unless it becomes a release requirement again later.

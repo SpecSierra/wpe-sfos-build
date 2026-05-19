@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/scripts/common.sh"
 echo "================================================================"
 echo "=== WPE SFOS Build started at $(date)"
 echo "=== CPUs: ${NPROC}"
-echo "=== Scripted baseline: SFOS ${LEGACY_SFOS_SYSROOT_VERSION} / WPE WebKit ${LEGACY_WPEWEBKIT_VERSION}"
+echo "=== Scripted baseline: SFOS ${SFOS_SYSROOT_VERSION} / WPE WebKit ${LEGACY_WPEWEBKIT_VERSION}"
 echo "=== Migration target: SFOS ${TARGET_SFOS_VERSION} / WPE WebKit ${TARGET_WPEWEBKIT_VERSION}"
 echo "================================================================"
 
