@@ -18,6 +18,7 @@ done
 echo ""
 echo "--- [12] Building sailfish-browser (atlantic-browser) ---"
 cd "${BROWSER_SRC}"
+rm -rf build_browser build_wpe
 mkdir -p build_browser build_wpe
 
 export PATH="${SYSROOT}/usr/lib64/qt5/bin:${PATH}"
@@ -48,13 +49,15 @@ qmake -spec "${SYSROOT}/usr/share/qt5/mkspecs/linux-g++" \
     "WPE_SFOS_PREFIX=${WPE_PREFIX}" \
     "SFOS_SYSROOT=${SYSROOT}" \
     "WPE_SOURCE_DIR=${WPE_SOURCE_DIR}"
+make -j"${NPROC}" sub-lib-all
+cp -a lib/libsailfishbrowser.so* "${BROWSER_SRC}/build_wpe/" 2>/dev/null || true
 make -j"${NPROC}" sub-browser-all
 
 cd "${BROWSER_SRC}"
 find build -name "atlantic-browser" -not -name "*.o" -type f \
     -exec cp {} build_browser/atlantic-browser \; 2>/dev/null || true
-find build -name "libatlanticbrowser.so*" -type f \
-    -exec cp {} build_wpe/ \; 2>/dev/null || true
+find build -name "libsailfishbrowser.so*" \
+    -exec cp -a {} build_wpe/ \; 2>/dev/null || true
 find build -name "*.qm" -exec cp {} build_browser/ \; 2>/dev/null || true
 
 echo "  sailfish-browser built."

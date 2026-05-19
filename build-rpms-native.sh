@@ -76,6 +76,46 @@ patch_staged_library_family() {
     maybe_patch_glibc_versions "$(readlink -f "${staged_symlink}")"
 }
 
+patch_binary_prefix_string() {
+    local file="$1" old="$2" new="$3"
+    python3 - "$file" "$old" "$new" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+old = sys.argv[2].encode()
+new = sys.argv[3].encode()
+
+if len(new) > len(old):
+    raise SystemExit(f"replacement is longer than source: {new!r} > {old!r}")
+
+data = path.read_bytes()
+count = data.count(old)
+if count == 0:
+    raise SystemExit(f"source string not found in {path}: {sys.argv[2]}")
+
+data = data.replace(old, new + b"\0" * (len(old) - len(new)))
+path.write_bytes(data)
+print(f"patched {count} occurrence(s) of {sys.argv[2]} in {path}")
+PY
+}
+
+patch_webkit_runtime_paths() {
+    local file="$1"
+    patch_binary_prefix_string "$file" \
+        "${WPE_PREFIX}/libexec/wpe-webkit-2.0" \
+        "/usr/libexec/wpe-webkit-2.0"
+    patch_binary_prefix_string "$file" \
+        "${WPE_PREFIX}/share/locale" \
+        "/usr/share/locale"
+    patch_binary_prefix_string "$file" \
+        "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/" \
+        "${PACKAGE_RUNTIME_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/"
+    patch_binary_prefix_string "$file" \
+        "${WPE_PREFIX}/share/wpe-webkit-2.0" \
+        "/usr/share/wpe-webkit-2.0"
+}
+
 # ---------------------------------------------------------------------------
 # Helper: build an RPM with fpm from a staging root
 # ---------------------------------------------------------------------------
@@ -156,6 +196,7 @@ S="${STAGING}/wpewebkit2"; rm -rf "$S"; mkdir -p "$S"
 # Main library — patch the staged copy rather than mutating the source prefix.
 stage_shared_library_family "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" /usr/lib64 "$S"
 patch_staged_library_family "${S}/usr/lib64/libWPEWebKit-2.0.so"
+patch_webkit_runtime_paths "$(readlink -f "${S}/usr/lib64/libWPEWebKit-2.0.so")"
 
 # InjectedBundle — staged in both the install path AND the compile-time prefix
 # (WPEWebProcess binary has /opt/wpe-sfos hard-coded as the injected-bundle dir)
@@ -367,20 +408,19 @@ export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
 export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
+export ATLANTIC_MINIMAL_UI=1
 export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
 export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
 export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
 # Disable droid hardware decoders (crash via binder IPC) - use software libav/vpx instead
 export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
-# Use invoker -s (single-instance) -F (notify Lipstick) so the window appears
-# in the app switcher and subsequent icon taps raise the existing window.
-# Fall back to direct exec if invoker is missing (e.g., in developer shell).
+# Use the browser/silica invoker path so Atlantic gets the same booster launch
+# environment as the stock browser. Fall back to direct exec for developer shells.
 if [ -x /usr/bin/invoker ]; then
-    exec /usr/bin/invoker --type=generic -s \
-        -F /usr/share/applications/atlantic-browser.desktop \
-        -- /usr/bin/atlantic-browser.bin "$@"
+    exec /usr/bin/invoker --type=browser,silica-qt5 -A \
+        -- /usr/bin/atlantic-browser.bin "\$@"
 else
-    exec /usr/bin/atlantic-browser.bin "$@"
+    exec /usr/bin/atlantic-browser.bin "\$@"
 fi
 LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser"
@@ -399,6 +439,7 @@ ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so"
 # QML files
 mkdir -p "${S}/usr/share/atlantic-browser"
 cp -a "${BROWSER_SRC}/apps/browser/qml/browser.qml" "${S}/usr/share/atlantic-browser/"
+cp -a "${BROWSER_SRC}/apps/browser/qml/browser-minimal.qml" "${S}/usr/share/atlantic-browser/"
 cp -a "${BROWSER_SRC}/apps/browser/qml/pages"        "${S}/usr/share/atlantic-browser/"
 cp -a "${BROWSER_SRC}/apps/browser/qml/cover"        "${S}/usr/share/atlantic-browser/"
 mkdir -p "${S}/usr/share/atlantic-browser/shared"
