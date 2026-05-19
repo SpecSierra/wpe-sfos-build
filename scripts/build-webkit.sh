@@ -31,6 +31,18 @@ ICU_UC_LIB="$(resolve_sysroot_library libicuuc)"
 ICU_I18N_LIB="$(resolve_sysroot_library libicui18n)"
 ICU_DATA_LIB="$(resolve_sysroot_library libicudata)"
 
+stage_webkit_pkgconfig_files() {
+    local build_dir="$1"
+    local pc_file
+
+    mkdir -p "${WPE_PREFIX}/lib/pkgconfig"
+    for pc_file in wpe-webkit-2.0.pc wpe-web-process-extension-2.0.pc; do
+        if [ -f "${build_dir}/${pc_file}" ]; then
+            cp "${build_dir}/${pc_file}" "${WPE_PREFIX}/lib/pkgconfig/${pc_file}"
+        fi
+    done
+}
+
 echo ""
 echo "--- [8] Building WPEWebKit ${WPE_WEBKIT_VERSION} (expect 60-90 min) ---"
 if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
@@ -89,7 +101,9 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DUSE_SYSTEM_SYSPROF_CAPTURE=NO
 
     ninja -C WebKitBuild/Release -j"${NPROC}"
-    ninja -C WebKitBuild/Release install
+    cmake --install WebKitBuild/Release --prefix "${WPE_PREFIX}"
+
+    stage_webkit_pkgconfig_files "${WPE_SOURCE_DIR}/WebKitBuild/Release"
 
     sed -i 's/libsoup-3\.0 //' "${WPE_PREFIX}/lib/pkgconfig/wpe-webkit-2.0.pc" 2>/dev/null || true
 
@@ -104,6 +118,8 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     echo "  WPEWebKit installed."
 else
     echo "  WPEWebKit already built."
+    cmake --install "${WPE_SOURCE_DIR}/WebKitBuild/Release" --prefix "${WPE_PREFIX}"
+    stage_webkit_pkgconfig_files "${WPE_SOURCE_DIR}/WebKitBuild/Release"
 fi
 
 echo ""
@@ -142,6 +158,8 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     apply_repo_patches 7 "${qt5_plugin_dir}" "${QT5_PLUGIN_PATCHES[@]}"
     cd "${qt5_plugin_dir}"
 
+    rm -rf build
+
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B build -G Ninja \
         -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain.cmake" \
@@ -149,7 +167,8 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
         -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWPE_WEBKIT_BUILD_DIR="${WPE_SOURCE_DIR}/WebKitBuild/Release"
-    ninja -C build -j"${NPROC}" install
+    ninja -C build -j"${NPROC}"
+    cmake --install build --prefix "${WPE_PREFIX}"
     echo "  Qt5 WPE plugin installed."
 else
     echo "  Qt5 WPE plugin already built."

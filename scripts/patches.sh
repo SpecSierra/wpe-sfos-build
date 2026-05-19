@@ -7,6 +7,8 @@ readonly ENGINE_SOURCE_PATCHES=(
 readonly WEBKIT_SOURCE_PATCHES=(
     "webkit-quirks-no-video.patch"
     "webkit-icu-imported-targets.patch"
+    "webkit-renderbox-isnan.patch"
+    "webkit-shapeoutside-isnan.patch"
 )
 
 readonly QT5_PLUGIN_PATCHES=(
