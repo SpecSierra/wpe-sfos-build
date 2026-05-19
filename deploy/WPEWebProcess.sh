@@ -1,5 +1,5 @@
 #!/bin/sh
-export LD_PRELOAD=/usr/lib64/wpe-compat/libcow_string_compat.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libegl-stubs.so
+export LD_PRELOAD=/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libegl-stubs.so
 export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0

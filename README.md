@@ -103,7 +103,7 @@ This is the current keep/drop inventory for the old SFOS 5.0 compatibility stack
 | `libglibc-compat.so` | `remove` on SFOS 5.1 if ABI confirms cleanly | old line only needed this for glibc 2.30 gaps |
 | `patch-glibc-versions.py` | `remove` on SFOS 5.1 unless a specific binary still needs it | should not stay in the normal path if the new baseline already matches runtime glibc |
 | `libglib-compat.so` | `remove` on SFOS 5.1 if GLib ABI is sufficient | carried for older GLib behavior on the SFOS 5.0 line |
-| `libcow_string_compat.so` | `re-check` | may disappear with the 5.1 rebuild, but needs confirmation against the rebuilt runtime |
+| `libcow_string_compat.so` | `remove` on SFOS 5.1 | the rebuilt 5.1 runtime makes `invoker` fail on `__libc_single_threaded`, so this shim is no longer safe in the default path |
 | `libsigill_skip*.so` | `re-check` | only keep if the rebuilt 5.1 line still trips unsupported CPU feature probes |
 | `libgetauxval_fix*.so` | `re-check` | legacy workaround; verify before carrying forward |
 | `libexecve_wrap*.so` | `remove` | tied to the older wrapped process-launch path and sailjail-era assumptions |
@@ -134,7 +134,7 @@ These are the repo-local patches currently relevant to the live build flow.
 The next useful repo changes should be:
 
 1. Run device/runtime validation for the rebuilt **SFOS 5.1.0.5 / WPE 2.52.3** packages.
-2. Re-check the remaining explicit shims (`libcow_string_compat.so`, `libsigill_skip.so`, `libegl-stubs.so`) against real runtime behavior.
+2. Re-check the remaining explicit shims (`libsigill_skip.so`, `libegl-stubs.so`) against real runtime behavior.
 3. Make fresh install match the staged tree exactly, with no manual device-side fixes.
 4. Decide whether the remaining older RPM specs beyond the WebKit pair should be aligned further or retired in favor of the native packaging path.
 
