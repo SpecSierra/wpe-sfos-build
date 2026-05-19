@@ -29,7 +29,12 @@ Current checkouts on the build host:
 | File | Purpose |
 | --- | --- |
 | `versions.env` | central version pins for the current scripted baseline and the migration target |
-| `build-all.sh` | end-to-end legacy build script for engine, Qt bridge, UI, and RPM creation |
+| `build-all.sh` | top-level orchestrator over the split build entrypoints |
+| `scripts/bootstrap-host.sh` | host dependencies, sysroot setup, and workspace bootstrap |
+| `scripts/build-engine.sh` | engine dependency build (`libwpe`, `libepoxy`, `WPEBackend-fdo`) |
+| `scripts/build-webkit.sh` | WPE WebKit build, legacy Qt5 bridge carry-forward, and GLIBC patching |
+| `scripts/build-ui.sh` | Atlantic UI/browser build against the staged engine |
+| `scripts/package-rpms.sh` | packaging entrypoint that delegates to the native RPM staging script |
 | `build-rpms-native.sh` | native RPM staging/packaging script |
 | `deploy/` | helper-process wrappers and deployment-time assets |
 | `native-meson.ini` | native meson config for engine-side dependencies |
@@ -60,12 +65,14 @@ The important pins now live in `versions.env`.
 
 ## Current script behavior
 
-`build-all.sh` and `build-rpms-native.sh` still represent the old line, but this first
-cleanup pass already does three important things:
+`build-all.sh` and `build-rpms-native.sh` still represent the old line, but the repo now
+has a real split between bootstrap, engine, WebKit, UI, and packaging entrypoints. The
+current cleanup pass does four important things:
 
 1. Removes hard-coded version drift by sourcing `versions.env`.
 2. Fixes the missing `WPE_SOURCE_DIR` wiring in `build-all.sh`.
 3. Stops packaging and depending on `bubblewrap` even though the current WPE build already sets `-DENABLE_BUBBLEWRAP_SANDBOX=OFF`.
+4. Makes the build flow easier to rework incrementally for the SFOS 5.1 / WPE 2.52.3 migration without editing one rescue-style script.
 
 That last point is intentional: isolation work is out of the default path for this migration
 unless it becomes a release requirement again later.
@@ -88,6 +95,20 @@ This is the current keep/drop inventory for the old SFOS 5.0 compatibility stack
 | `libepoxy-rtld-default-fallback.patch` | `keep temporarily` | coupled to `libegl-stubs.so`; re-check once the 5.1 runtime is exercised |
 | `BubblewrapLauncher-sfos-sandbox.patch` | `remove from default path` | no longer part of the main migration direction |
 | sailjail-disabled packaging/profile workarounds | `re-check` | keep only if they are still required to launch the app cleanly on 5.1 |
+
+## Current local patch queue
+
+These are the repo-local patches currently relevant to the live build flow.
+
+| Patch | Status | Notes |
+| --- | --- | --- |
+| `libepoxy-rtld-default-fallback.patch` | `keep temporarily` | currently applied in the engine build so `libegl-stubs.so` can satisfy missing EGL symbols on Sailfish/hybris |
+| `webkit-quirks-no-video.patch` | `re-check` | only relevant while the scripted baseline still builds WebKit with `ENABLE_VIDEO=OFF` |
+| `qt5-plugin-gnuinstalldirs.patch` | `keep temporarily` | still wired into the standalone Qt5 bridge build for install-path correctness |
+| `qt5-plugin-epoxy-gl-fix.patch` | `keep temporarily` | still wired into the Qt5 bridge build to avoid epoxy/Qt OpenGL header conflicts |
+| `wpeqtview-viewport-scale.patch` | `re-check` | currently wired into the Qt5 bridge build; keep only if still needed once the 2.52.3 carry-forward is rebased cleanly |
+| `wpeqtview-sfos-api.patch` | `re-check` | not wired into the current scripted build, but likely still relevant if the UI still depends on those legacy Qt-facing methods/signals |
+| `BubblewrapLauncher-sfos-sandbox.patch` | `drop from default path` | historical SFOS 5.0 isolation workaround; no longer part of the main build flow |
 
 ## Practical next steps
 

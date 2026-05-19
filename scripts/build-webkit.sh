@@ -1,0 +1,126 @@
+#!/bin/bash
+set -euo pipefail
+
+source "$(cd "$(dirname "$0")" && pwd)/common.sh"
+
+WPE_WEBKIT_VERSION="${WPE_WEBKIT_VERSION:-${LEGACY_WPEWEBKIT_VERSION}}"
+WPE_SOURCE_DIR="${WPE_SOURCE_DIR:-${WORK}/wpewebkit-${WPE_WEBKIT_VERSION}}"
+QT5_PLUGIN_SOURCE_DIR="${QT5_PLUGIN_SOURCE_DIR:-${QT5_PLUGIN_SOURCE_DIR_DEFAULT}}"
+
+echo ""
+echo "--- [8] Building WPEWebKit ${WPE_WEBKIT_VERSION} (expect 60-90 min) ---"
+if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
+    cd "${WORK}"
+    if [ ! -d "${WPE_SOURCE_DIR}" ]; then
+        echo "  Downloading tarball..."
+        wget -q --show-progress \
+            "https://wpewebkit.org/releases/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz" \
+            -O "/tmp/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz"
+        tar -xf "/tmp/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz"
+        rm -f "/tmp/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz"
+    fi
+
+    cd "${WPE_SOURCE_DIR}"
+    patch -p1 --forward < "${BUILD_TOOLS}/webkit-quirks-no-video.patch" || true
+
+    PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
+    cmake -B WebKitBuild/Release -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain-native.cmake" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
+        -DICU_INCLUDE_DIR=/usr/include \
+        -DICU_UC_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicuuc.so \
+        -DICU_I18N_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicui18n.so \
+        -DICU_DATA_LIBRARY_RELEASE=/opt/sfos-sysroot/usr/lib64/libicudata.so \
+        -DPORT=WPE \
+        -DENABLE_VIDEO=OFF \
+        -DENABLE_MEDIA_STREAM=OFF \
+        -DENABLE_MEDIA_RECORDER=OFF \
+        -DENABLE_WEB_CODECS=OFF \
+        -DENABLE_WEB_AUDIO=OFF \
+        -DENABLE_GEOLOCATION=OFF \
+        -DENABLE_GAMEPAD=OFF \
+        -DENABLE_SPELLCHECK=OFF \
+        -DENABLE_SPEECH_SYNTHESIS=OFF \
+        -DENABLE_SAMPLING_PROFILER=OFF \
+        -DENABLE_INTROSPECTION=OFF \
+        -DENABLE_WEBDRIVER=OFF \
+        -DENABLE_XSLT=OFF \
+        -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+        -DENABLE_WPE_LEGACY_API=ON \
+        -DUSE_ATK=OFF \
+        -DUSE_GSTREAMER=OFF \
+        -DUSE_GSTREAMER_GL=OFF \
+        -DUSE_JPEGXL=OFF \
+        -DUSE_LCMS=OFF \
+        -DUSE_LIBBACKTRACE=OFF \
+        -DUSE_LIBHYPHEN=OFF \
+        -DUSE_OPENJPEG=OFF \
+        -DUSE_WOFF2=OFF \
+        -DUSE_AVIF=OFF \
+        -DUSE_SYSTEM_SYSPROF_CAPTURE=NO
+
+    ninja -C WebKitBuild/Release -j"${NPROC}"
+    ninja -C WebKitBuild/Release install
+
+    sed -i 's/libsoup-3\.0 //' "${WPE_PREFIX}/lib/pkgconfig/wpe-webkit-2.0.pc" 2>/dev/null || true
+
+    ln -sf "${WPE_SOURCE_DIR}/WebKitBuild/Release/cmakeconfig.h" \
+       "${WPE_SOURCE_DIR}/WebKitBuild/Release/config.h" 2>/dev/null || true
+
+    mkdir -p "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle"
+    cp WebKitBuild/Release/lib/libWPEInjectedBundle.so \
+       "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/" 2>/dev/null || \
+    cp WebKitBuild/Release/lib/libWPEInjectedBundle.so "${WPE_PREFIX}/lib/" 2>/dev/null || true
+
+    echo "  WPEWebKit installed."
+else
+    echo "  WPEWebKit already built."
+fi
+
+echo ""
+echo "--- [9] Patching GLIBC version tags ---"
+for file in \
+    "${WPE_PREFIX}"/lib/libWPEWebKit-2.0.so.*.*.* \
+    "${WPE_PREFIX}/lib/libWPEInjectedBundle.so" \
+    "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
+    "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPEWebProcess" \
+    "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPENetworkProcess" \
+    "${WPE_PREFIX}/libexec/wpe-webkit-2.0/WPEGPUProcess"
+do
+    [ -f "${file}" ] && python3 "${BUILD_TOOLS}/patch-glibc-versions.py" "${file}" || true
+done
+
+echo ""
+echo "--- [10] Building Qt5 WPE plugin ---"
+if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
+    export PATH="${SYSROOT}/usr/lib64/qt5/bin:${PATH}"
+
+    if [ ! -d "${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5" ]; then
+        if [ ! -d "${QT5_PLUGIN_SOURCE_DIR}" ]; then
+            echo "ERROR: ${QT5_PLUGIN_SOURCE_DIR} not found; required to copy Qt5 plugin into ${WPE_WEBKIT_VERSION}" >&2
+            exit 1
+        fi
+        echo "  Copying Qt5 plugin from $(basename "${QT5_PLUGIN_SOURCE_DIR}")..."
+        cp -a "${QT5_PLUGIN_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5" \
+              "${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5"
+    fi
+
+    qt5_plugin_dir="${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5"
+    cd "${qt5_plugin_dir}"
+    patch -p4 --forward < "${BUILD_TOOLS}/qt5-plugin-gnuinstalldirs.patch" || true
+    patch -p4 --forward < "${BUILD_TOOLS}/wpeqtview-viewport-scale.patch" || true
+    patch -p4 --forward < "${BUILD_TOOLS}/qt5-plugin-epoxy-gl-fix.patch" || true
+
+    PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
+    cmake -B build -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain.cmake" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DWPE_WEBKIT_BUILD_DIR="${WPE_SOURCE_DIR}/WebKitBuild/Release"
+    ninja -C build -j"${NPROC}" install
+    echo "  Qt5 WPE plugin installed."
+else
+    echo "  Qt5 WPE plugin already built."
+fi
