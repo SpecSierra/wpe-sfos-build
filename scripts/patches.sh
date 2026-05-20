@@ -18,6 +18,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-unistdextras-includes.patch"
     "patches/webkit/webkit-pal-system-header-includes.patch"
     "patches/webkit/webkit-pal-text-header-includes.patch"
+    "patches/webkit/webkit-pal-header-owners.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
