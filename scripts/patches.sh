@@ -8,6 +8,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "webkit-quirks-no-video.patch"
     "webkit-icu-imported-targets.patch"
     "webkit-ramsize-cstddef.patch"
+    "webkit-wtf-header-includes.patch"
     "webkit-renderbox-isnan.patch"
     "webkit-shapeoutside-isnan.patch"
 )
