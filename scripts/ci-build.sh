@@ -8,7 +8,7 @@ export WORK="${WORK:-$(cd "${REPO_ROOT}/.." && pwd)}"
 export BUILD_TOOLS="${BUILD_TOOLS:-${REPO_ROOT}}"
 export BROWSER_SRC="${BROWSER_SRC:-${WORK}/sailfish-browser-wpe}"
 export WPE_PREFIX="${WPE_PREFIX:-${WORK}/wpe-sfos-prefix}"
-export SYSROOT="${SYSROOT:-/opt/github-runner/cache/sfos-sysroot-5.1.0.5}"
+export SYSROOT="${SYSROOT:-/opt/github-runner/cache/sfos-sysroot-5.0.0.62}"
 export OUT="${OUT:-/tmp/wpe-sfos-rpms}"
 export STAGING="${STAGING:-/tmp/wpe-sfos-stage}"
 
