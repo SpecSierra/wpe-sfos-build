@@ -408,7 +408,7 @@ export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
 export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR=/run/user/100000
 export WAYLAND_DISPLAY=../../display/wayland-0
-export ATLANTIC_MINIMAL_UI=1
+export ATLANTIC_BROWSER_RUNTIME_DELAY_MS=2000
 export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
 export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
 export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
@@ -436,7 +436,9 @@ ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so"
 # QML files
 mkdir -p "${S}/usr/share/atlantic-browser"
 cp -a "${BROWSER_SRC}/apps/browser/qml/browser.qml" "${S}/usr/share/atlantic-browser/"
+cp -a "${BROWSER_SRC}/apps/browser/qml/browser-silica-main-smoke.qml" "${S}/usr/share/atlantic-browser/"
 cp -a "${BROWSER_SRC}/apps/browser/qml/browser-minimal.qml" "${S}/usr/share/atlantic-browser/"
+cp -a "${BROWSER_SRC}/apps/browser/qml/browser-silica-smoke.qml" "${S}/usr/share/atlantic-browser/"
 cp -a "${BROWSER_SRC}/apps/browser/qml/pages"        "${S}/usr/share/atlantic-browser/"
 cp -a "${BROWSER_SRC}/apps/browser/qml/cover"        "${S}/usr/share/atlantic-browser/"
 mkdir -p "${S}/usr/share/atlantic-browser/shared"
