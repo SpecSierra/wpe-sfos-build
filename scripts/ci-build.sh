@@ -20,6 +20,10 @@ export STAGING="${STAGING:-/tmp/wpe-sfos-stage}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-${REPO_ROOT}/artifacts}"
 LOG_PATH="${LOG_PATH:-${ARTIFACT_ROOT}/build.log}"
 SUMMARY_PATH="${SUMMARY_PATH:-${ARTIFACT_ROOT}/summary.txt}"
+BUILD_TOOLS_COMMIT=""
+if git -C "${BUILD_TOOLS}" rev-parse HEAD >/dev/null 2>&1; then
+    BUILD_TOOLS_COMMIT="$(git -C "${BUILD_TOOLS}" rev-parse HEAD)"
+fi
 
 rm -rf "${ARTIFACT_ROOT}/rpms" "${ARTIFACT_ROOT}/build-config"
 mkdir -p "${ARTIFACT_ROOT}" "${OUT}" "${STAGING}"
@@ -37,6 +41,7 @@ qt5_plugin_source_dir=${QT5_PLUGIN_SOURCE_DIR}
 nproc=${NPROC:-}
 out=${OUT}
 staging=${STAGING}
+build_tools_commit=${BUILD_TOOLS_COMMIT}
 started_at=$(date --iso-8601=seconds)
 EOF
 
