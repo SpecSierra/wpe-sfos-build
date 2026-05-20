@@ -1,0 +1,53 @@
+{
+  "_serverReceivedAt": "2026-05-20T09:23:44.454368+00:00",
+  "benchmark": {
+    "avgFrameMs": 44.549,
+    "durationMs": 5034,
+    "fps": 22.447,
+    "frameCount": 113,
+    "maxFrameMs": 521,
+    "p50FrameMs": 39,
+    "p95FrameMs": 53.4,
+    "slowFramesOver20Ms": 113,
+    "slowFramesOver33Ms": 105,
+    "slowFramesOver50Ms": 8
+  },
+  "deviceMemory": null,
+  "hardwareConcurrency": 8,
+  "href": "http://127.0.0.1:8000/probe.html?mode=dom&durationMs=5000&run=dom-benchmark",
+  "mode": "dom",
+  "paints": {
+    "first-contentful-paint": 215
+  },
+  "platform": "Linux aarch64",
+  "runId": "dom-benchmark",
+  "screen": {
+    "devicePixelRatio": 3,
+    "height": 2520,
+    "width": 1080
+  },
+  "secureContext": true,
+  "timing": {
+    "decodedBodySize": 16457,
+    "domContentLoadedMs": 176,
+    "encodedBodySize": 16457,
+    "loadEventEndMs": 202,
+    "responseEndMs": 127,
+    "responseStartMs": 37,
+    "transferSize": 16757
+  },
+  "userAgent": "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+  "webgl": {
+    "majorPerformanceCaveatFree": true,
+    "renderer": "Apple GPU",
+    "shadingLanguageVersion": "WebGL GLSL ES 1.0 (1.0)",
+    "supported": true,
+    "vendor": "Apple Inc.",
+    "version": "WebGL 1.0",
+    "webgl2": false
+  },
+  "webgpu": {
+    "secureContext": true,
+    "supported": false
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "_serverReceivedAt": "2026-05-20T09:21:01.414441+00:00",
+  "benchmark": {
+    "smoke": true,
+    "timestampMs": 539
+  },
+  "deviceMemory": null,
+  "hardwareConcurrency": 8,
+  "href": "http://127.0.0.1:8000/probe.html?mode=smoke&run=smoke-baseline",
+  "mode": "smoke",
+  "paints": {
+    "first-contentful-paint": 194
+  },
+  "platform": "Linux aarch64",
+  "runId": "smoke-baseline",
+  "screen": {
+    "devicePixelRatio": 3,
+    "height": 2520,
+    "width": 1080
+  },
+  "secureContext": true,
+  "timing": {
+    "decodedBodySize": 16457,
+    "domContentLoadedMs": 162,
+    "encodedBodySize": 16457,
+    "loadEventEndMs": 184,
+    "responseEndMs": 110,
+    "responseStartMs": 45,
+    "transferSize": 16757
+  },
+  "userAgent": "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15",
+  "webgl": {
+    "majorPerformanceCaveatFree": true,
+    "renderer": "Apple GPU",
+    "shadingLanguageVersion": "WebGL GLSL ES 1.0 (1.0)",
+    "supported": true,
+    "vendor": "Apple Inc.",
+    "version": "WebGL 1.0",
+    "webgl2": false
+  },
+  "webgpu": {
+    "secureContext": true,
+    "supported": false
+  }
+}
