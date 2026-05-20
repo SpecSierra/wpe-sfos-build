@@ -14,7 +14,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
 )
 
 readonly QT5_PLUGIN_PATCHES=(
-    "qt5-plugin-texture-cache.patch"
+    "patches/qt-bridge/qt5-plugin-texture-cache.patch"
 )
 
 apply_single_repo_patch() {

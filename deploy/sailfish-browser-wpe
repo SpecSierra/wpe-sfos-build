@@ -1,4 +1,5 @@
 #!/bin/sh
+. "$(cd "$(dirname "$0")" && pwd)/runtime-common.sh"
 # Terminate any existing browser instance to allow clean restart.
 # Needed because SFOS/booster keeps apps alive after close, and the
 # WPE sandbox child processes must be cleaned up.
@@ -8,18 +9,11 @@ if [ -n "$OLD_PID" ] && [ -d "/proc/$OLD_PID" ]; then
     i=0; while [ -d "/proc/$OLD_PID" ] && [ $i -lt 10 ]; do sleep 0.1; i=$((i+1)); done
     [ -d "/proc/$OLD_PID" ] && /bin/kill -9 "$OLD_PID" 2>/dev/null
 fi
-rm -rf /run/user/100000/.flatpak/webkit-* /run/user/100000/wpe/bus-proxy-*
+atlantic_cleanup_runtime_artifacts
 
-export LD_PRELOAD=/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libegl-stubs.so
-export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
-export QT_QPA_PLATFORM=wayland
-export XDG_RUNTIME_DIR=/run/user/100000
-export WAYLAND_DISPLAY=../../display/wayland-0
-export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
-export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
-export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
-# Disable droid hardware decoders (crash via binder IPC) - use software libav/vpx instead
-export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
+ATLANTIC_LD_PRELOAD="${ATLANTIC_COMPAT_DIR}/libsigill_skip.so:${ATLANTIC_COMPAT_DIR}/libegl-stubs.so"
+ATLANTIC_LD_LIBRARY_PATH="$(atlantic_default_library_path)"
+atlantic_export_browser_env
 
 echo $$ > /tmp/sfos-browser-wpe.pid
 exec /usr/bin/sailfish-browser "$@"

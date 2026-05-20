@@ -11,8 +11,9 @@ Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  gcc
 
 %description
-Compatibility shim libraries required to run WPE WebKit 2.50.5 on
-Sailfish OS 5.0 (glibc 2.30, ARMv8.0-A, Snapdragon 665).
+Compatibility shim libraries historically used to run Atlantic WPE builds on
+older Sailfish OS baselines. The current SFOS 5.1 default path keeps this
+package explicit and temporary rather than treating it as the normal runtime.
 
 Provides:
   - glibc 2.31+ symbol stubs missing from SFOS glibc 2.30

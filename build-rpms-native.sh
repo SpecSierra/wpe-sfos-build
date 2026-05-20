@@ -11,43 +11,29 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/scripts/common.sh"
+source "${SCRIPT_DIR}/deploy/runtime-common.sh"
 
 OUT="${OUT:-/tmp/wpe-sfos-rpms}"
 STAGING="${STAGING:-/tmp/wpe-sfos-stage}"
 PACKAGE_RUNTIME_PREFIX="${PACKAGE_RUNTIME_PREFIX:-/opt/wpe-sfos}"
+ATLANTIC_RUNTIME_PREFIX="${PACKAGE_RUNTIME_PREFIX}"
 
 mkdir -p "$OUT"
 
-# ---------------------------------------------------------------------------
-# Helpers: compat flags and GLIBC retagging
-# ---------------------------------------------------------------------------
 maybe_patch_glibc_versions() {
     [ "${PATCH_GLIBC_VERSIONS}" = "1" ] || return 0
     python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$@"
 }
 
-build_ld_preload() {
-    local libs=()
-
-    [ "${USE_GLIBC_COMPAT}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libglibc-compat.so")
-    [ "${USE_COW_STRING_COMPAT}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libcow_string_compat.so")
-    [ "${USE_SIGILL_SKIP}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libsigill_skip.so")
-    [ "${USE_GLIB_COMPAT}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libglib-compat.so")
-    [ "${USE_EGL_STUBS}" = "1" ] && libs+=("/usr/lib64/wpe-compat/libegl-stubs.so")
-
-    local IFS=:
-    printf '%s' "${libs[*]}"
-}
-
-WPE_COMPAT_PRELOAD="$(build_ld_preload)"
-WPE_COMPAT_LIBRARY_PATH="/usr/lib64/wpe-compat:/usr/lib64"
-WPE_HELPER_LIBRARY_PATH="${WPE_COMPAT_LIBRARY_PATH}:${PACKAGE_RUNTIME_PREFIX}/lib"
-
-if [ -n "${WPE_COMPAT_PRELOAD}" ]; then
-    WPE_PRELOAD_EXPORT="export LD_PRELOAD=${WPE_COMPAT_PRELOAD}"
-else
-    WPE_PRELOAD_EXPORT=""
+if [ "${USE_COW_STRING_COMPAT:-0}" = "1" ]; then
+    echo "ERROR: USE_COW_STRING_COMPAT is no longer supported in the SFOS ${SFOS_SYSROOT_VERSION} default path." >&2
+    echo "       The opaque prebuilt libcow_string_compat shim has been removed; keep the flag disabled." >&2
+    exit 1
 fi
+
+WPE_COMPAT_PRELOAD="$(atlantic_build_ld_preload)"
+WPE_COMPAT_LIBRARY_PATH="$(atlantic_default_library_path)"
+WPE_HELPER_LIBRARY_PATH="$(atlantic_default_helper_library_path)"
 
 # ---------------------------------------------------------------------------
 # Helper: copy a file/symlink tree into staging root
@@ -215,19 +201,21 @@ for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
     maybe_patch_glibc_versions "${S}/usr/libexec/wpe-webkit-2.0/${helper}"
 done
 
-# Wrapper scripts for helper processes (set LD_PRELOAD, GStreamer paths, etc.)
+# Shared runtime environment for generated wrappers.
+mkdir -p "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/atlantic"
+install -m 755 "${SCRIPT_DIR}/deploy/runtime-common.sh" \
+    "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/atlantic/runtime-common.sh"
+
+# Wrapper scripts for helper processes (set runtime env and launch the real helper).
 mkdir -p "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
     cat > "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0/${helper}" <<WRAPPER
 #!/bin/sh
-${WPE_PRELOAD_EXPORT}
-export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
-export XDG_RUNTIME_DIR=/run/user/100000
-export WAYLAND_DISPLAY=../../display/wayland-0
-export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
-export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
-export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
-exec /usr/libexec/wpe-webkit-2.0/${helper} \$@
+. "${PACKAGE_RUNTIME_PREFIX}/libexec/atlantic/runtime-common.sh"
+ATLANTIC_LD_PRELOAD='${WPE_COMPAT_PRELOAD}'
+ATLANTIC_LD_LIBRARY_PATH='${WPE_HELPER_LIBRARY_PATH}'
+atlantic_export_helper_env
+exec "${ATLANTIC_WPE_HELPER_DIR}/${helper}" "\$@"
 WRAPPER
     chmod 755 "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0/${helper}"
 done
@@ -365,10 +353,6 @@ mkdir -p "${S}/usr/lib64/wpe-compat"
 for so in "${COMPAT_BUILD}"/*.so "${COMPAT_BUILD}"/*.so.[0-9]*; do
     [ -f "$so" ] && cp -a "$so" "${S}/usr/lib64/wpe-compat/"
 done
-# Prebuilt cow_string compat shim (extracted from libstdc++.a for __cow_string symbol)
-if [ "${USE_COW_STRING_COMPAT}" = "1" ]; then
-    cp -a "${SCRIPT_DIR}/prebuilt/libcow_string_compat.so" "${S}/usr/lib64/wpe-compat/"
-fi
 
 # Create versioned symlinks for bundled runtime libs
 (cd "${S}/usr/lib64/wpe-compat"
@@ -406,17 +390,10 @@ cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/"
 # WPE launcher environment wrapper
 cat > "${S}/usr/bin/atlantic-browser-env" <<LAUNCHER
 #!/bin/sh
-${WPE_PRELOAD_EXPORT}
-export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
-export QT_QPA_PLATFORM=wayland
-export XDG_RUNTIME_DIR=/run/user/100000
-export WAYLAND_DISPLAY=../../display/wayland-0
-export ATLANTIC_BROWSER_RUNTIME_DELAY_MS=2000
-export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
-export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
-export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
-# Disable droid hardware decoders (crash via binder IPC) - use software libav/vpx instead
-export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
+. "${PACKAGE_RUNTIME_PREFIX}/libexec/atlantic/runtime-common.sh"
+ATLANTIC_LD_PRELOAD='${WPE_COMPAT_PRELOAD}'
+ATLANTIC_LD_LIBRARY_PATH='${WPE_HELPER_LIBRARY_PATH}'
+atlantic_export_browser_env
 exec /usr/bin/atlantic-browser.bin "\$@"
 LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser-env"

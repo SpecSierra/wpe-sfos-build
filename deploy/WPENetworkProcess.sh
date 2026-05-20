@@ -1,9 +1,6 @@
 #!/bin/sh
-export LD_PRELOAD=/usr/lib64/wpe-compat/libsigill_skip.so
-export LD_LIBRARY_PATH=/usr/lib64/wpe-compat:/usr/lib64
-export XDG_RUNTIME_DIR=/run/user/100000
-export WAYLAND_DISPLAY=../../display/wayland-0
-export GST_PLUGIN_SYSTEM_PATH_1_0=/usr/lib64/gstreamer-1.0
-export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
-export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
-exec /usr/libexec/wpe-webkit-2.0/WPENetworkProcess $@
+. "$(cd "$(dirname "$0")" && pwd)/runtime-common.sh"
+ATLANTIC_LD_PRELOAD="${ATLANTIC_COMPAT_DIR}/libsigill_skip.so"
+ATLANTIC_LD_LIBRARY_PATH="$(atlantic_default_library_path)"
+atlantic_export_helper_env
+exec "${ATLANTIC_WPE_HELPER_DIR}/WPENetworkProcess" "$@"

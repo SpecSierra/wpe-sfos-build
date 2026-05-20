@@ -45,10 +45,10 @@ Current checkouts on the build host:
 | `scripts/build-ui.sh` | Atlantic UI/browser build against the staged engine |
 | `scripts/package-rpms.sh` | packaging entrypoint that delegates to the native RPM staging script |
 | `build-rpms-native.sh` | native RPM staging/packaging script |
-| `deploy/` | helper-process wrappers and deployment-time assets |
+| `deploy/` | helper-process wrappers, shared runtime env, and deployment-time assets |
 | `native-meson.ini` | native meson config for engine-side dependencies |
 | `sfos-toolchain.cmake` | SFOS sysroot toolchain for Qt/UI builds |
-| `patches and shim sources` | compatibility work carried from the old line |
+| `patches/qt-bridge/` plus shim sources | carried-forward Qt5 bridge patches and remaining compatibility work |
 
 ## Version pins
 
@@ -126,10 +126,10 @@ These are the repo-local patches currently relevant to the live build flow.
 | `webkit-wtf-header-includes.patch` | `keep temporarily` | fixes newer WTF header self-sufficiency issues on Ubuntu 24.04 by adding missing `<cstdint>` and `Assertions.h` includes for `EnumTraits.h` and `TypeCasts.h` |
 | `webkit-renderbox-isnan.patch` | `keep temporarily` | fixes the 2.52.3 WebCore compile on Ubuntu 24.04 by making `RenderBox.h` use `std::isnan` with an explicit `<cmath>` include |
 | `webkit-shapeoutside-isnan.patch` | `keep temporarily` | fixes the 2.52.3 WebCore shape-outside compile on Ubuntu 24.04 by making `ShapeOutsideInfo.cpp` use `std::isnan` with an explicit `<cmath>` include |
-| `qt5-plugin-texture-cache.patch` | `keep temporarily` | avoids rebuilding the Qt scene-graph texture wrapper every frame in the carried-forward Qt5 bridge; measured improvements were strongest on Canvas2D/WebGL perf probes |
-| `qt5-plugin-gnuinstalldirs.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this install-path fix, so it is no longer re-applied in the default path |
-| `qt5-plugin-epoxy-gl-fix.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this header/include fix |
-| `wpeqtview-carryforward.patch` | `reference only` | records the SFOS API additions, deferred device scale, and Qt 5.6 touch guard already carried by the `wpewebkit-2.52.1` Qt5 source snapshot |
+| `patches/qt-bridge/qt5-plugin-texture-cache.patch` | `keep temporarily` | avoids rebuilding the Qt scene-graph texture wrapper every frame in the carried-forward Qt5 bridge; measured improvements were strongest on Canvas2D/WebGL perf probes |
+| `patches/qt-bridge/qt5-plugin-gnuinstalldirs.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this install-path fix, so it is no longer re-applied in the default path |
+| `patches/qt-bridge/qt5-plugin-epoxy-gl-fix.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this header/include fix |
+| `patches/qt-bridge/wpeqtview-carryforward.patch` | `reference only` | records the SFOS API additions, deferred device scale, and Qt 5.6 touch guard already carried by the `wpewebkit-2.52.1` Qt5 source snapshot |
 | `BubblewrapLauncher-sfos-sandbox.patch` | `drop from default path` | historical SFOS 5.0 isolation workaround; no longer part of the main build flow |
 
 ## Practical next steps
