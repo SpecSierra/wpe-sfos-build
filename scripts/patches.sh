@@ -1,17 +1,17 @@
 #!/bin/bash
 
 readonly ENGINE_SOURCE_PATCHES=(
-    "libepoxy-rtld-default-fallback.patch"
+    "patches/engine/libepoxy-rtld-default-fallback.patch"
 )
 
 readonly WEBKIT_SOURCE_PATCHES=(
-    "webkit-quirks-no-video.patch"
-    "webkit-icu-imported-targets.patch"
-    "webkit-ramsize-cstddef.patch"
-    "webkit-wtf-header-includes.patch"
-    "webkit-wtf-platform-stdint.patch"
-    "webkit-renderbox-isnan.patch"
-    "webkit-shapeoutside-isnan.patch"
+    "patches/webkit/webkit-quirks-no-video.patch"
+    "patches/webkit/webkit-icu-imported-targets.patch"
+    "patches/webkit/webkit-ramsize-cstddef.patch"
+    "patches/webkit/webkit-wtf-header-includes.patch"
+    "patches/webkit/webkit-wtf-platform-stdint.patch"
+    "patches/webkit/webkit-renderbox-isnan.patch"
+    "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
 
 readonly QT5_PLUGIN_PATCHES=(

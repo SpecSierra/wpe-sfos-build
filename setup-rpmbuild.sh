@@ -144,12 +144,14 @@ echo "--- Copying spec helper files ---"
 for f in \
     sfos-toolchain.cmake \
     sfos-meson-cross.ini \
-    webkit-quirks-no-video.patch \
-    webkit-icu-imported-targets.patch \
-    webkit-renderbox-isnan.patch \
-    webkit-shapeoutside-isnan.patch \
-    patch-glibc-versions.py; do
-  cp -v "$SCRIPT_DIR/$f" "$SOURCES_DIR/$f"
+    patches/webkit/webkit-quirks-no-video.patch \
+    patches/webkit/webkit-icu-imported-targets.patch \
+    patches/webkit/webkit-renderbox-isnan.patch \
+    patches/webkit/webkit-shapeoutside-isnan.patch \
+    patch-glibc-versions.py \
+    cmake/atlantic-wpe-features.cmake \
+    scripts/write-webkit-feature-flags.py; do
+  cp -v "$SCRIPT_DIR/$f" "$SOURCES_DIR/$(basename "$f")"
 done
 
 echo ""

@@ -22,7 +22,7 @@ mkdir -p "$OUT"
 
 maybe_patch_glibc_versions() {
     [ "${PATCH_GLIBC_VERSIONS}" = "1" ] || return 0
-    python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$@"
+        python3 "${SCRIPT_DIR}/patch-glibc-versions.py" "$@"
 }
 
 if [ "${USE_COW_STRING_COMPAT:-0}" = "1" ]; then
@@ -266,7 +266,7 @@ fpm_rpm wpewebkit2-qt5 "$LEGACY_WPEWEBKIT_VERSION" "WPE WebKit Qt5 QML plugin fo
 # 6. wpe-sfos-compat  (compiled from source)
 # ===========================================================================
 echo "--- Building wpe-sfos-compat shims ---"
-COMPAT_SRC="${SCRIPT_DIR}"
+COMPAT_SRC="${SCRIPT_DIR}/shims/compat"
 COMPAT_BUILD="${STAGING}/compat-build"
 rm -rf "$COMPAT_BUILD"; mkdir -p "$COMPAT_BUILD"
 

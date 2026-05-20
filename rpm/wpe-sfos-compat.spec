@@ -37,13 +37,14 @@ Placeholder devel sub-package.
 
 %build
 SYSROOT=%{_prefix}
+COMPAT_SRC=shims/compat
 CC="gcc"
 CFLAGS="-O2 -march=armv8-a -fPIC -fvisibility=hidden"
 SHARED="-shared -Wl,--allow-shlib-undefined"
 
-$CC $CFLAGS $SHARED -o libglibc-compat.so       libglibc-compat.c
-$CC $CFLAGS $SHARED -o libsigill_skip.so         libsigill_skip.c
-$CC $CFLAGS $SHARED -o libegl-stubs.so           libegl-stubs.c
+$CC $CFLAGS $SHARED -o libglibc-compat.so       ${COMPAT_SRC}/libglibc-compat.c
+$CC $CFLAGS $SHARED -o libsigill_skip.so         ${COMPAT_SRC}/libsigill_skip.c
+$CC $CFLAGS $SHARED -o libegl-stubs.so           ${COMPAT_SRC}/libegl-stubs.c
 
 %install
 install -d %{buildroot}%{_libdir}/wpe-compat
