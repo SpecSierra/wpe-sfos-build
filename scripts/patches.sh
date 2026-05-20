@@ -35,6 +35,12 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-jsc-wasm-platform.patch"
     "patches/webkit/webkit-jsc-llint-build-defines.patch"
     "patches/webkit/webkit-jsc-shell-object-link.patch"
+    "patches/webkit/webkit-webcore-user-message-handlers-platform.patch"
+    "patches/webkit/webkit-webcore-colorconversion-export-macros.patch"
+    "patches/webkit/webkit-webcore-webkitnamespace-platform.patch"
+    "patches/webkit/webkit-webcore-avif-platform.patch"
+    "patches/webkit/webkit-webcore-avif-reader-platform.patch"
+    "patches/webkit/webkit-webcore-context-export-macros.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
