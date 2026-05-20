@@ -138,6 +138,40 @@ The next useful repo changes should be:
 3. Make fresh install match the staged tree exactly, with no manual device-side fixes.
 4. Decide whether the remaining older RPM specs beyond the WebKit pair should be aligned further or retired in favor of the native packaging path.
 
+## GitHub Actions build automation
+
+This repo now has a first self-hosted ARM64 workflow at
+`.github/workflows/build-atlantic-packages.yml`.
+
+- Trigger modes:
+  - manual `workflow_dispatch`
+  - automatic `push` builds on `master` when build/package inputs change
+- Runner labels:
+  - `self-hosted`
+  - `Linux`
+  - `ARM64`
+  - `atlantic`
+- Main CI wrapper:
+  - `scripts/ci-build.sh`
+
+The workflow intentionally builds in isolated CI paths instead of the live
+development prefix:
+
+- `WPE_PREFIX=${RUNNER_TEMP}/wpe-sfos-prefix`
+- `OUT=${RUNNER_TEMP}/wpe-sfos-rpms`
+- `STAGING=${RUNNER_TEMP}/wpe-sfos-stage`
+- `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.5`
+
+That keeps CI runs from clobbering the live `/opt/wpe-sfos` tree used for manual
+device work on the host.
+
+Artifacts uploaded from each run include:
+
+- `artifacts/build.log`
+- `artifacts/summary.txt`
+- `artifacts/rpms/*.rpm`
+- `artifacts/build-config/` when WebKit metadata is available
+
 ## Build philosophy
 
 Atlantic should be maintained like a browser port:

@@ -1,0 +1,79 @@
+name: Build Atlantic packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - .github/workflows/build-atlantic-packages.yml
+      - build-all.sh
+      - build-rpms-native.sh
+      - scripts/**
+      - rpm/**
+      - versions.env
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlantic-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build RPMs
+    runs-on:
+      - self-hosted
+      - Linux
+      - ARM64
+      - atlantic
+    timeout-minutes: 360
+    env:
+      WORK: ${{ github.workspace }}/..
+      BUILD_TOOLS: ${{ github.workspace }}
+      BROWSER_SRC: ${{ github.workspace }}/../sailfish-browser-wpe
+      WPE_PREFIX: ${{ runner.temp }}/wpe-sfos-prefix
+      SYSROOT: /opt/github-runner/cache/sfos-sysroot-5.1.0.5
+      OUT: ${{ runner.temp }}/wpe-sfos-rpms
+      STAGING: ${{ runner.temp }}/wpe-sfos-stage
+      ARTIFACT_ROOT: ${{ github.workspace }}/artifacts
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Show runner details
+        run: |
+          set -euo pipefail
+          id
+          uname -a
+          df -h /
+
+      - name: Reset isolated build directories
+        run: |
+          set -euo pipefail
+          rm -rf "${ARTIFACT_ROOT}"
+          mkdir -p "${ARTIFACT_ROOT}"
+          sudo rm -rf "${WPE_PREFIX}" "${OUT}" "${STAGING}"
+
+      - name: Build Atlantic packages
+        run: |
+          set -euo pipefail
+          sudo --preserve-env=WORK,BUILD_TOOLS,BROWSER_SRC,WPE_PREFIX,SYSROOT,OUT,STAGING,ARTIFACT_ROOT,NPROC \
+            bash "${GITHUB_WORKSPACE}/scripts/ci-build.sh"
+
+      - name: Fix artifact ownership
+        if: always()
+        run: |
+          set -euo pipefail
+          sudo chown -R "$(id -u)":"$(id -g)" "${ARTIFACT_ROOT}" || true
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlantic-rpms-${{ github.run_number }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
