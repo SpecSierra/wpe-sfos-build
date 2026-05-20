@@ -34,6 +34,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-jsc-lol-platform.patch"
     "patches/webkit/webkit-jsc-wasm-platform.patch"
     "patches/webkit/webkit-jsc-llint-build-defines.patch"
+    "patches/webkit/webkit-jsc-shell-object-link.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
