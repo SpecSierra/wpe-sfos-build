@@ -400,8 +400,8 @@ S="${STAGING}/atlantic-browser"; rm -rf "$S"; mkdir -p "$S"
 mkdir -p "${S}/usr/bin"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/"
 
-# WPE launcher wrapper script
-cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
+# WPE launcher environment wrapper
+cat > "${S}/usr/bin/atlantic-browser-env" <<LAUNCHER
 #!/bin/sh
 ${WPE_PRELOAD_EXPORT}
 export LD_LIBRARY_PATH=${WPE_HELPER_LIBRARY_PATH}
@@ -414,20 +414,17 @@ export GST_PLUGIN_PATH=/usr/lib64/gstreamer-1.0
 export WEBKIT_GST_ENABLE_HLS_SUPPORT=1
 # Disable droid hardware decoders (crash via binder IPC) - use software libav/vpx instead
 export GST_PLUGIN_FEATURE_RANK=droidvdec:0,droidvenc:0
-# Use the browser/silica invoker path so Atlantic gets the same booster launch
-# environment as the stock browser. Fall back to direct exec for developer shells.
-if [ -x /usr/bin/invoker ]; then
-    exec /usr/bin/invoker --type=browser,silica-qt5 -A \
-        -- /usr/bin/atlantic-browser.bin "\$@"
-else
-    exec /usr/bin/atlantic-browser.bin "\$@"
-fi
+exec /usr/bin/atlantic-browser.bin "\$@"
+LAUNCHER
+chmod 755 "${S}/usr/bin/atlantic-browser-env"
+
+# WPE launcher wrapper script
+cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
+#!/bin/sh
+exec /usr/bin/atlantic-browser-env "\$@"
 LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser"
-# Move actual binary to .bin so wrapper takes the main name
-mv "${S}/usr/bin/atlantic-browser" "${S}/usr/bin/atlantic-browser.launcher"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/atlantic-browser.bin"
-mv "${S}/usr/bin/atlantic-browser.launcher" "${S}/usr/bin/atlantic-browser"
 
 # libsailfishbrowser (versioned + symlinks — SONAME is libsailfishbrowser.so.1)
 mkdir -p "${S}/usr/lib64"
@@ -456,6 +453,8 @@ cat > "${S}/usr/share/applications/atlantic-browser.desktop" << 'DESKTOP'
 [Desktop Entry]
 Type=Application
 Name=Atlantic
+X-MeeGo-Logical-Id=atlantic-browser-ap-name
+X-MeeGo-Translation-Catalog=atlantic-browser
 Icon=icon-launcher-browser
 Exec=/usr/bin/atlantic-browser %U
 Comment=Atlantic Browser (WPE WebKit)
@@ -463,6 +462,11 @@ MimeType=text/html;application/xhtml+xml;application/xml;text/xml;x-scheme-handl
 X-Maemo-Service=org.atlantic.browser.ui
 X-Maemo-Object-Path=/ui
 X-Maemo-Method=org.atlantic.browser.ui.openUrl
+
+[X-Sailjail]
+Permissions=Internet;Audio
+OrganizationName=org.sailfishos
+ApplicationName=browser
 DESKTOP
 
 # DBus service files
@@ -490,8 +494,8 @@ Sandboxing=disabled
 
 [X-Sailjail]
 Permissions=Internet;Audio
-OrganizationName=org.atlantic
-ApplicationName=atlantic-browser
+OrganizationName=org.sailfishos
+ApplicationName=browser
 EOF
 
 fpm_rpm atlantic-browser "$ATLANTIC_BROWSER_VERSION" "Atlantic Browser (WPE WebKit engine)" "$S" \
