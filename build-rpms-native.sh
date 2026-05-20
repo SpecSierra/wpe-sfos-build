@@ -367,13 +367,11 @@ done
 
 # Environment file — sets LD_PRELOAD and LD_LIBRARY_PATH for all nemo/user sessions
 mkdir -p "${S}/var/lib/environment/nemo"
-cat > "${S}/var/lib/environment/nemo/70-wpe-compat.conf" <<EOF
-# WPE SFOS compatibility shims — loaded for all nemo user sessions.
-EOF
-if [ -n "${WPE_COMPAT_PRELOAD}" ]; then
-    printf 'LD_PRELOAD=%s\n' "${WPE_COMPAT_PRELOAD}" >> "${S}/var/lib/environment/nemo/70-wpe-compat.conf"
-fi
-printf 'LD_LIBRARY_PATH=%s\n' "${WPE_COMPAT_LIBRARY_PATH}" >> "${S}/var/lib/environment/nemo/70-wpe-compat.conf"
+python3 "${SCRIPT_DIR}/scripts/write-runtime-env.py" \
+    "${S}/var/lib/environment/nemo/70-wpe-compat.conf" \
+    --comment "WPE SFOS compatibility shims — loaded for all nemo user sessions." \
+    --entry LD_LIBRARY_PATH "${WPE_COMPAT_LIBRARY_PATH}" \
+    --optional-entry LD_PRELOAD "${WPE_COMPAT_PRELOAD}"
 
 fpm_rpm wpe-sfos-compat "$WPE_SFOS_COMPAT_VERSION" "SFOS compatibility shims for WPE WebKit" "$S"
 

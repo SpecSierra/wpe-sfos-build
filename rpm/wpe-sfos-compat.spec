@@ -71,11 +71,15 @@ done
 
 # Environment file: sets LD_PRELOAD for all nemo/user sessions
 install -d %{buildroot}%{_sharedstatedir}/environment/nemo
-cat > %{buildroot}%{_sharedstatedir}/environment/nemo/70-wpe-compat.conf << 'EOF'
-# WPE SFOS compatibility shims — loaded for all user processes.
-# Order matters: glibc-compat first, then getauxval, then sigill, then egl.
-LD_PRELOAD=/usr/lib64/wpe-compat/libglibc-compat.so:/usr/lib64/wpe-compat/libgetauxval_fix.so:/usr/lib64/wpe-compat/libsigill_skip.so:/usr/lib64/wpe-compat/libegl-stubs.so
-EOF
+. ./versions.env
+. ./deploy/runtime-common.sh
+compat_preload="$(atlantic_build_ld_preload)"
+compat_library_path="$(atlantic_default_library_path)"
+python3 ./scripts/write-runtime-env.py \
+    %{buildroot}%{_sharedstatedir}/environment/nemo/70-wpe-compat.conf \
+    --comment "WPE SFOS compatibility shims — loaded for all nemo user sessions." \
+    --entry LD_LIBRARY_PATH "${compat_library_path}" \
+    --optional-entry LD_PRELOAD "${compat_preload}"
 
 %post
 /sbin/ldconfig || :

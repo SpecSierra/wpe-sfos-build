@@ -54,43 +54,12 @@ install_webkit_build_metadata() {
     [ -f "${cache_path}" ] && cp "${cache_path}" "${metadata_dir}/CMakeCache.txt"
     [ -f "${config_path}" ] && cp "${config_path}" "${metadata_dir}/cmakeconfig.h"
 
-    python3 - "${cache_path}" "${metadata_dir}/feature-flags.txt" "${WPE_WEBKIT_VERSION}" "${WPE_SOURCE_DIR}" <<'PY'
-import re
-import sys
-from pathlib import Path
-
-cache_path = Path(sys.argv[1])
-output_path = Path(sys.argv[2])
-webkit_version = sys.argv[3]
-source_dir = sys.argv[4]
-interesting = (
-    "ENABLE_GPU_PROCESS",
-    "ENABLE_WEBGL",
-    "ENABLE_WEBGPU",
-    "USE_GBM",
-    "ENABLE_BUBBLEWRAP_SANDBOX",
-)
-values = {key: "<not found>" for key in interesting}
-pattern = re.compile(r"^([^:#=]+):[^=]+=(.*)$")
-
-if cache_path.is_file():
-    for line in cache_path.read_text(encoding="utf-8", errors="replace").splitlines():
-        match = pattern.match(line)
-        if not match:
-            continue
-        key, value = match.groups()
-        if key in values:
-            values[key] = value
-
-lines = [
-    f"WPE WebKit version: {webkit_version}",
-    f"Source dir: {source_dir}",
-    f"Build dir: {cache_path.parent}",
-    "",
-]
-lines.extend(f"{key}={values[key]}" for key in interesting)
-output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-PY
+    python3 "${BUILD_TOOLS}/scripts/write-webkit-feature-flags.py" \
+        "${cache_path}" \
+        "${metadata_dir}/feature-flags.txt" \
+        "${WPE_WEBKIT_VERSION}" \
+        --source-dir "${WPE_SOURCE_DIR}" \
+        --build-dir "${build_dir}"
 }
 
 echo ""
@@ -114,6 +83,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain-native.cmake" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
+        -C "${BUILD_TOOLS}/cmake/atlantic-wpe-features.cmake" \
         -DICU_INCLUDE_DIR="${SYSROOT}/usr/include" \
         -DICU_INCLUDE_DIRS="${SYSROOT}/usr/include" \
         -DICU_UC_LIBRARY="${ICU_UC_LIB}" \
@@ -123,32 +93,8 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DICU_I18N_LIBRARY_RELEASE="${ICU_I18N_LIB}" \
         -DICU_DATA_LIBRARY_RELEASE="${ICU_DATA_LIB}" \
         -DPORT=WPE \
-        -DENABLE_VIDEO=OFF \
-        -DENABLE_MEDIA_STREAM=OFF \
-        -DENABLE_MEDIA_RECORDER=OFF \
-        -DENABLE_WEB_CODECS=OFF \
-        -DENABLE_WEB_AUDIO=OFF \
-        -DENABLE_GEOLOCATION=OFF \
-        -DENABLE_GAMEPAD=OFF \
-        -DENABLE_SPELLCHECK=OFF \
-        -DENABLE_SPEECH_SYNTHESIS=OFF \
-        -DENABLE_SAMPLING_PROFILER=OFF \
-        -DENABLE_INTROSPECTION=OFF \
-        -DENABLE_WEBDRIVER=OFF \
-        -DENABLE_XSLT=OFF \
-        -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
         -DENABLE_WPE_LEGACY_API=ON \
-        -DUSE_ATK=OFF \
-        -DUSE_GSTREAMER=OFF \
-        -DUSE_GSTREAMER_GL=OFF \
-        -DUSE_JPEGXL=OFF \
-        -DUSE_LCMS=OFF \
-        -DUSE_LIBBACKTRACE=OFF \
-        -DUSE_LIBHYPHEN=OFF \
-        -DUSE_OPENJPEG=OFF \
-        -DUSE_WOFF2=OFF \
-        -DUSE_AVIF=OFF \
-        -DUSE_SYSTEM_SYSPROF_CAPTURE=NO
+        -DUSE_JPEGXL=OFF
 
     ninja -C WebKitBuild/Release -j"${NPROC}"
     cmake --install WebKitBuild/Release --prefix "${WPE_PREFIX}"

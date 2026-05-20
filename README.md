@@ -45,6 +45,7 @@ Current checkouts on the build host:
 | `scripts/build-ui.sh` | Atlantic UI/browser build against the staged engine |
 | `scripts/package-rpms.sh` | packaging entrypoint that delegates to the native RPM staging script |
 | `build-rpms-native.sh` | native RPM staging/packaging script |
+| `cmake/` | shared CMake cache presets used by both the script and spec packaging paths |
 | `deploy/` | helper-process wrappers, shared runtime env, and deployment-time assets |
 | `native-meson.ini` | native meson config for engine-side dependencies |
 | `sfos-toolchain.cmake` | SFOS sysroot toolchain for Qt/UI builds |

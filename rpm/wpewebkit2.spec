@@ -12,6 +12,8 @@ Source3:    patch-glibc-versions.py
 Source4:    webkit-icu-imported-targets.patch
 Source5:    webkit-renderbox-isnan.patch
 Source6:    webkit-shapeoutside-isnan.patch
+Source7:    atlantic-wpe-features.cmake
+Source8:    write-webkit-feature-flags.py
 
 BuildRequires:  cmake >= 3.20
 BuildRequires:  ninja
@@ -76,34 +78,11 @@ cmake -B WebKitBuild/Release -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=%{SOURCE1} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+    -C %{SOURCE7} \
     -DPORT=WPE \
-    -DENABLE_VIDEO=OFF \
-    -DENABLE_WEB_AUDIO=OFF \
-    -DENABLE_GEOLOCATION=OFF \
-    -DENABLE_GAMEPAD=OFF \
-    -DENABLE_SPELLCHECK=OFF \
-    -DENABLE_SAMPLING_PROFILER=OFF \
-    -DENABLE_SPEECH_SYNTHESIS=OFF \
-    -DENABLE_XSLT=OFF \
-    -DENABLE_WEBDRIVER=OFF \
-    -DENABLE_MEDIA_STREAM=OFF \
-    -DENABLE_MEDIA_RECORDER=OFF \
-    -DENABLE_WEB_CODECS=OFF \
-    -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
     -DENABLE_MINIBROWSER=OFF \
-    -DENABLE_INTROSPECTION=OFF \
-    -DUSE_GSTREAMER=OFF \
-    -DUSE_GSTREAMER_GL=OFF \
-    -DUSE_ATK=OFF \
-    -DUSE_LCMS=OFF \
-    -DUSE_LIBBACKTRACE=OFF \
-    -DUSE_LIBHYPHEN=OFF \
-    -DUSE_OPENJPEG=OFF \
-    -DUSE_WOFF2=OFF \
-    -DUSE_AVIF=OFF \
     -DUSE_SKIA=ON \
-    -DUSE_SYSPROF_CAPTURE=ON \
-    -DUSE_SYSTEM_SYSPROF_CAPTURE=NO
+    -DUSE_SYSPROF_CAPTURE=ON
 
 ninja -C WebKitBuild/Release %{?_smp_mflags}
 
@@ -126,39 +105,11 @@ install -m 644 WebKitBuild/Release/CMakeCache.txt \
     %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/CMakeCache.txt
 install -m 644 WebKitBuild/Release/cmakeconfig.h \
     %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/cmakeconfig.h
-python3 - <<'PY'
-import re
-from pathlib import Path
-
-buildroot = Path(r"%{buildroot}")
-cache_path = buildroot / "%{_datadir}".lstrip("/") / "wpe-webkit-2.0" / "build-config" / "CMakeCache.txt"
-output_path = buildroot / "%{_datadir}".lstrip("/") / "wpe-webkit-2.0" / "build-config" / "feature-flags.txt"
-interesting = (
-    "ENABLE_GPU_PROCESS",
-    "ENABLE_WEBGL",
-    "ENABLE_WEBGPU",
-    "USE_GBM",
-    "ENABLE_BUBBLEWRAP_SANDBOX",
-)
-values = {key: "<not found>" for key in interesting}
-pattern = re.compile(r"^([^:#=]+):[^=]+=(.*)$")
-
-for line in cache_path.read_text(encoding="utf-8", errors="replace").splitlines():
-    match = pattern.match(line)
-    if not match:
-        continue
-    key, value = match.groups()
-    if key in values:
-        values[key] = value
-
-lines = [
-    "WPE WebKit version: %{version}",
-    "Build dir: WebKitBuild/Release",
-    "",
-]
-lines.extend(f"{key}={values[key]}" for key in interesting)
-output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-PY
+python3 %{SOURCE8} \
+    WebKitBuild/Release/CMakeCache.txt \
+    %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/feature-flags.txt \
+    %{version} \
+    --build-dir WebKitBuild/Release
 
 # Patch GLIBC_2.34+ version tags down to GLIBC_2.17 in all installed binaries
 python3 %{SOURCE3} \
