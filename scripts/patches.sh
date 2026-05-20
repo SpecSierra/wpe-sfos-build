@@ -31,6 +31,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-jsc-heap-cstddef.patch"
     "patches/webkit/webkit-jsc-inspector-remote-glib.patch"
     "patches/webkit/webkit-jsc-jit-platform.patch"
+    "patches/webkit/webkit-jsc-lol-platform.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
