@@ -157,9 +157,10 @@ This repo now has a first self-hosted ARM64 workflow at
 The workflow intentionally builds in isolated CI paths instead of the live
 development prefix:
 
-- `WPE_PREFIX=${RUNNER_TEMP}/wpe-sfos-prefix`
-- `OUT=${RUNNER_TEMP}/wpe-sfos-rpms`
-- `STAGING=${RUNNER_TEMP}/wpe-sfos-stage`
+- `CI_ROOT=/opt/github-runner/builds/<run-id>-<attempt>`
+- `WPE_PREFIX=${CI_ROOT}/wpe-sfos-prefix`
+- `OUT=${CI_ROOT}/wpe-sfos-rpms`
+- `STAGING=${CI_ROOT}/wpe-sfos-stage`
 - `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.5`
 
 That keeps CI runs from clobbering the live `/opt/wpe-sfos` tree used for manual

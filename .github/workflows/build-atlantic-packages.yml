@@ -30,13 +30,14 @@ jobs:
       - atlantic
     timeout-minutes: 360
     env:
+      CI_ROOT: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}
       WORK: ${{ github.workspace }}/..
       BUILD_TOOLS: ${{ github.workspace }}
       BROWSER_SRC: ${{ github.workspace }}/../sailfish-browser-wpe
-      WPE_PREFIX: ${{ runner.temp }}/wpe-sfos-prefix
+      WPE_PREFIX: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/wpe-sfos-prefix
       SYSROOT: /opt/github-runner/cache/sfos-sysroot-5.1.0.5
-      OUT: ${{ runner.temp }}/wpe-sfos-rpms
-      STAGING: ${{ runner.temp }}/wpe-sfos-stage
+      OUT: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/wpe-sfos-rpms
+      STAGING: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/wpe-sfos-stage
       ARTIFACT_ROOT: ${{ github.workspace }}/artifacts
 
     steps:
@@ -55,7 +56,7 @@ jobs:
           set -euo pipefail
           rm -rf "${ARTIFACT_ROOT}"
           mkdir -p "${ARTIFACT_ROOT}"
-          sudo rm -rf "${WPE_PREFIX}" "${OUT}" "${STAGING}"
+          sudo rm -rf "${CI_ROOT}"
 
       - name: Build Atlantic packages
         run: |
