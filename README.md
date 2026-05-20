@@ -122,6 +122,7 @@ These are the repo-local patches currently relevant to the live build flow.
 | `libepoxy-rtld-default-fallback.patch` | `keep temporarily` | currently applied in the engine build so `libegl-stubs.so` can satisfy missing EGL symbols on Sailfish/hybris |
 | `webkit-quirks-no-video.patch` | `re-check` | only relevant while the scripted baseline still builds WebKit with `ENABLE_VIDEO=OFF` |
 | `webkit-icu-imported-targets.patch` | `keep temporarily` | fixes the 2.52.3 configure path on Ubuntu 24.04 by repairing the `ICU::` imported targets after `find_package(ICU ...)` |
+| `webkit-ramsize-cstddef.patch` | `keep temporarily` | fixes the 2.52.3 WTF compile on Ubuntu 24.04 by adding the missing `<cstddef>` include for `size_t` in `RAMSize.h` |
 | `webkit-renderbox-isnan.patch` | `keep temporarily` | fixes the 2.52.3 WebCore compile on Ubuntu 24.04 by making `RenderBox.h` use `std::isnan` with an explicit `<cmath>` include |
 | `webkit-shapeoutside-isnan.patch` | `keep temporarily` | fixes the 2.52.3 WebCore shape-outside compile on Ubuntu 24.04 by making `ShapeOutsideInfo.cpp` use `std::isnan` with an explicit `<cmath>` include |
 | `qt5-plugin-texture-cache.patch` | `keep temporarily` | avoids rebuilding the Qt scene-graph texture wrapper every frame in the carried-forward Qt5 bridge; measured improvements were strongest on Canvas2D/WebGL perf probes |
