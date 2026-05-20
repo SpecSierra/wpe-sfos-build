@@ -27,6 +27,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-jsc-b3-cstdint.patch"
     "patches/webkit/webkit-jsc-bytecode-platform.patch"
     "patches/webkit/webkit-jsc-dfg-platform.patch"
+    "patches/webkit/webkit-jsc-ftl-platform.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
