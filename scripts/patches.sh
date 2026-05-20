@@ -12,10 +12,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
 )
 
 readonly QT5_PLUGIN_PATCHES=(
-    # The current standalone Qt5 bridge is copied from the existing 2.52.1
-    # carried-forward source snapshot, which already includes the local bridge
-    # fixes required by Atlantic. Keep the individual patch files in-repo as
-    # reference material, but do not reapply them in the default path.
+    "qt5-plugin-texture-cache.patch"
 )
 
 apply_single_repo_patch() {

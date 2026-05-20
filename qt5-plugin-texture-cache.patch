@@ -1,0 +1,33 @@
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
+@@ -192,16 +192,23 @@ QSGNode* WPEQtView::updatePaintNode(QSGNode* node, UpdatePaintNodeData*)
+ 
+     auto* textureNode = static_cast<QSGSimpleTextureNode*>(node);
+-    if (!textureNode)
++    if (!textureNode) {
+         textureNode = new QSGSimpleTextureNode();
++        textureNode->setOwnsTexture(true);
++    }
+ 
+     GLuint textureId = m_backend->texture(window()->openglContext());
+     if (!textureId)
+         return node;
+ 
+-#if (QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
+-    auto texture = window()->createTextureFromNativeObject(QQuickWindow::NativeObjectTexture, &textureId, 0, m_size.toSize(), QQuickWindow::TextureHasAlphaChannel);
+-#else
+-    auto texture = window()->createTextureFromId(textureId, m_size.toSize(), QQuickWindow::TextureHasAlphaChannel);
+-#endif
+-    textureNode->setTexture(texture);
++    const QSize textureSize = m_size.toSize();
++    QSGTexture *texture = textureNode->texture();
++    if (!texture || texture->textureSize() != textureSize) {
++#if (QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
++        texture = window()->createTextureFromNativeObject(QQuickWindow::NativeObjectTexture, &textureId, 0, textureSize, QQuickWindow::TextureHasAlphaChannel);
++#else
++        texture = window()->createTextureFromId(textureId, textureSize, QQuickWindow::TextureHasAlphaChannel);
++#endif
++        textureNode->setTexture(texture);
++    }
+     textureNode->setRect(boundingRect());
+     return textureNode;
