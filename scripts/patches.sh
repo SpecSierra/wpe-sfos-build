@@ -13,6 +13,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-wtf-glib-platform.patch"
     "patches/webkit/webkit-wtf-glib-header-includes.patch"
     "patches/webkit/webkit-wtf-linux-header-includes.patch"
+    "patches/webkit/webkit-wtf-posix-unix-platform.patch"
     "patches/webkit/webkit-memoryfootprint-cstddef.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
