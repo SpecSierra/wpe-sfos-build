@@ -7,8 +7,10 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 export WORK="${WORK:-$(cd "${REPO_ROOT}/.." && pwd)}"
 export BUILD_TOOLS="${BUILD_TOOLS:-${REPO_ROOT}}"
 export BROWSER_SRC="${BROWSER_SRC:-${WORK}/sailfish-browser-wpe}"
+export PUBLIC_SFOS_BASE_VERSION="${PUBLIC_SFOS_BASE_VERSION:-5.0.0.62}"
+export LOCAL_SFOS_SOURCE_SYSROOT="${LOCAL_SFOS_SOURCE_SYSROOT:-/opt/sfos-sysroot}"
 export WPE_PREFIX="${WPE_PREFIX:-${WORK}/wpe-sfos-prefix}"
-export SYSROOT="${SYSROOT:-/opt/github-runner/cache/sfos-sysroot-5.0.0.62}"
+export SYSROOT="${SYSROOT:-/opt/github-runner/cache/sfos-sysroot-5.1.0.5}"
 export OUT="${OUT:-/tmp/wpe-sfos-rpms}"
 export STAGING="${STAGING:-/tmp/wpe-sfos-stage}"
 
@@ -26,6 +28,8 @@ build_tools=${BUILD_TOOLS}
 browser_src=${BROWSER_SRC}
 wpe_prefix=${WPE_PREFIX}
 sysroot=${SYSROOT}
+public_sfos_base_version=${PUBLIC_SFOS_BASE_VERSION}
+local_sfos_source_sysroot=${LOCAL_SFOS_SOURCE_SYSROOT}
 out=${OUT}
 staging=${STAGING}
 started_at=$(date --iso-8601=seconds)

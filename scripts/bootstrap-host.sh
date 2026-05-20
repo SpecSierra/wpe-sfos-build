@@ -3,6 +3,31 @@ set -euo pipefail
 
 source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 
+PUBLIC_SFOS_BASE_VERSION="${PUBLIC_SFOS_BASE_VERSION:-5.0.0.62}"
+LOCAL_SFOS_SOURCE_SYSROOT="${LOCAL_SFOS_SOURCE_SYSROOT:-/opt/sfos-sysroot}"
+
+sysroot_version_of() {
+    local root="$1"
+    local os_release
+
+    for os_release in "${root}/etc/os-release" "${root}/usr/lib/os-release"; do
+        [ -f "${os_release}" ] || continue
+        sed -n 's/^VERSION_ID=//p' "${os_release}" | tr -d '"'
+        return 0
+    done
+
+    return 1
+}
+
+replace_sysroot_with_copy() {
+    local source_root="$1"
+    local dest_root="$2"
+
+    mkdir -p "$(dirname "${dest_root}")"
+    rm -rf "${dest_root}"
+    cp -a "${source_root}" "${dest_root}"
+}
+
 echo ""
 echo "--- [0] Setting up 64 GB swap ---"
 if ! swapon --show | grep -q /swapfile; then
@@ -49,22 +74,44 @@ echo "Build tools ready."
 
 echo ""
 echo "--- [2] Setting up SFOS ${SFOS_SYSROOT_VERSION} aarch64 sysroot ---"
-if [ ! -d "${SYSROOT}/usr/include" ]; then
-    mkdir -p "${SYSROOT}"
-    sysroot_url="https://releases.sailfishos.org/sdk/targets/Sailfish_OS-${SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar.7z"
-    sysroot_tar="/tmp/Sailfish_OS-${SFOS_SYSROOT_VERSION}-Sailfish_SDK_Target-aarch64.tar"
-    echo "  Downloading sysroot (177 MB)..."
-    curl -L --progress-bar "${sysroot_url}" -o /tmp/sfos-sysroot.tar.7z
-    echo "  Extracting..."
-    cd "${SYSROOT}"
-    7z x /tmp/sfos-sysroot.tar.7z -so | tar -x --numeric-owner 2>/dev/null || {
-        7z e /tmp/sfos-sysroot.tar.7z -o/tmp -y
-        tar -xf "${sysroot_tar}" -C "${SYSROOT}" --numeric-owner
-    }
-    rm -f /tmp/sfos-sysroot.tar.7z "${sysroot_tar}"
-    echo "  Sysroot ready."
+current_sysroot_version="$(sysroot_version_of "${SYSROOT}" || true)"
+local_source_version=""
+if [ "${LOCAL_SFOS_SOURCE_SYSROOT}" != "${SYSROOT}" ]; then
+    local_source_version="$(sysroot_version_of "${LOCAL_SFOS_SOURCE_SYSROOT}" || true)"
+fi
+
+if [ -d "${SYSROOT}/usr/include" ] && [ "${current_sysroot_version}" = "${SFOS_SYSROOT_VERSION}" ]; then
+    echo "  Sysroot already present at target version ${current_sysroot_version}."
+elif [ -n "${local_source_version}" ] && [ "${local_source_version}" = "${SFOS_SYSROOT_VERSION}" ]; then
+    echo "  Seeding sysroot from local ${LOCAL_SFOS_SOURCE_SYSROOT} (${local_source_version})..."
+    replace_sysroot_with_copy "${LOCAL_SFOS_SOURCE_SYSROOT}" "${SYSROOT}"
+    echo "  Sysroot ready from local updated source."
 else
-    echo "  Sysroot already present."
+    if [ ! -d "${SYSROOT}/usr/include" ]; then
+        mkdir -p "${SYSROOT}"
+        sysroot_url="https://releases.sailfishos.org/sdk/targets/Sailfish_OS-${PUBLIC_SFOS_BASE_VERSION}-Sailfish_SDK_Target-aarch64.tar.7z"
+        sysroot_tar="/tmp/Sailfish_OS-${PUBLIC_SFOS_BASE_VERSION}-Sailfish_SDK_Target-aarch64.tar"
+        echo "  Downloading public base sysroot ${PUBLIC_SFOS_BASE_VERSION}..."
+        curl -L --progress-bar "${sysroot_url}" -o /tmp/sfos-sysroot.tar.7z
+        echo "  Extracting..."
+        cd "${SYSROOT}"
+        7z x /tmp/sfos-sysroot.tar.7z -so | tar -x --numeric-owner 2>/dev/null || {
+            7z e /tmp/sfos-sysroot.tar.7z -o/tmp -y
+            tar -xf "${sysroot_tar}" -C "${SYSROOT}" --numeric-owner
+        }
+        rm -f /tmp/sfos-sysroot.tar.7z "${sysroot_tar}"
+    else
+        echo "  Existing sysroot version is ${current_sysroot_version:-unknown}; keeping it for validation."
+    fi
+
+    current_sysroot_version="$(sysroot_version_of "${SYSROOT}" || true)"
+    if [ "${current_sysroot_version}" != "${SFOS_SYSROOT_VERSION}" ]; then
+        echo "ERROR: sysroot at ${SYSROOT} is ${current_sysroot_version:-unknown}, but ${SFOS_SYSROOT_VERSION} is required." >&2
+        echo "       Public SDK target ${PUBLIC_SFOS_BASE_VERSION} can be downloaded, but this machine also needs an updated ${SFOS_SYSROOT_VERSION} sysroot source (for example ${LOCAL_SFOS_SOURCE_SYSROOT}) to seed CI builds." >&2
+        exit 1
+    fi
+
+    echo "  Sysroot ready."
 fi
 
 echo ""
