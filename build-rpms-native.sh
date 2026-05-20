@@ -275,11 +275,7 @@ CFLAGS="-O2 -march=armv8-a -fPIC -fvisibility=hidden"
 SHARED="-shared -Wl,--allow-shlib-undefined"
 
 for lib in \
-    "libgetauxval_fix.so:libgetauxval_fix.c" \
-    "libgetauxval_fix2.so:libgetauxval_fix2.c" \
-    "libsigill_skip.so:libsigill_skip.c" \
-    "libsigill_skip2.so:libsigill_skip2.c" \
-    "libsigill_skip3.so:libsigill_skip3.c"
+    "libsigill_skip.so:libsigill_skip.c"
 do
     name="${lib%%:*}"; src="${lib##*:}"
     $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/${name}" "${COMPAT_SRC}/${src}"
@@ -309,8 +305,6 @@ if [ "${USE_GLIB_COMPAT}" = "1" ]; then
         -L"${SFOS_SYSROOT}/usr/lib64" -lglib-2.0
     ln -sfn libglib-compat.so "${COMPAT_BUILD}/libglib-compat-preload.so"
 fi
-$CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap.so"  "${COMPAT_SRC}/libexecve_wrap.c"  -ldl
-$CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/libexecve_wrap2.so" "${COMPAT_SRC}/libexecve_wrap2.c" -ldl
 
 # Stub: libgssapi_krb5.so.2 (GSSAPI for libsoup3 — always returns unavailable on SFOS)
 # Note: must NOT use -fvisibility=hidden here — version-script requires GLOBAL symbols

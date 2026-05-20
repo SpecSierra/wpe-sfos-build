@@ -105,9 +105,9 @@ This is the current keep/drop inventory for the old SFOS 5.0 compatibility stack
 | `patch-glibc-versions.py` | `remove` on SFOS 5.1 unless a specific binary still needs it | should not stay in the normal path if the new baseline already matches runtime glibc |
 | `libglib-compat.so` | `remove` on SFOS 5.1 if GLib ABI is sufficient | carried for older GLib behavior on the SFOS 5.0 line |
 | `libcow_string_compat.so` | `remove` on SFOS 5.1 | the rebuilt 5.1 runtime makes `invoker` fail on `__libc_single_threaded`, so this shim is no longer safe in the default path |
-| `libsigill_skip*.so` | `re-check` | only keep if the rebuilt 5.1 line still trips unsupported CPU feature probes |
-| `libgetauxval_fix*.so` | `re-check` | legacy workaround; verify before carrying forward |
-| `libexecve_wrap*.so` | `remove` | tied to the older wrapped process-launch path and sailjail-era assumptions |
+| `libsigill_skip.so` | `re-check` | only keep if the rebuilt 5.1 line still trips unsupported CPU feature probes |
+| `libgetauxval_fix*.so` | `removed from default package` | legacy workaround no longer used by the current runtime closure |
+| `libexecve_wrap*.so` | `removed from default package` | tied to the older wrapped process-launch path and sailjail-era assumptions |
 | broad `LD_PRELOAD` stacks | `remove` | migration goal is a minimal runtime closure, not global preload repair |
 | `libegl-stubs.so` | `keep temporarily` | still potentially relevant if Sailfish/hybris EGL remains short on required symbols |
 | `libepoxy-rtld-default-fallback.patch` | `keep temporarily` | coupled to `libegl-stubs.so`; re-check once the 5.1 runtime is exercised |
