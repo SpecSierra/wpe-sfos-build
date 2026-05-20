@@ -23,6 +23,8 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-jsc-assembler-platform.patch"
     "patches/webkit/webkit-jsc-cpu-b3-includes.patch"
     "patches/webkit/webkit-jsc-b3-export-macros.patch"
+    "patches/webkit/webkit-jsc-b3-platform.patch"
+    "patches/webkit/webkit-jsc-b3-cstdint.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
