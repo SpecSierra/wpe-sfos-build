@@ -11,6 +11,7 @@ export BROWSER_SRC="${BROWSER_SRC:-${WORK}/sailfish-browser-wpe}"
 # actual cached sysroot from its updated 5.1 tree.
 export PUBLIC_SFOS_BASE_VERSION="${PUBLIC_SFOS_BASE_VERSION:-5.0.0.62}"
 export LOCAL_SFOS_SOURCE_SYSROOT="${LOCAL_SFOS_SOURCE_SYSROOT:-/opt/sfos-sysroot}"
+export QT5_PLUGIN_SOURCE_DIR="${QT5_PLUGIN_SOURCE_DIR:-/release/workspace/wpewebkit-2.52.1}"
 export WPE_PREFIX="${WPE_PREFIX:-${WORK}/wpe-sfos-prefix}"
 export SYSROOT="${SYSROOT:-/opt/github-runner/cache/sfos-sysroot-5.1.0.5}"
 export OUT="${OUT:-/tmp/wpe-sfos-rpms}"
@@ -32,6 +33,8 @@ wpe_prefix=${WPE_PREFIX}
 sysroot=${SYSROOT}
 public_sfos_base_version=${PUBLIC_SFOS_BASE_VERSION}
 local_sfos_source_sysroot=${LOCAL_SFOS_SOURCE_SYSROOT}
+qt5_plugin_source_dir=${QT5_PLUGIN_SOURCE_DIR}
+nproc=${NPROC:-}
 out=${OUT}
 staging=${STAGING}
 started_at=$(date --iso-8601=seconds)
