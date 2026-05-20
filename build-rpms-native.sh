@@ -236,6 +236,9 @@ done
 mkdir -p "${S}/usr/share/wpe-webkit-2.0"
 cp -a "${WPE_PREFIX}/share/wpe-webkit-2.0/inspector.gresource" \
       "${S}/usr/share/wpe-webkit-2.0/"
+if [ -d "${WPE_PREFIX}/share/wpe-webkit-2.0/build-config" ]; then
+    stage_cp "${WPE_PREFIX}/share/wpe-webkit-2.0/build-config" /usr/share/wpe-webkit-2.0 "$S"
+fi
 
 # devel headers and pkg-config
 stage_cp "${WPE_PREFIX}/include/wpe-webkit-2.0"            /usr/include "$S"

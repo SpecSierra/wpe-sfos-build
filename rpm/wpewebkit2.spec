@@ -120,6 +120,46 @@ install -m 644 WebKitBuild/Release/wpe-webkit-2.0.pc \
 install -m 644 WebKitBuild/Release/wpe-web-process-extension-2.0.pc \
     %{buildroot}%{_libdir}/pkgconfig/wpe-web-process-extension-2.0.pc
 
+# Preserve the generated build config so packaged installs can be inspected later.
+install -d %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config
+install -m 644 WebKitBuild/Release/CMakeCache.txt \
+    %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/CMakeCache.txt
+install -m 644 WebKitBuild/Release/cmakeconfig.h \
+    %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/cmakeconfig.h
+python3 - <<'PY'
+import re
+from pathlib import Path
+
+buildroot = Path(r"%{buildroot}")
+cache_path = buildroot / "%{_datadir}".lstrip("/") / "wpe-webkit-2.0" / "build-config" / "CMakeCache.txt"
+output_path = buildroot / "%{_datadir}".lstrip("/") / "wpe-webkit-2.0" / "build-config" / "feature-flags.txt"
+interesting = (
+    "ENABLE_GPU_PROCESS",
+    "ENABLE_WEBGL",
+    "ENABLE_WEBGPU",
+    "USE_GBM",
+    "ENABLE_BUBBLEWRAP_SANDBOX",
+)
+values = {key: "<not found>" for key in interesting}
+pattern = re.compile(r"^([^:#=]+):[^=]+=(.*)$")
+
+for line in cache_path.read_text(encoding="utf-8", errors="replace").splitlines():
+    match = pattern.match(line)
+    if not match:
+        continue
+    key, value = match.groups()
+    if key in values:
+        values[key] = value
+
+lines = [
+    "WPE WebKit version: %{version}",
+    "Build dir: WebKitBuild/Release",
+    "",
+]
+lines.extend(f"{key}={values[key]}" for key in interesting)
+output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
 # Patch GLIBC_2.34+ version tags down to GLIBC_2.17 in all installed binaries
 python3 %{SOURCE3} \
     %{buildroot}%{_libdir}/libWPEWebKit-2.0.so.*.*.* \
@@ -144,6 +184,11 @@ python3 %{SOURCE3} \
 %{_libexecdir}/wpe-webkit-2.0/WPEWebProcess
 %{_libexecdir}/wpe-webkit-2.0/WPENetworkProcess
 %{_libexecdir}/wpe-webkit-2.0/WPEGPUProcess
+%dir %{_datadir}/wpe-webkit-2.0
+%dir %{_datadir}/wpe-webkit-2.0/build-config
+%{_datadir}/wpe-webkit-2.0/build-config/CMakeCache.txt
+%{_datadir}/wpe-webkit-2.0/build-config/cmakeconfig.h
+%{_datadir}/wpe-webkit-2.0/build-config/feature-flags.txt
 
 %files devel
 %{_libdir}/libWPEWebKit-2.0.so

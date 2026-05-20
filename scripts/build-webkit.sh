@@ -43,6 +43,56 @@ stage_webkit_pkgconfig_files() {
     done
 }
 
+install_webkit_build_metadata() {
+    local build_dir="$1"
+    local metadata_dir="${WPE_PREFIX}/share/wpe-webkit-2.0/build-config"
+    local cache_path="${build_dir}/CMakeCache.txt"
+    local config_path="${build_dir}/cmakeconfig.h"
+
+    mkdir -p "${metadata_dir}"
+
+    [ -f "${cache_path}" ] && cp "${cache_path}" "${metadata_dir}/CMakeCache.txt"
+    [ -f "${config_path}" ] && cp "${config_path}" "${metadata_dir}/cmakeconfig.h"
+
+    python3 - "${cache_path}" "${metadata_dir}/feature-flags.txt" "${WPE_WEBKIT_VERSION}" "${WPE_SOURCE_DIR}" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+cache_path = Path(sys.argv[1])
+output_path = Path(sys.argv[2])
+webkit_version = sys.argv[3]
+source_dir = sys.argv[4]
+interesting = (
+    "ENABLE_GPU_PROCESS",
+    "ENABLE_WEBGL",
+    "ENABLE_WEBGPU",
+    "USE_GBM",
+    "ENABLE_BUBBLEWRAP_SANDBOX",
+)
+values = {key: "<not found>" for key in interesting}
+pattern = re.compile(r"^([^:#=]+):[^=]+=(.*)$")
+
+if cache_path.is_file():
+    for line in cache_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = pattern.match(line)
+        if not match:
+            continue
+        key, value = match.groups()
+        if key in values:
+            values[key] = value
+
+lines = [
+    f"WPE WebKit version: {webkit_version}",
+    f"Source dir: {source_dir}",
+    f"Build dir: {cache_path.parent}",
+    "",
+]
+lines.extend(f"{key}={values[key]}" for key in interesting)
+output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+}
+
 echo ""
 echo "--- [8] Building WPEWebKit ${WPE_WEBKIT_VERSION} (expect 60-90 min) ---"
 if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
@@ -104,6 +154,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     cmake --install WebKitBuild/Release --prefix "${WPE_PREFIX}"
 
     stage_webkit_pkgconfig_files "${WPE_SOURCE_DIR}/WebKitBuild/Release"
+    install_webkit_build_metadata "${WPE_SOURCE_DIR}/WebKitBuild/Release"
 
     sed -i 's/libsoup-3\.0 //' "${WPE_PREFIX}/lib/pkgconfig/wpe-webkit-2.0.pc" 2>/dev/null || true
 
@@ -120,6 +171,7 @@ else
     echo "  WPEWebKit already built."
     cmake --install "${WPE_SOURCE_DIR}/WebKitBuild/Release" --prefix "${WPE_PREFIX}"
     stage_webkit_pkgconfig_files "${WPE_SOURCE_DIR}/WebKitBuild/Release"
+    install_webkit_build_metadata "${WPE_SOURCE_DIR}/WebKitBuild/Release"
 fi
 
 echo ""
