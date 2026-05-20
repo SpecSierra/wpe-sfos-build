@@ -10,6 +10,8 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-ramsize-cstddef.patch"
     "patches/webkit/webkit-wtf-header-includes.patch"
     "patches/webkit/webkit-wtf-platform-stdint.patch"
+    "patches/webkit/webkit-wtf-glib-platform.patch"
+    "patches/webkit/webkit-wtf-glib-header-includes.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )
