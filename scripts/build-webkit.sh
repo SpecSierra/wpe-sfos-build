@@ -4,7 +4,13 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 
 WPE_WEBKIT_VERSION="${WPE_WEBKIT_VERSION:-${LEGACY_WPEWEBKIT_VERSION}}"
-WPE_SOURCE_DIR="${WPE_SOURCE_DIR:-${WORK}/wpewebkit-${WPE_WEBKIT_VERSION}}"
+if [ -n "${WPE_SOURCE_DIR:-}" ]; then
+    WPE_SOURCE_DIR="${WPE_SOURCE_DIR}"
+elif [ -n "${CI_ROOT:-}" ]; then
+    WPE_SOURCE_DIR="${CI_ROOT}/sources/wpewebkit-${WPE_WEBKIT_VERSION}"
+else
+    WPE_SOURCE_DIR="${WORK}/wpewebkit-${WPE_WEBKIT_VERSION}"
+fi
 QT5_PLUGIN_SOURCE_DIR="${QT5_PLUGIN_SOURCE_DIR:-${QT5_PLUGIN_SOURCE_DIR_DEFAULT}}"
 
 resolve_sysroot_library() {
@@ -65,13 +71,16 @@ install_webkit_build_metadata() {
 echo ""
 echo "--- [8] Building WPEWebKit ${WPE_WEBKIT_VERSION} (expect 60-90 min) ---"
 if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
-    cd "${WORK}"
+    webkit_source_parent="$(dirname "${WPE_SOURCE_DIR}")"
+    mkdir -p "${webkit_source_parent}"
+
+    cd "${webkit_source_parent}"
     if [ ! -d "${WPE_SOURCE_DIR}" ]; then
         echo "  Downloading tarball..."
         wget -q --show-progress \
             "https://wpewebkit.org/releases/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz" \
             -O "/tmp/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz"
-        tar -xf "/tmp/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz"
+        tar -xf "/tmp/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz" -C "${webkit_source_parent}"
         rm -f "/tmp/wpewebkit-${WPE_WEBKIT_VERSION}.tar.xz"
     fi
 

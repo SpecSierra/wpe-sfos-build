@@ -1,23 +1,19 @@
 --- a/Source/JavaScriptCore/shell/CMakeLists.txt
 +++ b/Source/JavaScriptCore/shell/CMakeLists.txt
-@@ -11,15 +11,8 @@
- if (${JavaScriptCore_LIBRARY_TYPE} STREQUAL "OBJECT")
--    set(JavaScriptCoreShellArchive "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libJavaScriptCoreShellArchive.a")
--    add_custom_command(
--        OUTPUT ${JavaScriptCoreShellArchive}
--        COMMAND ${CMAKE_COMMAND} -E rm -f ${JavaScriptCoreShellArchive}
--        COMMAND ${CMAKE_AR} crs ${JavaScriptCoreShellArchive} $<TARGET_OBJECTS:JavaScriptCore> $<TARGET_OBJECTS:LowLevelInterpreterLib>
--        DEPENDS $<TARGET_OBJECTS:JavaScriptCore> $<TARGET_OBJECTS:LowLevelInterpreterLib>
--        COMMAND_EXPAND_LISTS
--        VERBATIM
--    )
--    add_custom_target(JavaScriptCoreShellArchiveTarget DEPENDS ${JavaScriptCoreShellArchive})
+@@ -25,6 +25,16 @@
+ 
+ WEBKIT_EXECUTABLE_DECLARE(jsc)
+ 
++if (${JavaScriptCore_LIBRARY_TYPE} STREQUAL "OBJECT")
 +    add_library(JavaScriptCoreShellArchive STATIC
 +        $<TARGET_OBJECTS:JavaScriptCore>
 +        $<TARGET_OBJECTS:LowLevelInterpreterLib>
 +    )
-     list(REMOVE_ITEM jsc_FRAMEWORKS JavaScriptCore)
--    list(APPEND jsc_DEPENDENCIES JavaScriptCoreShellArchiveTarget)
--    list(PREPEND jsc_LIBRARIES ${JavaScriptCoreShellArchive})
++    list(REMOVE_ITEM jsc_FRAMEWORKS JavaScriptCore)
++    list(APPEND jsc_DEPENDENCIES JavaScriptCoreShellArchive)
 +    list(PREPEND jsc_LIBRARIES "-Wl,--whole-archive" JavaScriptCoreShellArchive "-Wl,--no-whole-archive")
- endif ()
++endif ()
++
+ if (DEVELOPER_MODE)
+     set(testapi_SOURCES
+         ../API/tests/CompareAndSwapTest.cpp
