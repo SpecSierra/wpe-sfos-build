@@ -4,7 +4,7 @@
  
  #pragma once
  
-+#include "JSExportMacros.h"
++#include <JavaScriptCore/JSExportMacros.h>
  #include "JSCContext.h"
  
 --- a/Source/JavaScriptCore/API/glib/JSCContextPrivate.h
@@ -13,7 +13,7 @@
  
  #pragma once
  
-+#include "JSExportMacros.h"
++#include <JavaScriptCore/JSExportMacros.h>
  #include "JSCContext.h"
  #include "JSCValue.h"
  #include <wtf/glib/GRefPtr.h>
@@ -23,6 +23,6 @@
  
  #pragma once
  
-+#include "JSExportMacros.h"
++#include <JavaScriptCore/JSExportMacros.h>
  #include "JSCValue.h"
  
