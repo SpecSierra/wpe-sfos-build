@@ -10,6 +10,7 @@ on:
       - build-all.sh
       - build-rpms-native.sh
       - scripts/**
+      - patches/**
       - rpm/**
       - versions.env
 
