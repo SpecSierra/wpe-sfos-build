@@ -41,6 +41,8 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-webcore-avif-platform.patch"
     "patches/webkit/webkit-webcore-avif-reader-platform.patch"
     "patches/webkit/webkit-webcore-context-export-macros.patch"
+    "patches/webkit/webkit-webcore-bitmaptexturepool-owners.patch"
+    "patches/webkit/webkit-webcore-texmap-owner-headers.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
 )

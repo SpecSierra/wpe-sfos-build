@@ -1,0 +1,10 @@
+--- a/Source/WebCore/platform/graphics/texmap/BitmapTexturePool.h
++++ b/Source/WebCore/platform/graphics/texmap/BitmapTexturePool.h
+@@ -27,6 +27,7 @@
+ #pragma once
+ 
+ #include <wtf/Platform.h>
++#include <WebCore/PlatformExportMacros.h>
+ 
+ #if USE(TEXTURE_MAPPER)
+ 
