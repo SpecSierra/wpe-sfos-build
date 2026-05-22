@@ -1,6 +1,6 @@
 --- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
 +++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
-@@ -192,16 +192,23 @@ QSGNode* WPEQtView::updatePaintNode(QSGNode* node, UpdatePaintNodeData*)
+@@ -192,17 +192,23 @@ QSGNode* WPEQtView::updatePaintNode(QSGNode* node, UpdatePaintNodeData*)
  
      auto* textureNode = static_cast<QSGSimpleTextureNode*>(node);
 -    if (!textureNode)
