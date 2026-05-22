@@ -13,6 +13,8 @@ export SYSROOT="${SYSROOT:-/opt/sfos-sysroot}"
 export NPROC="${NPROC:-$(nproc)}"
 export CCACHE_DIR="${CCACHE_DIR:-/opt/github-runner/cache/ccache}"
 export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-40G}"
+export CCACHE_BASEDIR="${CCACHE_BASEDIR:-${CI_ROOT:-${WORK}}}"
+export CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR:-1}"
 
 if [ -d /usr/lib/ccache ]; then
     export PATH="/usr/lib/ccache:${PATH}"

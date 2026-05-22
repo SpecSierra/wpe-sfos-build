@@ -76,6 +76,12 @@ if command -v ccache >/dev/null 2>&1; then
     mkdir -p "${CCACHE_DIR}"
     ccache --set-config=cache_dir="${CCACHE_DIR}" >/dev/null
     ccache --set-config=max_size="${CCACHE_MAXSIZE}" >/dev/null
+    ccache --set-config=base_dir="${CCACHE_BASEDIR}" >/dev/null
+    if [ "${CCACHE_NOHASHDIR}" = "1" ]; then
+        ccache --set-config=hash_dir=false >/dev/null
+    else
+        ccache --set-config=hash_dir=true >/dev/null
+    fi
     ccache --set-config=compression=true >/dev/null
     ccache --set-config=compiler_check=content >/dev/null
 fi

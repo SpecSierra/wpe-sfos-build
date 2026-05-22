@@ -41,6 +41,8 @@ jobs:
       NPROC: "6"
       CCACHE_DIR: /opt/github-runner/cache/ccache
       CCACHE_MAXSIZE: 40G
+      CCACHE_BASEDIR: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}
+      CCACHE_NOHASHDIR: "1"
       WPE_PREFIX: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/wpe-sfos-prefix
       SYSROOT: /opt/github-runner/cache/sfos-sysroot-5.1.0.5
       OUT: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/wpe-sfos-rpms
@@ -68,7 +70,7 @@ jobs:
       - name: Build Atlantic packages
         run: |
           set -euo pipefail
-          sudo --preserve-env=CI_ROOT,WORK,BUILD_TOOLS,BROWSER_SRC,PUBLIC_SFOS_BASE_VERSION,LOCAL_SFOS_SOURCE_SYSROOT,QT5_PLUGIN_SOURCE_DIR,WPE_PREFIX,SYSROOT,OUT,STAGING,ARTIFACT_ROOT,NPROC,CCACHE_DIR,CCACHE_MAXSIZE \
+          sudo --preserve-env=CI_ROOT,WORK,BUILD_TOOLS,BROWSER_SRC,PUBLIC_SFOS_BASE_VERSION,LOCAL_SFOS_SOURCE_SYSROOT,QT5_PLUGIN_SOURCE_DIR,WPE_PREFIX,SYSROOT,OUT,STAGING,ARTIFACT_ROOT,NPROC,CCACHE_DIR,CCACHE_MAXSIZE,CCACHE_BASEDIR,CCACHE_NOHASHDIR \
             bash "${GITHUB_WORKSPACE}/scripts/ci-build.sh"
 
       - name: Fix artifact ownership
