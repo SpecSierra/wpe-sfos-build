@@ -3,7 +3,13 @@ set -euo pipefail
 
 source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 
-WPE_SOURCE_DIR="${WPE_SOURCE_DIR:-${LEGACY_WPE_SOURCE_DIR}}"
+if [ -n "${WPE_SOURCE_DIR:-}" ]; then
+    WPE_SOURCE_DIR="${WPE_SOURCE_DIR}"
+elif [ -n "${CI_CACHE_ROOT:-}" ]; then
+    WPE_SOURCE_DIR="${CI_CACHE_ROOT}/sources/wpewebkit-${LEGACY_WPEWEBKIT_VERSION}"
+else
+    WPE_SOURCE_DIR="${LEGACY_WPE_SOURCE_DIR}"
+fi
 
 echo ""
 echo "--- [11] Setting up Qt5 symlinks ---"
@@ -31,9 +37,9 @@ cd build
 qmake -spec "${SYSROOT}/usr/share/qt5/mkspecs/linux-g++" \
     ../sailfish-browser.pro \
     "CONFIG+=release" \
-    "QMAKE_CXX=g++ --sysroot=${SYSROOT}" \
-    "QMAKE_CC=gcc --sysroot=${SYSROOT}" \
-    "QMAKE_LINK=g++ --sysroot=${SYSROOT}" \
+    "QMAKE_CXX=ccache g++ --sysroot=${SYSROOT}" \
+    "QMAKE_CC=ccache gcc --sysroot=${SYSROOT}" \
+    "QMAKE_LINK=ccache g++ --sysroot=${SYSROOT}" \
     "WPE_SFOS_PREFIX=${WPE_PREFIX}" \
     "SFOS_SYSROOT=${SYSROOT}" \
     "WPE_SOURCE_DIR=${WPE_SOURCE_DIR}"
@@ -43,9 +49,9 @@ cd apps
 qmake -spec "${SYSROOT}/usr/share/qt5/mkspecs/linux-g++" \
     "${BROWSER_SRC}/apps/apps.pro" \
     "CONFIG+=release" \
-    "QMAKE_CXX=g++ --sysroot=${SYSROOT}" \
-    "QMAKE_CC=gcc --sysroot=${SYSROOT}" \
-    "QMAKE_LINK=g++ --sysroot=${SYSROOT}" \
+    "QMAKE_CXX=ccache g++ --sysroot=${SYSROOT}" \
+    "QMAKE_CC=ccache gcc --sysroot=${SYSROOT}" \
+    "QMAKE_LINK=ccache g++ --sysroot=${SYSROOT}" \
     "WPE_SFOS_PREFIX=${WPE_PREFIX}" \
     "SFOS_SYSROOT=${SYSROOT}" \
     "WPE_SOURCE_DIR=${WPE_SOURCE_DIR}"

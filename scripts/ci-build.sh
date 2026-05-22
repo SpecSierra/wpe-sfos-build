@@ -12,6 +12,7 @@ export BROWSER_SRC="${BROWSER_SRC:-${WORK}/sailfish-browser-wpe}"
 export PUBLIC_SFOS_BASE_VERSION="${PUBLIC_SFOS_BASE_VERSION:-5.0.0.62}"
 export LOCAL_SFOS_SOURCE_SYSROOT="${LOCAL_SFOS_SOURCE_SYSROOT:-/opt/sfos-sysroot}"
 export QT5_PLUGIN_SOURCE_DIR="${QT5_PLUGIN_SOURCE_DIR:-/release/workspace/wpewebkit-2.52.1}"
+export CI_CACHE_ROOT="${CI_CACHE_ROOT:-/opt/github-runner/cache/atlantic-build}"
 export WPE_PREFIX="${WPE_PREFIX:-${WORK}/wpe-sfos-prefix}"
 export SYSROOT="${SYSROOT:-/opt/github-runner/cache/sfos-sysroot-5.1.0.5}"
 export OUT="${OUT:-/tmp/wpe-sfos-rpms}"
@@ -37,6 +38,7 @@ ccache_dir=${CCACHE_DIR:-}
 ccache_maxsize=${CCACHE_MAXSIZE:-}
 ccache_basedir=${CCACHE_BASEDIR:-}
 ccache_nohashdir=${CCACHE_NOHASHDIR:-}
+ci_cache_root=${CI_CACHE_ROOT:-}
 wpe_prefix=${WPE_PREFIX}
 sysroot=${SYSROOT}
 public_sfos_base_version=${PUBLIC_SFOS_BASE_VERSION}
@@ -48,6 +50,42 @@ staging=${STAGING}
 build_tools_commit=${BUILD_TOOLS_COMMIT}
 started_at=$(date --iso-8601=seconds)
 EOF
+
+rm -rf "${CI_CACHE_ROOT}/wpe-sfos-prefix" "${CI_CACHE_ROOT}/sources"
+
+ccache_smoke_test() {
+    if ! command -v ccache >/dev/null 2>&1; then
+        echo "ERROR: ccache is not available in CI" >&2
+        exit 1
+    fi
+
+    local smoke_dir="${ARTIFACT_ROOT}/ccache-smoke"
+    local smoke_source="${smoke_dir}/smoke.cpp"
+
+    rm -rf "${smoke_dir}"
+    mkdir -p "${smoke_dir}"
+    cat > "${smoke_source}" <<'CPP'
+int smoke() { return 42; }
+CPP
+
+    ccache -z >/dev/null
+    ccache g++ -c "${smoke_source}" -o "${smoke_dir}/first.o"
+    ccache g++ -c "${smoke_source}" -o "${smoke_dir}/second.o"
+    ccache -s > "${ARTIFACT_ROOT}/ccache-smoke.txt"
+
+    local hits misses
+    hits="$(awk '/^  Hits:/ {print $2; exit}' "${ARTIFACT_ROOT}/ccache-smoke.txt")"
+    misses="$(awk '/^  Misses:/ {print $2; exit}' "${ARTIFACT_ROOT}/ccache-smoke.txt")"
+    if [ "${hits:-0}" -lt 1 ] || [ "${misses:-0}" -lt 1 ]; then
+        echo "ERROR: ccache smoke test did not record a cache hit" >&2
+        cat "${ARTIFACT_ROOT}/ccache-smoke.txt" >&2
+        exit 1
+    fi
+
+    ccache -z >/dev/null
+}
+
+ccache_smoke_test
 
 if command -v ccache >/dev/null 2>&1; then
     ccache -s > "${ARTIFACT_ROOT}/ccache-before.txt" || true

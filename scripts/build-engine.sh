@@ -17,7 +17,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libwpe-1.0.so" ]; then
     fi
     cd libwpe
     rm -rf build
-    PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig" \
+    CC="ccache gcc" CXX="ccache g++" PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig" \
     meson setup build \
         --native-file "${BUILD_TOOLS}/native-meson.ini" \
         --prefix "${WPE_PREFIX}" \
@@ -46,7 +46,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libepoxy.so" ]; then
     cd libepoxy
     apply_repo_patches 1 "${PWD}" "${ENGINE_SOURCE_PATCHES[@]}"
     rm -rf build
-    PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig" \
+    CC="ccache gcc" CXX="ccache g++" PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig" \
     meson setup build \
         --native-file "${BUILD_TOOLS}/native-meson.ini" \
         --prefix "${WPE_PREFIX}" \
@@ -70,7 +70,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEBackend-fdo-1.0.so" ]; then
     fi
     cd WPEBackend-fdo
     rm -rf build
-    PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig" \
+    CC="ccache gcc" CXX="ccache g++" PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig" \
     meson setup build \
         --native-file "${BUILD_TOOLS}/native-meson.ini" \
         --prefix "${WPE_PREFIX}" \

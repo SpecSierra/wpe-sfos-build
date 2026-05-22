@@ -6,6 +6,8 @@ source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 WPE_WEBKIT_VERSION="${WPE_WEBKIT_VERSION:-${LEGACY_WPEWEBKIT_VERSION}}"
 if [ -n "${WPE_SOURCE_DIR:-}" ]; then
     WPE_SOURCE_DIR="${WPE_SOURCE_DIR}"
+elif [ -n "${CI_CACHE_ROOT:-}" ]; then
+    WPE_SOURCE_DIR="${CI_CACHE_ROOT}/sources/wpewebkit-${WPE_WEBKIT_VERSION}"
 elif [ -n "${CI_ROOT:-}" ]; then
     WPE_SOURCE_DIR="${CI_ROOT}/sources/wpewebkit-${WPE_WEBKIT_VERSION}"
 else
@@ -75,6 +77,9 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     mkdir -p "${webkit_source_parent}"
 
     cd "${webkit_source_parent}"
+    if [ -n "${CI_CACHE_ROOT:-}" ] && [ -d "${WPE_SOURCE_DIR}" ]; then
+        rm -rf "${WPE_SOURCE_DIR}"
+    fi
     if [ ! -d "${WPE_SOURCE_DIR}" ]; then
         echo "  Downloading tarball..."
         wget -q --show-progress \
@@ -90,6 +95,8 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B WebKitBuild/Release -G Ninja \
         -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain-native.cmake" \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
         -C "${BUILD_TOOLS}/cmake/atlantic-wpe-features.cmake" \
@@ -170,6 +177,8 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B build -G Ninja \
         -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain.cmake" \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
         -DCMAKE_INSTALL_LIBDIR=lib \

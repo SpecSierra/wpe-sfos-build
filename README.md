@@ -207,6 +207,11 @@ host sysroot when the raw 5.1 SDK target archive is not publicly downloadable:
 - `NPROC=6`
 - `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.5`
 
+The WPE source tree and install prefix now live under a stable cache root
+(``/opt/github-runner/cache/atlantic-build``) so ccache sees consistent paths
+between runs, and the CI wrapper runs a smoke test that must record a cache hit
+before the full build starts.
+
 That keeps CI runs from clobbering the live `/opt/wpe-sfos` tree used for manual
 device work on the host.
 
