@@ -217,6 +217,22 @@ Artifacts uploaded from each run include:
 - `artifacts/rpms/*.rpm`
 - `artifacts/build-config/` when WebKit metadata is available
 
+## CLI test automation
+
+Basic automated tests now cover the Python CLI helpers:
+
+- `scripts/write-runtime-env.py`
+- `scripts/write-webkit-feature-flags.py`
+
+Run them locally with:
+
+```bash
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+GitHub Actions also runs the same suite via `.github/workflows/cli-tests.yml`
+whenever these CLI scripts or tests change on `master`.
+
 ## Build philosophy
 
 Atlantic should be maintained like a browser port:

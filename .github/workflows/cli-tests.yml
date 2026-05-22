@@ -1,0 +1,29 @@
+name: CLI tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - .github/workflows/cli-tests.yml
+      - scripts/write-runtime-env.py
+      - scripts/write-webkit-feature-flags.py
+      - tests/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run CLI tests
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py' -v
