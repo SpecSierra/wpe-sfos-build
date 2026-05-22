@@ -33,6 +33,8 @@ repo_root=${REPO_ROOT}
 work=${WORK}
 build_tools=${BUILD_TOOLS}
 browser_src=${BROWSER_SRC}
+ccache_dir=${CCACHE_DIR:-}
+ccache_maxsize=${CCACHE_MAXSIZE:-}
 wpe_prefix=${WPE_PREFIX}
 sysroot=${SYSROOT}
 public_sfos_base_version=${PUBLIC_SFOS_BASE_VERSION}
@@ -45,7 +47,15 @@ build_tools_commit=${BUILD_TOOLS_COMMIT}
 started_at=$(date --iso-8601=seconds)
 EOF
 
+if command -v ccache >/dev/null 2>&1; then
+    ccache -s > "${ARTIFACT_ROOT}/ccache-before.txt" || true
+fi
+
 bash "${REPO_ROOT}/build-all.sh" 2>&1 | tee "${LOG_PATH}"
+
+if command -v ccache >/dev/null 2>&1; then
+    ccache -s > "${ARTIFACT_ROOT}/ccache-after.txt" || true
+fi
 
 mkdir -p "${ARTIFACT_ROOT}/rpms"
 shopt -s nullglob

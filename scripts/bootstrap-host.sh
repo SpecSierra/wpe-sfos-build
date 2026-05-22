@@ -46,6 +46,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y \
     build-essential gcc g++ cmake ninja-build meson \
+    ccache \
     pkg-config python3 python3-pip \
     git curl wget p7zip-full \
     patchelf bzip2 xz-utils \
@@ -70,6 +71,15 @@ apt-get install -y \
     2>/dev/null
 
 gem list fpm | grep -q fpm || gem install --no-document fpm
+
+if command -v ccache >/dev/null 2>&1; then
+    mkdir -p "${CCACHE_DIR}"
+    ccache --set-config=cache_dir="${CCACHE_DIR}" >/dev/null
+    ccache --set-config=max_size="${CCACHE_MAXSIZE}" >/dev/null
+    ccache --set-config=compression=true >/dev/null
+    ccache --set-config=compiler_check=content >/dev/null
+fi
+
 echo "Build tools ready."
 
 echo ""
