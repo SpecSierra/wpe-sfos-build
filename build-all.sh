@@ -22,6 +22,13 @@ bash "${SCRIPT_DIR}/scripts/package-rpms.sh"
 echo ""
 echo "================================================================"
 echo "=== Build COMPLETE at $(date)"
-echo "=== RPMs in /tmp/wpe-sfos-rpms/:"
-ls -lh /tmp/wpe-sfos-rpms/*.rpm
+rpm_out="${OUT:-/tmp/wpe-sfos-rpms}"
+echo "=== RPMs in ${rpm_out}/:"
+shopt -s nullglob
+rpms=("${rpm_out}"/*.rpm)
+if [ "${#rpms[@]}" -eq 0 ]; then
+    echo "ERROR: no RPMs found in ${rpm_out}" >&2
+    exit 1
+fi
+ls -lh "${rpms[@]}"
 echo "================================================================"
