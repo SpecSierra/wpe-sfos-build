@@ -88,6 +88,14 @@ jobs:
           mkdir -p "${repo_arch_dir}"
           cp -a "${ARTIFACT_ROOT}/rpms/." "${repo_arch_dir}/"
           createrepo_c --update "${repo_arch_dir}"
+          cat > "${repo_arch_dir}/index.html" <<HTML
+          <!doctype html>
+          <html><body>
+          <h1>Atlantic CI RPM repository (aarch64)</h1>
+          <p>This path is consumed by zypper.</p>
+          <p>Metadata: <a href="repodata/repomd.xml">repodata/repomd.xml</a></p>
+          </body></html>
+          HTML
           cat > "${repo_root}/index.html" <<HTML
           <!doctype html>
           <html><body>
