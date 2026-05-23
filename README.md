@@ -102,7 +102,7 @@ This is the current keep/drop inventory for the old SFOS 5.0 compatibility stack
 
 | Item | Status | Why |
 | --- | --- | --- |
-| `libglibc-compat.so` | `remove` on SFOS 5.1 if ABI confirms cleanly | old line only needed this for glibc 2.30 gaps |
+| `libglibc-compat.so` | `keep temporarily` | 2.52.3 helper/runtime binaries still require `__libc_single_threaded@GLIBC_2.17` on-device |
 | `patch-glibc-versions.py` | `remove` on SFOS 5.1 unless a specific binary still needs it | should not stay in the normal path if the new baseline already matches runtime glibc |
 | `libglib-compat.so` | `remove` on SFOS 5.1 if GLib ABI is sufficient | carried for older GLib behavior on the SFOS 5.0 line |
 | `libcow_string_compat.so` | `remove` on SFOS 5.1 | the rebuilt 5.1 runtime makes `invoker` fail on `__libc_single_threaded`, so this shim is no longer safe in the default path |

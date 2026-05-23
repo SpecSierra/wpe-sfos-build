@@ -90,7 +90,7 @@ patch_webkit_runtime_paths() {
     local file="$1"
     patch_binary_prefix_string "$file" \
         "${WPE_PREFIX}/libexec/wpe-webkit-2.0" \
-        "/usr/libexec/wpe-webkit-2.0"
+        "${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0"
     patch_binary_prefix_string "$file" \
         "${WPE_PREFIX}/share/locale" \
         "/usr/share/locale"
