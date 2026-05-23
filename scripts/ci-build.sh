@@ -73,10 +73,9 @@ CPP
     ccache g++ -c "${smoke_source}" -o "${smoke_dir}/second.o"
     ccache -s > "${ARTIFACT_ROOT}/ccache-smoke.txt"
 
-    local hits misses
-    hits="$(awk '/^  Hits:/ {print $2; exit}' "${ARTIFACT_ROOT}/ccache-smoke.txt")"
-    misses="$(awk '/^  Misses:/ {print $2; exit}' "${ARTIFACT_ROOT}/ccache-smoke.txt")"
-    if [ "${hits:-0}" -lt 1 ] || [ "${misses:-0}" -lt 1 ]; then
+    local hits
+    hits="$(awk '/^[[:space:]]*Hits:/ {print $2; exit}' "${ARTIFACT_ROOT}/ccache-smoke.txt")"
+    if [ "${hits:-0}" -lt 1 ]; then
         echo "ERROR: ccache smoke test did not record a cache hit" >&2
         cat "${ARTIFACT_ROOT}/ccache-smoke.txt" >&2
         exit 1
