@@ -108,26 +108,27 @@ patch_webkit_runtime_paths() {
 fpm_rpm() {
     local name="$1" version="$2" summary="$3" stage_root="$4"
     shift 4
+    local iteration="${RPM_ITERATION:-1}"
 
     # Write ldconfig scripts
     local post="${STAGING}/post-${name}.sh" postun="${STAGING}/postun-${name}.sh"
     printf '#!/bin/sh\n/sbin/ldconfig || :\n' > "$post"
     printf '#!/bin/sh\n/sbin/ldconfig || :\n' > "$postun"
 
-    echo "==> Building RPM: ${name}-${version}"
+    echo "==> Building RPM: ${name}-${version}-${iteration}"
     fpm -s dir -t rpm \
         -n "$name" \
         -v "$version" \
-        --iteration 1 \
+        --iteration "${iteration}" \
         --architecture aarch64 \
         --rpm-summary "$summary" \
         --after-install "$post" \
         --after-remove "$postun" \
         --force \
-        --package "${OUT}/${name}-${version}-1.aarch64.rpm" \
+        --package "${OUT}/${name}-${version}-${iteration}.aarch64.rpm" \
         "$@" \
         -C "$stage_root" .
-    echo "    -> ${OUT}/${name}-${version}-1.aarch64.rpm"
+    echo "    -> ${OUT}/${name}-${version}-${iteration}.aarch64.rpm"
 }
 
 # ===========================================================================

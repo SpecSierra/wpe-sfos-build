@@ -40,6 +40,7 @@ ccache_basedir=${CCACHE_BASEDIR:-}
 ccache_nohashdir=${CCACHE_NOHASHDIR:-}
 ci_cache_root=${CI_CACHE_ROOT:-}
 wpe_prefix=${WPE_PREFIX}
+rpm_iteration=${RPM_ITERATION:-1}
 sysroot=${SYSROOT}
 public_sfos_base_version=${PUBLIC_SFOS_BASE_VERSION}
 local_sfos_source_sysroot=${LOCAL_SFOS_SOURCE_SYSROOT}

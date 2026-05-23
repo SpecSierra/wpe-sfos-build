@@ -220,7 +220,26 @@ Artifacts uploaded from each run include:
 - `artifacts/build.log`
 - `artifacts/summary.txt`
 - `artifacts/rpms/*.rpm`
+- `artifacts/rpm-repo/aarch64/` with `repodata/` (rpm-md metadata)
 - `artifacts/build-config/` when WebKit metadata is available
+
+On successful `master` builds, the workflow also publishes the same rpm-md tree
+to GitHub Pages (`gh-pages` branch):
+
+- `https://specsierra.github.io/wpe-sfos-build/aarch64/`
+
+Package release/iteration now tracks CI runs (`RPM_ITERATION=<run>.<attempt>`),
+so `zypper up` can pick up each new build instead of seeing repeated `-1`
+releases.
+
+Phone setup for updates:
+
+```bash
+devel-su
+zypper ar -f https://specsierra.github.io/wpe-sfos-build/aarch64 atlantic-ci
+zypper ref
+zypper up atlantic-browser wpewebkit2 wpewebkit2-qt5 wpebackend-fdo libwpe libepoxy wpe-sfos-compat
+```
 
 ## CLI test automation
 
