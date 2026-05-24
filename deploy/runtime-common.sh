@@ -5,7 +5,7 @@ ATLANTIC_RUNTIME_LIBDIR="${ATLANTIC_RUNTIME_LIBDIR:-/usr/lib64}"
 ATLANTIC_COMPAT_DIR="${ATLANTIC_COMPAT_DIR:-${ATLANTIC_RUNTIME_LIBDIR}/wpe-compat}"
 ATLANTIC_WPE_HELPER_DIR="${ATLANTIC_WPE_HELPER_DIR:-/usr/libexec/wpe-webkit-2.0}"
 ATLANTIC_QT_QPA_PLATFORM="${ATLANTIC_QT_QPA_PLATFORM:-wayland}"
-ATLANTIC_XDG_RUNTIME_DIR="${ATLANTIC_XDG_RUNTIME_DIR:-/run/user/100000}"
+ATLANTIC_XDG_RUNTIME_DIR="${ATLANTIC_XDG_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/run/user/100000}}"
 ATLANTIC_WAYLAND_DISPLAY="${ATLANTIC_WAYLAND_DISPLAY:-../../display/wayland-0}"
 ATLANTIC_GSTREAMER_PLUGIN_DIR="${ATLANTIC_GSTREAMER_PLUGIN_DIR:-${ATLANTIC_RUNTIME_LIBDIR}/gstreamer-1.0}"
 ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:0,droidvenc:0}"
@@ -13,9 +13,15 @@ ATLANTIC_WEBKIT_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT:-1}"
 ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS:-2000}"
 
 atlantic_default_pulse_server() {
-    if [ -S "${ATLANTIC_XDG_RUNTIME_DIR}/pulse/native" ]; then
-        printf 'unix:%s/pulse/native' "${ATLANTIC_XDG_RUNTIME_DIR}"
-    fi
+    for pulse_socket in \
+        "${ATLANTIC_XDG_RUNTIME_DIR}/pulse/native" \
+        "/run/pulse/native"
+    do
+        if [ -S "${pulse_socket}" ]; then
+            printf 'unix:%s' "${pulse_socket}"
+            return
+        fi
+    done
 }
 
 atlantic_build_ld_preload() {

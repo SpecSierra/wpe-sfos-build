@@ -21,8 +21,8 @@ Provides:
   - EGL stub entry points for libepoxy load-time probing
   - C++ ABI / stdlibc++ compatibility layer
 
-All shims are loaded via LD_PRELOAD through the browser environment
-file (%{_sharedstatedir}/environment/nemo/70-wpe-compat.conf).
+All shims are loaded via Atlantic browser/helper launch wrappers, not via
+global nemo session environment injection.
 
 # ---------------------------------------------------------------------------
 %package -n wpe-sfos-compat-devel
@@ -56,18 +56,6 @@ for lib in \
     install -m 755 $lib %{buildroot}%{_libdir}/wpe-compat/$lib
 done
 
-# Environment file: sets LD_PRELOAD for all nemo/user sessions
-install -d %{buildroot}%{_sharedstatedir}/environment/nemo
-. ./versions.env
-. ./deploy/runtime-common.sh
-compat_preload="$(atlantic_build_ld_preload)"
-compat_library_path="$(atlantic_default_library_path)"
-python3 ./scripts/write-runtime-env.py \
-    %{buildroot}%{_sharedstatedir}/environment/nemo/70-wpe-compat.conf \
-    --comment "WPE SFOS compatibility shims — loaded for all nemo user sessions." \
-    --entry LD_LIBRARY_PATH "${compat_library_path}" \
-    --optional-entry LD_PRELOAD "${compat_preload}"
-
 %post
 /sbin/ldconfig || :
 
@@ -80,4 +68,3 @@ python3 ./scripts/write-runtime-env.py \
 %{_libdir}/wpe-compat/libglibc-compat.so
 %{_libdir}/wpe-compat/libsigill_skip.so
 %{_libdir}/wpe-compat/libegl-stubs.so
-%{_sharedstatedir}/environment/nemo/70-wpe-compat.conf
