@@ -420,6 +420,12 @@ cp -a "${BROWSER_SRC}/apps/shared/"*.qml             "${S}/usr/share/atlantic-br
 mkdir -p "${S}/usr/share/atlantic-browser/data"
 cp -a "${BROWSER_SRC}/data/prefs.js"                 "${S}/usr/share/atlantic-browser/data/"
 cp -a "${BROWSER_SRC}/data/ua-update.json"           "${S}/usr/share/atlantic-browser/data/"
+cp -a "${BROWSER_SRC}/data/icon-launcher-browser.png" "${S}/usr/share/atlantic-browser/data/"
+
+# Launcher icon
+mkdir -p "${S}/usr/share/icons/hicolor/86x86/apps"
+cp -a "${BROWSER_SRC}/data/icon-launcher-browser.png" \
+    "${S}/usr/share/icons/hicolor/86x86/apps/"
 
 # Desktop file
 mkdir -p "${S}/usr/share/applications"
