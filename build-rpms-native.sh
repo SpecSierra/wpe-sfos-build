@@ -185,6 +185,11 @@ stage_shared_library_family "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" /usr/lib64 "
 patch_staged_library_family "${S}/usr/lib64/libWPEWebKit-2.0.so"
 patch_webkit_runtime_paths "$(readlink -f "${S}/usr/lib64/libWPEWebKit-2.0.so")"
 
+# WOFF2 runtime shared libraries are required when USE_WOFF2=ON.
+# Bundle them into /usr/lib64 so Atlantic can start on stock SFOS images.
+stage_shared_library_family "/usr/lib/aarch64-linux-gnu/libwoff2common.so" /usr/lib64 "$S"
+stage_shared_library_family "/usr/lib/aarch64-linux-gnu/libwoff2dec.so" /usr/lib64 "$S"
+
 # InjectedBundle — staged in both the install path AND the compile-time prefix
 # (WPEWebProcess binary has /opt/wpe-sfos hard-coded as the injected-bundle dir)
 mkdir -p "${S}/usr/lib64/wpe-webkit-2.0"
