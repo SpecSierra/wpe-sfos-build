@@ -107,26 +107,35 @@ jobs:
           sudo chown "$(id -u)":"$(id -g)" "${GNUPGHOME}"
           printf '%s\n' "${ATLANTIC_RPM_SIGNING_KEY}" | gpg --batch --import
           gpg --batch --list-secret-keys "${ATLANTIC_RPM_SIGNING_KEY_ID}" >/dev/null
-          cat > "${HOME}/.rpmmacros" << 'MACROS'
-%_signature gpg
-%_gpg_name %{getenv:ATLANTIC_RPM_SIGNING_KEY_ID}
-%_gpg_path %{getenv:GNUPGHOME}
-%_gpgbin /usr/bin/gpg
-%_gpg_digest_algo sha256
-%__gpg /usr/bin/gpg
-%__gpg_sign_cmd %{__gpg} gpg --batch --no-armor --no-verbose --pinentry-mode loopback --passphrase "%{getenv:ATLANTIC_RPM_SIGNING_PASSPHRASE}" %{?_gpg_digest_algo:--digest-algo %{_gpg_digest_algo}} --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} %{__plaintext_filename}
-MACROS
 
       - name: Sign RPM artifacts
+        env:
+          ATLANTIC_RPM_SIGNING_KEY_ID: ${{ secrets.ATLANTIC_RPM_SIGNING_KEY_ID }}
+          ATLANTIC_RPM_SIGNING_PASSPHRASE: ${{ secrets.ATLANTIC_RPM_SIGNING_PASSPHRASE }}
         run: |
           set -euo pipefail
           shopt -s nullglob
+          if [ -z "${ATLANTIC_RPM_SIGNING_KEY_ID:-}" ]; then
+            echo "Missing ATLANTIC_RPM_SIGNING_KEY_ID secret" >&2
+            exit 1
+          fi
+          cat > "${HOME}/.rpmmacros" << MACROS
+          %_signature gpg
+          %_gpg_name ${ATLANTIC_RPM_SIGNING_KEY_ID}
+          %_gpg_path ${GNUPGHOME}
+          %_gpgbin /usr/bin/gpg
+          %_gpg_digest_algo sha256
+          %__gpg /usr/bin/gpg
+          %__gpg_sign_cmd %{__gpg} gpg --batch --no-armor --no-verbose --pinentry-mode loopback --passphrase "${ATLANTIC_RPM_SIGNING_PASSPHRASE}" %{?_gpg_digest_algo:--digest-algo %{_gpg_digest_algo}} --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} %{__plaintext_filename}
+          MACROS
+          cat "${HOME}/.rpmmacros"
           rpms=("${ARTIFACT_ROOT}/rpms/"*.rpm)
           if [ "${#rpms[@]}" -eq 0 ]; then
             echo "No RPMs found under ${ARTIFACT_ROOT}/rpms to sign" >&2
             exit 1
           fi
           for rpm_path in "${rpms[@]}"; do
+            echo "Signing: ${rpm_path}"
             rpmsign --addsign "${rpm_path}"
           done
 
