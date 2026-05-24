@@ -58,20 +58,21 @@ jobs:
       - name: Check out browser repo
         run: |
           set -euo pipefail
-          git config --global --add safe.directory "${BROWSER_SRC}"
-          if [ -d "${BROWSER_SRC}/.git" ]; then
-            git -C "${BROWSER_SRC}" fetch --prune origin main
+          browser_src="$(realpath -m "${BROWSER_SRC}")"
+          git config --global --add safe.directory "${browser_src}"
+          if [ -d "${browser_src}/.git" ]; then
+            git -C "${browser_src}" fetch --prune origin main
           else
-            rm -rf "${BROWSER_SRC}"
-            git clone --depth 1 --branch main https://github.com/SpecSierra/atlantic-browser.git "${BROWSER_SRC}"
+            rm -rf "${browser_src}"
+            git clone --depth 1 --branch main https://github.com/SpecSierra/atlantic-browser.git "${browser_src}"
           fi
-          git -C "${BROWSER_SRC}" checkout -f main
-          git -C "${BROWSER_SRC}" reset --hard origin/main
+          git -C "${browser_src}" checkout -f main
+          git -C "${browser_src}" reset --hard origin/main
 
       - name: Show runner details
         run: |
           set -euo pipefail
-          git -C "${BROWSER_SRC}" rev-parse --short HEAD
+          git -C "$(realpath -m "${BROWSER_SRC}")" rev-parse --short HEAD
           id
           uname -a
           df -h /
