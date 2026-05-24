@@ -55,9 +55,19 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
+      - name: Check out browser repo
+        uses: actions/checkout@v4
+        with:
+          repository: SpecSierra/atlantic-browser
+          ref: main
+          path: ../sailfish-browser-wpe
+          clean: true
+          fetch-depth: 1
+
       - name: Show runner details
         run: |
           set -euo pipefail
+          git -C "${BROWSER_SRC}" rev-parse --short HEAD
           id
           uname -a
           df -h /
