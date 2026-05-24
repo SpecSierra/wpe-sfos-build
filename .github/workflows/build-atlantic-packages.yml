@@ -58,6 +58,7 @@ jobs:
       - name: Check out browser repo
         run: |
           set -euo pipefail
+          git config --global --add safe.directory "${BROWSER_SRC}"
           if [ -d "${BROWSER_SRC}/.git" ]; then
             git -C "${BROWSER_SRC}" fetch --prune origin main
           else
