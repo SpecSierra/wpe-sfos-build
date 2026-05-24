@@ -153,6 +153,8 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y createrepo-c
           fi
+          sudo chmod -R 700 "${GNUPGHOME}"
+          sudo chown -R "$(id -u)":"$(id -g)" "${GNUPGHOME}"
           repo_root="${ARTIFACT_ROOT}/rpm-repo"
           repo_arch_dir="${repo_root}/aarch64"
           rm -rf "${repo_root}"
