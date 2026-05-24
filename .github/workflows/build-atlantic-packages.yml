@@ -59,13 +59,8 @@ jobs:
         run: |
           set -euo pipefail
           browser_src="$(realpath -m "${BROWSER_SRC}")"
-          git config --global --add safe.directory "${browser_src}"
-          if [ -d "${browser_src}/.git" ]; then
-            git -C "${browser_src}" fetch --prune origin main
-          else
-            rm -rf "${browser_src}"
-            git clone --depth 1 --branch main https://github.com/SpecSierra/atlantic-browser.git "${browser_src}"
-          fi
+          sudo rm -rf "${browser_src}"
+          git clone --depth 1 --branch main https://github.com/SpecSierra/atlantic-browser.git "${browser_src}"
           git -C "${browser_src}" checkout -f main
           git -C "${browser_src}" reset --hard origin/main
 
