@@ -12,6 +12,12 @@ ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:
 ATLANTIC_WEBKIT_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT:-1}"
 ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS:-2000}"
 
+atlantic_default_pulse_server() {
+    if [ -S "${ATLANTIC_XDG_RUNTIME_DIR}/pulse/native" ]; then
+        printf 'unix:%s/pulse/native' "${ATLANTIC_XDG_RUNTIME_DIR}"
+    fi
+}
+
 atlantic_build_ld_preload() {
     preload=""
     sep=""
@@ -57,6 +63,12 @@ atlantic_export_helper_env() {
     export LD_LIBRARY_PATH="${ATLANTIC_LD_LIBRARY_PATH:-$(atlantic_default_helper_library_path)}"
     export XDG_RUNTIME_DIR="${ATLANTIC_XDG_RUNTIME_DIR}"
     export WAYLAND_DISPLAY="${ATLANTIC_WAYLAND_DISPLAY}"
+    if [ -z "${PULSE_SERVER:-}" ]; then
+        pulse_server="$(atlantic_default_pulse_server)"
+        if [ -n "${pulse_server}" ]; then
+            export PULSE_SERVER="${pulse_server}"
+        fi
+    fi
     export GST_PLUGIN_SYSTEM_PATH_1_0="${ATLANTIC_GSTREAMER_PLUGIN_DIR}"
     export GST_PLUGIN_PATH="${ATLANTIC_GSTREAMER_PLUGIN_DIR}"
     export GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK}"
