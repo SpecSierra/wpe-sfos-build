@@ -129,6 +129,7 @@ jobs:
           %__gpg_sign_cmd %{__gpg} gpg --batch --no-armor --no-verbose --pinentry-mode loopback --passphrase "${ATLANTIC_RPM_SIGNING_PASSPHRASE}" %{?_gpg_digest_algo:--digest-algo %{_gpg_digest_algo}} --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} %{__plaintext_filename}
           MACROS
           cat "${HOME}/.rpmmacros"
+          sudo chown "$(id -u)":"$(id -g)" "${ARTIFACT_ROOT}/rpms/"*.rpm
           sudo chmod 644 "${ARTIFACT_ROOT}/rpms/"*.rpm
           rpms=("${ARTIFACT_ROOT}/rpms/"*.rpm)
           if [ "${#rpms[@]}" -eq 0 ]; then
