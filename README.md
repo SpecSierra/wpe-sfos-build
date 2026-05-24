@@ -122,7 +122,7 @@ These are the repo-local patches currently relevant to the live build flow.
 | Patch | Status | Notes |
 | --- | --- | --- |
 | `patches/engine/libepoxy-rtld-default-fallback.patch` | `keep temporarily` | currently applied in the engine build so `libegl-stubs.so` can satisfy missing EGL symbols on Sailfish/hybris |
-| `patches/webkit/webkit-quirks-no-video.patch` | `re-check` | only relevant while the scripted baseline still builds WebKit with `ENABLE_VIDEO=OFF` |
+| `patches/webkit/webkit-quirks-no-video.patch` | `keep` | harmless compatibility patch while the WebKit carry-forward is still being rebased |
 | `patches/webkit/webkit-icu-imported-targets.patch` | `keep temporarily` | fixes the 2.52.3 configure path on Ubuntu 24.04 by repairing the `ICU::` imported targets after `find_package(ICU ...)` |
 | `patches/webkit/webkit-ramsize-cstddef.patch` | `keep temporarily` | fixes the 2.52.3 WTF compile on Ubuntu 24.04 by adding the missing `<cstddef>` include for `size_t` in `RAMSize.h` |
 | `patches/webkit/webkit-wtf-header-includes.patch` | `keep temporarily` | fixes newer WTF header self-sufficiency issues on Ubuntu 24.04 by adding missing `<cstdint>` and `Assertions.h` includes for `EnumTraits.h` and `TypeCasts.h` |

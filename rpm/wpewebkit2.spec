@@ -36,6 +36,11 @@ BuildRequires:  pkgconfig(libpng)
 BuildRequires:  pkgconfig(libwebp)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(zlib)
+BuildRequires:  pkgconfig(gstreamer-1.0)
+BuildRequires:  pkgconfig(gstreamer-app-1.0)
+BuildRequires:  pkgconfig(gstreamer-video-1.0)
+BuildRequires:  pkgconfig(gstreamer-audio-1.0)
+BuildRequires:  pkgconfig(gstreamer-pbutils-1.0)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-server)
 BuildRequires:  pkgconfig(xkbcommon)
@@ -52,7 +57,8 @@ ARMv8.0-A). This is the engine used by the WPE Sailfish Browser as a
 replacement for the Gecko/EmbedLite engine.
 
 Build configuration:
-  - VIDEO, MEDIA_STREAM, WEB_CODECS, WEB_AUDIO disabled (no GStreamer)
+  - VIDEO, MEDIA_STREAM, WEB_AUDIO enabled via GStreamer
+  - WEB_CODECS disabled
   - GEOLOCATION, SPEECH_SYNTHESIS, XSLT, WEBDRIVER disabled
   - Static libstdc++ / libgcc (no GLIBCXX version requirements)
   - glibc version tags downgraded to GLIBC_2.17
