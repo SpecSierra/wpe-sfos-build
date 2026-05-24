@@ -56,13 +56,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check out browser repo
-        uses: actions/checkout@v4
-        with:
-          repository: SpecSierra/atlantic-browser
-          ref: main
-          path: ../sailfish-browser-wpe
-          clean: true
-          fetch-depth: 1
+        run: |
+          set -euo pipefail
+          if [ -d "${BROWSER_SRC}/.git" ]; then
+            git -C "${BROWSER_SRC}" fetch --prune origin main
+          else
+            rm -rf "${BROWSER_SRC}"
+            git clone --depth 1 --branch main https://github.com/SpecSierra/atlantic-browser.git "${BROWSER_SRC}"
+          fi
+          git -C "${BROWSER_SRC}" checkout -f main
+          git -C "${BROWSER_SRC}" reset --hard origin/main
 
       - name: Show runner details
         run: |
