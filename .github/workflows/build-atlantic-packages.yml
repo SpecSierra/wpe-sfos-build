@@ -101,9 +101,10 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y rpm gnupg2
           fi
-          rm -rf "${GNUPGHOME}"
-          mkdir -p "${GNUPGHOME}"
-          chmod 700 "${GNUPGHOME}"
+          sudo rm -rf "${GNUPGHOME}"
+          sudo mkdir -p "${GNUPGHOME}"
+          sudo chmod 700 "${GNUPGHOME}"
+          sudo chown "$(id -u)":"$(id -g)" "${GNUPGHOME}"
           printf '%s\n' "${ATLANTIC_RPM_SIGNING_KEY}" | gpg --batch --import
           gpg --batch --list-secret-keys "${ATLANTIC_RPM_SIGNING_KEY_ID}" >/dev/null
           cat > "${HOME}/.rpmmacros" <<'MACROS'
