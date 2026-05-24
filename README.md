@@ -221,12 +221,21 @@ Artifacts uploaded from each run include:
 - `artifacts/summary.txt`
 - `artifacts/rpms/*.rpm`
 - `artifacts/rpm-repo/aarch64/` with `repodata/` (rpm-md metadata)
+- `artifacts/rpm-repo/RPM-GPG-KEY-atlantic-ci` (public signing key)
+- `artifacts/rpm-repo/atlantic-ci.repo` (ready-to-use zypper repo file)
 - `artifacts/build-config/` when WebKit metadata is available
 
 On successful `master` builds, the workflow also publishes the same rpm-md tree
 to GitHub Pages (`gh-pages` branch):
 
 - `https://specsierra.github.io/wpe-sfos-build/aarch64/`
+
+RPMs and repository metadata are signed in CI. Configure these GitHub repository
+secrets for signing:
+
+- `ATLANTIC_RPM_SIGNING_KEY` — ASCII-armored private GPG key used for RPM/repo signing
+- `ATLANTIC_RPM_SIGNING_KEY_ID` — key id or uid string used by `rpmsign`/`gpg`
+- `ATLANTIC_RPM_SIGNING_PASSPHRASE` — passphrase for the private key (can be empty for passphrase-less CI keys)
 
 Package release/iteration now tracks CI runs (`RPM_ITERATION=<run>.<attempt>`),
 so `zypper up` can pick up each new build instead of seeing repeated `-1`
@@ -236,6 +245,7 @@ Phone setup for updates:
 
 ```bash
 devel-su
+rpm --import https://specsierra.github.io/wpe-sfos-build/RPM-GPG-KEY-atlantic-ci
 zypper ar -f https://specsierra.github.io/wpe-sfos-build/aarch64 atlantic-ci
 zypper ref
 zypper up atlantic-browser wpewebkit2 wpewebkit2-qt5 wpebackend-fdo libwpe libepoxy wpe-sfos-compat
