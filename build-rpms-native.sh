@@ -399,6 +399,13 @@ LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/atlantic-browser.bin"
 
+# Compatibility launcher so legacy Sailfish browser entry points resolve to Atlantic.
+cat > "${S}/usr/bin/sailfish-browser" <<LAUNCHER
+#!/bin/sh
+exec /usr/bin/atlantic-browser "\$@"
+LAUNCHER
+chmod 755 "${S}/usr/bin/sailfish-browser"
+
 # libsailfishbrowser (versioned + symlinks — SONAME is libsailfishbrowser.so.1)
 mkdir -p "${S}/usr/lib64"
 cp -a "${BROWSER_SRC}/build_wpe/libsailfishbrowser.so.1.0.0" "${S}/usr/lib64/"
@@ -425,7 +432,7 @@ cp -a "${BROWSER_SRC}/data/icon-launcher-browser.png" "${S}/usr/share/atlantic-b
 # Launcher icon
 mkdir -p "${S}/usr/share/icons/hicolor/86x86/apps"
 cp -a "${BROWSER_SRC}/data/icon-launcher-browser.png" \
-    "${S}/usr/share/icons/hicolor/86x86/apps/"
+    "${S}/usr/share/icons/hicolor/86x86/apps/icon-launcher-atlantic.png"
 
 # Desktop file
 mkdir -p "${S}/usr/share/applications"
@@ -435,7 +442,7 @@ Type=Application
 Name=Atlantic
 X-MeeGo-Logical-Id=atlantic-browser-ap-name
 X-MeeGo-Translation-Catalog=atlantic-browser
-Icon=icon-launcher-browser
+Icon=icon-launcher-atlantic
 Exec=/usr/bin/atlantic-browser %U
 Comment=Atlantic Browser (WPE WebKit)
 MimeType=text/html;application/xhtml+xml;application/xml;text/xml;x-scheme-handler/http;x-scheme-handler/https;
@@ -481,7 +488,9 @@ EOF
 fpm_rpm atlantic-browser "$ATLANTIC_BROWSER_VERSION" "Atlantic Browser (WPE WebKit engine)" "$S" \
     --depends wpewebkit2 \
     --depends wpewebkit2-qt5 \
-    --depends wpe-sfos-compat
+    --depends wpe-sfos-compat \
+    --provides sailfish-browser \
+    --replaces sailfish-browser
 
 # ===========================================================================
 echo ""
