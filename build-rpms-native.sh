@@ -399,13 +399,6 @@ LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/atlantic-browser.bin"
 
-# Compatibility launcher so legacy Sailfish browser entry points resolve to Atlantic.
-cat > "${S}/usr/bin/sailfish-browser" <<LAUNCHER
-#!/bin/sh
-exec /usr/bin/atlantic-browser "\$@"
-LAUNCHER
-chmod 755 "${S}/usr/bin/sailfish-browser"
-
 # libsailfishbrowser (versioned + symlinks — SONAME is libsailfishbrowser.so.1)
 mkdir -p "${S}/usr/lib64"
 cp -a "${BROWSER_SRC}/build_wpe/libsailfishbrowser.so.1.0.0" "${S}/usr/lib64/"
@@ -488,9 +481,7 @@ EOF
 fpm_rpm atlantic-browser "$ATLANTIC_BROWSER_VERSION" "Atlantic Browser (WPE WebKit engine)" "$S" \
     --depends wpewebkit2 \
     --depends wpewebkit2-qt5 \
-    --depends wpe-sfos-compat \
-    --provides sailfish-browser \
-    --replaces sailfish-browser
+    --depends wpe-sfos-compat
 
 # ===========================================================================
 echo ""
