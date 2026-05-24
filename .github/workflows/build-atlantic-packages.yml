@@ -138,11 +138,7 @@ jobs:
           fi
           for rpm_path in "${rpms[@]}"; do
             echo "Signing: ${rpm_path}"
-            echo "File info before:"
-            ls -la "${rpm_path}"
-            sudo rpmsign --addsign "${rpm_path}"
-            echo "File info after:"
-            ls -la "${rpm_path}"
+            sudo rpmsign --rcfile="${HOME}/.rpmmacros" --addsign "${rpm_path}"
           done
 
       - name: Build rpm-md repository metadata
