@@ -129,6 +129,8 @@ jobs:
           %__gpg_sign_cmd %{__gpg} gpg --batch --no-armor --no-verbose --pinentry-mode loopback --passphrase "${ATLANTIC_RPM_SIGNING_PASSPHRASE}" %{?_gpg_digest_algo:--digest-algo %{_gpg_digest_algo}} --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} %{__plaintext_filename}
           MACROS
           cat "${HOME}/.rpmmacros"
+          sudo tee /root/.rpmmacros < "${HOME}/.rpmmacros" > /dev/null
+          sudo chmod 600 /root/.rpmmacros
           sudo chown "$(id -u)":"$(id -g)" "${ARTIFACT_ROOT}/rpms/"*.rpm
           sudo chmod 644 "${ARTIFACT_ROOT}/rpms/"*.rpm
           rpms=("${ARTIFACT_ROOT}/rpms/"*.rpm)
@@ -138,7 +140,7 @@ jobs:
           fi
           for rpm_path in "${rpms[@]}"; do
             echo "Signing: ${rpm_path}"
-            sudo rpmsign --rcfile="${HOME}/.rpmmacros" --addsign "${rpm_path}"
+            sudo rpmsign --addsign "${rpm_path}"
           done
 
       - name: Build rpm-md repository metadata
