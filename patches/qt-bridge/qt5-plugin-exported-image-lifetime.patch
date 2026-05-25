@@ -1,6 +1,6 @@
 --- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
 +++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtView.cpp
-@@ -81,6 +81,10 @@
+@@ -83,6 +83,10 @@
          return;
  
      win->setSurfaceType(QWindow::OpenGLSurface);
@@ -11,9 +11,10 @@
  
      if (win->isSceneGraphInitialized())
          createWebView();
+
 --- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.h
 +++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.h
-@@ -44,6 +44,7 @@
+@@ -48,6 +48,7 @@
  
      void resize(const QSizeF&);
      GLuint texture(QOpenGLContext*);
@@ -21,48 +22,45 @@
      bool hasValidSurface() const { return m_surface.isValid(); };
  
      void dispatchHoverEnterEvent(QHoverEvent*);
-@@ -67,7 +68,10 @@
+@@ -71,7 +72,9 @@
      EGLDisplay m_eglDisplay { nullptr };
      EGLContext m_eglContext { nullptr };
      struct wpe_view_backend_exportable_fdo* m_exportable { nullptr };
 -    struct wpe_fdo_egl_exported_image* m_lockedImage { nullptr };
 +    struct wpe_fdo_egl_exported_image* m_pendingImage { nullptr };
-+    struct wpe_fdo_egl_exported_image* m_inFlightImage { nullptr };
 +    struct wpe_fdo_egl_exported_image* m_committedImage { nullptr };
 +    bool m_frameUpdateRequested { false };
  
      QPointer<WPEQtView> m_view;
      QOffscreenSurface m_surface;
+
 --- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.cpp
 +++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.cpp
-@@ -135,6 +135,15 @@
+@@ -135,6 +135,12 @@
  
  WPEQtViewBackend::~WPEQtViewBackend()
  {
 +    if (m_exportable && m_pendingImage)
 +        wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_pendingImage);
-+    if (m_exportable && m_inFlightImage)
-+        wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_inFlightImage);
 +    if (m_exportable && m_committedImage)
 +        wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_committedImage);
 +    m_pendingImage = nullptr;
-+    m_inFlightImage = nullptr;
 +    m_committedImage = nullptr;
      wpe_view_backend_exportable_fdo_destroy(m_exportable);
      eglDestroyContext(m_eglDisplay, m_eglContext);
  }
-@@ -150,8 +159,9 @@
+@@ -150,8 +156,9 @@
  
  GLuint WPEQtViewBackend::texture(QOpenGLContext* context)
  {
 -    if (!m_lockedImage || !hasValidSurface())
-+    if ((!m_pendingImage && !m_inFlightImage && !m_committedImage) || !hasValidSurface())
++    if ((!m_pendingImage && !m_committedImage) || !hasValidSurface())
          return 0;
-+    auto* image = m_inFlightImage ? m_inFlightImage : (m_pendingImage ? m_pendingImage : m_committedImage);
++    auto* image = m_pendingImage ? m_pendingImage : m_committedImage;
  
      context->makeCurrent(&m_surface);
  
-@@ -174,7 +184,7 @@
+@@ -174,7 +181,7 @@
  
      glFunctions->glActiveTexture(GL_TEXTURE0);
      glFunctions->glBindTexture(GL_TEXTURE_2D, m_textureId);
@@ -71,39 +69,31 @@
      glFunctions->glUniform1i(m_textureUniform, 0);
  
      static const GLfloat vertices[4][2] = {
-@@ -202,19 +212,45 @@
+@@ -202,19 +209,38 @@
      glFunctions->glDisableVertexAttribArray(0);
      glFunctions->glDisableVertexAttribArray(1);
  
-+    if (!m_inFlightImage && m_pendingImage) {
-+        m_inFlightImage = m_pendingImage;
-+        m_pendingImage = nullptr;
-+    }
-+
-+    m_frameUpdateRequested = m_inFlightImage;
-+
-+    return m_textureId;
-+}
-+
+-    wpe_view_backend_exportable_fdo_dispatch_frame_complete(m_exportable);
+-    wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_lockedImage);
+-    m_lockedImage = nullptr;
++    m_frameUpdateRequested = m_pendingImage;
+ 
+     return m_textureId;
+ }
+ 
 +void WPEQtViewBackend::didRenderFrame()
 +{
 +    if (!m_frameUpdateRequested || !m_exportable)
 +        return;
 +
 +    m_frameUpdateRequested = false;
-     wpe_view_backend_exportable_fdo_dispatch_frame_complete(m_exportable);
--    wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_lockedImage);
--    m_lockedImage = nullptr;
--
--    return m_textureId;
++    wpe_view_backend_exportable_fdo_dispatch_frame_complete(m_exportable);
 +    if (m_committedImage)
 +        wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_committedImage);
-+    m_committedImage = m_inFlightImage;
-+    m_inFlightImage = nullptr;
-+    if (m_pendingImage && m_view)
-+        m_view->triggerUpdate();
- }
- 
++    m_committedImage = m_pendingImage;
++    m_pendingImage = nullptr;
++}
++
  void WPEQtViewBackend::displayImage(struct wpe_fdo_egl_exported_image* image)
  {
 -    Q_ASSUME(!m_lockedImage);
