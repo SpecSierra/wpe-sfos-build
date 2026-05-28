@@ -1,0 +1,17 @@
+--- a/Source/WTF/wtf/PlatformEnableGlib.h
++++ b/Source/WTF/wtf/PlatformEnableGlib.h
+@@ -71,6 +71,14 @@
+ #define ENABLE_WEBPROCESS_CACHE 1
+ #endif
+ 
++#if !defined(ENABLE_GPU_PROCESS_BY_DEFAULT) && PLATFORM(WPE)
++#define ENABLE_GPU_PROCESS_BY_DEFAULT 1
++#endif
++
++#if !defined(ENABLE_GPU_PROCESS_DOM_RENDERING_BY_DEFAULT) && PLATFORM(WPE)
++#define ENABLE_GPU_PROCESS_DOM_RENDERING_BY_DEFAULT 1
++#endif
++
+ #if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+ #define ENABLE_DAMAGE_TRACKING 1
+ #endif

@@ -45,6 +45,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-webcore-texmap-owner-headers.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
+    "patches/webkit/webkit-gpu-process-by-default-wpe.patch"
 )
 
 readonly QT5_PLUGIN_PATCHES=(
