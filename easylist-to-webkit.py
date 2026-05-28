@@ -127,6 +127,46 @@ def generate_default_rules():
     return rules
 
 
+def abp_pattern_to_regex(raw):
+    """Convert ABP URL filter pattern to a YARR-compatible regex string.
+
+    ABP special tokens (||, |, *, ^) are extracted first so the remaining
+    literal characters can be safely regex-escaped, avoiding YARR parse
+    errors for characters like ? + ( ) [ ] that are metacharacters in
+    regex but plain literals in ABP filter syntax.
+    """
+    # Unique placeholders for ABP tokens (null bytes never appear in filters)
+    PH_DOMAIN = '\x00D\x00'   # ||  → domain anchor
+    PH_ANCHOR = '\x00A\x00'   # |   → hard anchor (dropped)
+    PH_WILD   = '\x00W\x00'   # *   → wildcard
+    PH_SEP    = '\x00S\x00'   # ^   → separator
+
+    # Replace ABP special tokens with placeholders (|| before |)
+    p = raw.replace('||', PH_DOMAIN)
+    p = p.replace('|', PH_ANCHOR)
+    p = p.replace('*', PH_WILD)
+    p = p.replace('^', PH_SEP)
+
+    # Escape regex metacharacters in the remaining literal text.
+    # We escape char-by-char to leave the placeholder bytes untouched.
+    escaped = []
+    METAS = set(r'\.+?()[]{}')
+    for ch in p:
+        if ch in METAS:
+            escaped.append('\\' + ch)
+        else:
+            escaped.append(ch)
+    p = ''.join(escaped)
+
+    # Restore ABP tokens as their regex equivalents
+    p = p.replace(PH_DOMAIN, '^[^:]+:(//)?([^/]+\\.)?')
+    p = p.replace(PH_ANCHOR, '')
+    p = p.replace(PH_WILD,   '.*')
+    p = p.replace(PH_SEP,    '[/:?&=]')
+
+    return p
+
+
 def convert_abp_line(line):
     """Convert a single ABP filter line to WebKit content blocker rule(s)."""
     line = line.strip()
@@ -167,19 +207,17 @@ def convert_abp_line(line):
             else:
                 options[opt] = True
 
-    # Convert filter pattern to regex
-    pattern = line
-    # Handle anchors
-    pattern = pattern.replace('||', '^[^:]+:(//)?([^/]+\\.)?')
-    pattern = pattern.replace('|', '')
-    # Handle wildcards
-    pattern = pattern.replace('*', '.*')
-    # Handle separator
-    pattern = pattern.replace('^', '[/:?&=]')
-    # Escape dots (but not already escaped ones or .* )
-    pattern = re.sub(r'(?<!\.)\.(?!\*)', '\\.', pattern)
+    # Convert filter pattern to regex using safe escaping
+    pattern = abp_pattern_to_regex(line)
 
     if not pattern or pattern == '.*':
+        return None
+
+    # Final sanity-check: skip patterns that Python's own regex engine rejects;
+    # YARR is broadly compatible and will also reject these.
+    try:
+        re.compile(pattern)
+    except re.error:
         return None
 
     trigger = {"url-filter": pattern}
