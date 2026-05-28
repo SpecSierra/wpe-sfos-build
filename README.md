@@ -45,8 +45,11 @@ Current checkouts on the build host:
 | `scripts/build-ui.sh` | Atlantic UI/browser build against the staged engine |
 | `scripts/package-rpms.sh` | packaging entrypoint that delegates to the native RPM staging script |
 | `build-rpms-native.sh` | native RPM staging/packaging script |
+| `easylist-to-webkit.py` | converts pinned ABP/EasyList sources to WebKit content blocker JSON |
+| `data/content-blocker/` | pinned EasyList and EasyPrivacy snapshots used for packaged blocker generation |
 | `cmake/` | shared CMake cache presets used by both the script and spec packaging paths |
 | `deploy/` | helper-process wrappers, shared runtime env, and deployment-time assets |
+| `docs/RENDERING-AUDIT.md` | live rendering-path audit notes and remaining GPU-path checks |
 | `native-meson.ini` | native meson config for engine-side dependencies |
 | `sfos-toolchain.cmake` | SFOS sysroot toolchain for Qt/UI builds |
 | `patches/` | repo-local engine, WebKit, Qt bridge, and historical patches grouped by area |

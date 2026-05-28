@@ -83,6 +83,7 @@ atlantic_export_helper_env() {
 atlantic_export_browser_env() {
     atlantic_export_helper_env
     export QT_QPA_PLATFORM="${ATLANTIC_QT_QPA_PLATFORM}"
+    export QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-threaded}"
     export ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS}"
     export WEBKIT_GST_ENABLE_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT}"
 }

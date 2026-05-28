@@ -17,6 +17,7 @@ OUT="${OUT:-/tmp/wpe-sfos-rpms}"
 STAGING="${STAGING:-/tmp/wpe-sfos-stage}"
 PACKAGE_RUNTIME_PREFIX="${PACKAGE_RUNTIME_PREFIX:-/opt/wpe-sfos}"
 ATLANTIC_RUNTIME_PREFIX="${PACKAGE_RUNTIME_PREFIX}"
+CONTENT_BLOCKER_DATA_DIR="${SCRIPT_DIR}/data/content-blocker"
 
 mkdir -p "$OUT"
 
@@ -378,6 +379,34 @@ fpm_rpm wpe-sfos-compat "$WPE_SFOS_COMPAT_VERSION" "SFOS compatibility shims for
 echo "--- Staging atlantic-browser ---"
 S="${STAGING}/atlantic-browser"; rm -rf "$S"; mkdir -p "$S"
 
+CONTENT_BLOCKER_BUILD_DIR="${STAGING}/content-blocker-build"
+CONTENT_BLOCKER_JSON="${CONTENT_BLOCKER_BUILD_DIR}/content-blocker.json"
+rm -rf "${CONTENT_BLOCKER_BUILD_DIR}"
+mkdir -p "${CONTENT_BLOCKER_BUILD_DIR}"
+python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
+    "${CONTENT_BLOCKER_DATA_DIR}/easylist.txt" \
+    --max-rules 40000 \
+    -o "${CONTENT_BLOCKER_BUILD_DIR}/easylist.json"
+python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
+    "${CONTENT_BLOCKER_DATA_DIR}/easyprivacy.txt" \
+    --max-rules 20000 \
+    -o "${CONTENT_BLOCKER_BUILD_DIR}/easyprivacy.json"
+python3 - "${CONTENT_BLOCKER_BUILD_DIR}/easylist.json" \
+    "${CONTENT_BLOCKER_BUILD_DIR}/easyprivacy.json" \
+    "${CONTENT_BLOCKER_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+easylist_path = Path(sys.argv[1])
+easyprivacy_path = Path(sys.argv[2])
+output_path = Path(sys.argv[3])
+
+rules = json.loads(easylist_path.read_text()) + json.loads(easyprivacy_path.read_text())
+output_path.write_text(json.dumps(rules, indent=2))
+print(f"Wrote {len(rules)} content blocker rules to {output_path}")
+PY
+
 # Binary
 mkdir -p "${S}/usr/bin"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/"
@@ -423,6 +452,7 @@ mkdir -p "${S}/usr/share/atlantic-browser/data"
 cp -a "${BROWSER_SRC}/data/prefs.js"                 "${S}/usr/share/atlantic-browser/data/"
 cp -a "${BROWSER_SRC}/data/ua-update.json"           "${S}/usr/share/atlantic-browser/data/"
 cp -a "${BROWSER_SRC}/data/icon-launcher-browser.png" "${S}/usr/share/atlantic-browser/data/"
+cp -a "${CONTENT_BLOCKER_JSON}"                      "${S}/usr/share/atlantic-browser/content-blocker.json"
 
 # Launcher icon
 mkdir -p "${S}/usr/share/icons/hicolor/86x86/apps"
