@@ -111,9 +111,9 @@ fpm_rpm() {
     shift 4
     local iteration="${RPM_ITERATION:-1}"
 
-    # Write ldconfig scripts
+    # Write ldconfig scripts; FPM_POST_EXTRA may inject extra commands into post
     local post="${STAGING}/post-${name}.sh" postun="${STAGING}/postun-${name}.sh"
-    printf '#!/bin/sh\n/sbin/ldconfig || :\n' > "$post"
+    printf '#!/bin/sh\n/sbin/ldconfig || :\n%s\n' "${FPM_POST_EXTRA:-}" > "$post"
     printf '#!/bin/sh\n/sbin/ldconfig || :\n' > "$postun"
 
     echo "==> Building RPM: ${name}-${version}-${iteration}"
@@ -524,10 +524,24 @@ OrganizationName=org.sailfishos
 ApplicationName=browser
 EOF
 
+# GPU performance udev rule — Snapdragon 665 Adreno 610
+# Power levels: 0=950 1=900 2=820 3=745 4=600 5=465 6=320 MHz
+# Without a floor the GPU idles at 320 MHz; Skia tile rendering stalls on
+# every scroll/repaint waiting for the clock to ramp back up.
+mkdir -p "${S}/lib/udev/rules.d"
+cat > "${S}/lib/udev/rules.d/99-atlantic-gpu.rules" << 'UDEV'
+# Atlantic Browser: keep Adreno 610 GPU above 820 MHz for responsive rendering.
+# Level 2=820MHz is a good perf/battery balance; level 0 would be 950MHz max.
+SUBSYSTEM=="kgsl", KERNEL=="kgsl-3d0", ATTR{min_pwrlevel}="2"
+UDEV
+
+# Post-install: apply GPU boost immediately (udev rule handles reboots)
+FPM_POST_EXTRA='[ -w /sys/class/kgsl/kgsl-3d0/min_pwrlevel ] && echo 2 > /sys/class/kgsl/kgsl-3d0/min_pwrlevel || :'
 fpm_rpm atlantic-browser "$ATLANTIC_BROWSER_VERSION" "Atlantic Browser (WPE WebKit engine)" "$S" \
     --depends wpewebkit2 \
     --depends wpewebkit2-qt5 \
     --depends wpe-sfos-compat
+unset FPM_POST_EXTRA
 
 # ===========================================================================
 echo ""
