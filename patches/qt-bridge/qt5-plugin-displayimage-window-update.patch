@@ -1,33 +1,22 @@
 --- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.cpp
 +++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.cpp
-@@ -24,6 +24,8 @@
- 
+@@ -24,4 +24,6 @@
  #include "WPEQtView.h"
  #include <QGuiApplication>
 +#include <QMetaObject>
  #include <QOpenGLFunctions>
 +#include <QQuickWindow>
  #include <QtGlobal>
- 
-@@ -212,8 +214,19 @@ void WPEQtViewBackend::displayImage(struct wpe_fdo_egl_exported_image* image)
- {
-     Q_ASSUME(!m_lockedImage);
-     m_lockedImage = image;
--    if (m_view)
--        m_view->triggerUpdate();
-+    if (m_view) {
-+        m_view->triggerUpdate();
+@@ -235,5 +237,12 @@
+     m_pendingImage = image;
+     if (m_view) {
+         m_view->triggerUpdate();
 +        // QQuickItem::update() from triggerUpdate() is not sufficient on hybris
-+        // EGL: after eglSwapBuffers the QSGRenderThread stalls waiting for the
-+        // main thread to call QQuickWindow::update() before it will process
-+        // another frame. Without this, the first WPE frame renders correctly
-+        // but subsequent frames are silently dropped until something else wakes
-+        // the Qt render loop (e.g. a UI touch event). Posting
-+        // QQuickWindow::update() here makes frame delivery demand-driven:
-+        // the compositor only runs when WPE actually produces output.
++        // EGL: the QSGRenderThread stalls after eglSwapBuffers waiting for
++        // QQuickWindow::update() before processing another frame. Without this,
++        // subsequent WPE frames are silently dropped until user interaction
++        // wakes the Qt render loop externally.
 +        if (QQuickWindow* w = m_view->window())
 +            QMetaObject::invokeMethod(w, "update", Qt::QueuedConnection);
-+    }
- }
- 
- uint32_t WPEQtViewBackend::modifiers() const
+         return;
+     }
