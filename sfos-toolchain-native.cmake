@@ -8,20 +8,15 @@ set(CMAKE_STAGING_PREFIX /opt/wpe-sfos)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -I/usr/include/gio-unix-2.0")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -I/usr/include/gio-unix-2.0")
 
-# ── GCC Thin/Parallel LTO ─────────────────────────────────────────────────────
-# GCC does not support -flto=thin (that is Clang-only).  The GCC equivalent is
-# -flto=auto, which partitions LTRANS units across all available CPUs during the
-# link phase.  On this 16-core build host the link phase runs after Ninja's
-# parallel compile phase, so -flto=auto will fully utilise the box without
-# competing with per-TU compilation jobs.
-#
-# cmake_ar/nm/ranlib must be the gcc-wrapper variants so that static archive
-# members carry GCC GIMPLE IR that the link-time LTO pass can see.
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -flto=auto")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto=auto")
-set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    -flto=auto -fuse-ld=gold")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=auto -fuse-ld=gold")
-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -flto=auto -fuse-ld=gold")
+# ── LTO note ─────────────────────────────────────────────────────────────────
+# GCC -flto=auto is NOT used here.  WebKit's JSC LLInt/IPInt (offline assembler
+# → .S files) defines symbols such as slow_path_wasm_unwind_exception and
+# ipint_extern_unreachable_breakpoint_handler that are called only from assembly
+# stubs — invisible to GCC's GIMPLE IR graph.  GCC LTO dead-strips those C++
+# functions because it sees no IR callers, breaking the final link.
+# WebKit's own cmake only enables LTO for Clang (COMPILER_IS_CLANG guard in
+# WebKitCompilerFlags.cmake).  gcc-ar/nm/ranlib are kept as LTO-aware tools
+# in case a future change re-enables LTO for a subset of targets.
 set(CMAKE_AR     "gcc-ar")
 set(CMAKE_NM     "gcc-nm")
 set(CMAKE_RANLIB "gcc-ranlib")
