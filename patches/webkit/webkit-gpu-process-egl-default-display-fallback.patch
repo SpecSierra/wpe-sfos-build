@@ -1,0 +1,66 @@
+--- a/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h
++++ b/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h
+@@ -25,7 +25,7 @@
+ 
+ #pragma once
+ 
+-#if PLATFORM(GTK) || OS(ANDROID)
++#if PLATFORM(GTK) || PLATFORM(WPE) || OS(ANDROID)
+ 
+ #include "PlatformDisplay.h"
+ 
+@@ -44,4 +44,4 @@
+ 
+ } // namespace WebCore
+ 
+-#endif // PLATFORM(GTK) || OS(ANDROID)
++#endif // PLATFORM(GTK) || PLATFORM(WPE) || OS(ANDROID)
+--- a/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.cpp
++++ b/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.cpp
+@@ -26,7 +26,7 @@
+ #include "config.h"
+ #include "PlatformDisplayDefault.h"
+ 
+-#if PLATFORM(GTK) || OS(ANDROID)
++#if PLATFORM(GTK) || PLATFORM(WPE) || OS(ANDROID)
+ 
+ #include "GLContext.h"
+ #include <epoxy/egl.h>
+@@ -59,4 +59,4 @@
+ 
+ } // namespace WebCore
+ 
+-#endif // PLATFORM(GTK) || OS(ANDROID)
++#endif // PLATFORM(GTK) || PLATFORM(WPE) || OS(ANDROID)
+--- a/Source/WebKit/GPUProcess/glib/GPUProcessGLib.cpp
++++ b/Source/WebKit/GPUProcess/glib/GPUProcessGLib.cpp
+@@ -36,6 +36,9 @@
+ #include <WebCore/GBMDevice.h>
+ #include <WebCore/PlatformDisplayGBM.h>
+ #endif
++#if PLATFORM(WPE)
++#include <WebCore/PlatformDisplayDefault.h>
++#endif
+ 
+ namespace WebKit {
+ 
+@@ -48,8 +51,19 @@
+         WebCore::PlatformDisplay::setSharedDisplay(WebCore::PlatformDisplayGBM::create(device->device()));
+         return;
+     }
++    WTFLogAlways("GPU process: GBM device unavailable, trying EGL default display fallback...");
+ #else
+     UNUSED_PARAM(parameters);
++#endif
++
++#if PLATFORM(WPE)
++    // On SFOS/hybris there is no DRM/GBM device. Fall back to
++    // eglGetDisplay(EGL_DEFAULT_DISPLAY) which the Adreno hybris stack honours.
++    if (auto display = WebCore::PlatformDisplayDefault::create()) {
++        WebCore::PlatformDisplay::setSharedDisplay(WTF::move(display));
++        WTFLogAlways("GPU process: using EGL default display (hybris fallback).");
++        return;
++    }
+ #endif
+ 
+     WTFLogAlways("Could not create EGL display for GPU process: no supported platform available. Aborting...");
