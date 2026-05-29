@@ -39,7 +39,7 @@ Placeholder devel sub-package.
 SYSROOT=%{_prefix}
 COMPAT_SRC=shims/compat
 CC="gcc"
-CFLAGS="-O2 -march=armv8-a -fPIC -fvisibility=hidden"
+CFLAGS="-O2 -march=armv8-a -mtune=cortex-a73.cortex-a53 -fPIC -fvisibility=hidden"
 SHARED="-shared -Wl,--allow-shlib-undefined"
 
 $CC $CFLAGS $SHARED -o libglibc-compat.so       ${COMPAT_SRC}/libglibc-compat.c
