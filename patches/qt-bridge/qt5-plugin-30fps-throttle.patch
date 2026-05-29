@@ -13,7 +13,7 @@
      struct wpe_fdo_egl_exported_image* m_committedImage { nullptr };
      bool m_frameUpdateRequested { false };
 +    QElapsedTimer m_frameThrottleTimer;
-+    qint64 m_frameIntervalMs { 33 }; // ~30fps; 0 = unlimited
++    qint64 m_frameIntervalMs { 41 }; // ~24fps; 0 = unlimited
  
      QPointer<WPEQtView> m_view;
      QOffscreenSurface m_surface;
@@ -34,7 +34,7 @@
 +    // Throttle WPE to ~30fps by deferring frame_complete when the last dispatch
 +    // was less than m_frameIntervalMs ago. RadioFrance (React, heavy rAF loops)
 +    // needs ~26ms of JS per 16ms frame on the Snapdragon 665 -- causing constant
-+    // overrun. At 30fps (33ms budget) JS fits within the frame, eliminating jank.
++    // overrun. At 24fps (41ms budget) JS fits within the frame, eliminating jank.
 +    // When deferred, we post a delayed QQuickWindow::update() so the render
 +    // thread re-checks after the remaining wait time.
 +    const qint64 interval = m_frameIntervalMs;

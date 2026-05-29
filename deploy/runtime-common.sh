@@ -93,7 +93,7 @@ atlantic_export_browser_env() {
     export JSC_numberOfFTLCompilerThreads="${JSC_numberOfFTLCompilerThreads:-2}"
     export JSC_numberOfDFGCompilerThreads="${JSC_numberOfDFGCompilerThreads:-2}"
     export JSC_numberOfBaselineCompilerThreads="${JSC_numberOfBaselineCompilerThreads:-2}"
-    export JSC_numberOfGCMarkers="${JSC_numberOfGCMarkers:-4}"
+    export JSC_numberOfGCMarkers="${JSC_numberOfGCMarkers:-2}"
     export JSC_maxNumberOfWorklistThreads="${JSC_maxNumberOfWorklistThreads:-4}"
     export JSC_worklistLoadFactor="${JSC_worklistLoadFactor:-20}"
     export JSC_worklistFTLLoadWeight="${JSC_worklistFTLLoadWeight:-20}"
