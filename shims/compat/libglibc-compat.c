@@ -21,30 +21,26 @@
  * libstdc++ reads this to skip locking.  0 = multi-threaded (safe). */
 char __libc_single_threaded = 0;
 
-/* glibc 2.36: cryptographic random number.  Fall back to /dev/urandom. */
+/* glibc 2.36: cryptographic random number.
+ * Use getrandom(2) syscall directly — 1 syscall vs open+read+close per call.
+ * SYS_getrandom = 278 on aarch64 (asm-generic/unistd.h). */
 uint32_t arc4random(void)
 {
     uint32_t val = 0;
-    int fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
-    if (fd >= 0) {
-        (void)read(fd, &val, sizeof(val));
-        close(fd);
-    }
+    syscall(SYS_getrandom, &val, sizeof(val), 0);
     return val;
 }
 
-/* glibc 2.36: fill buffer with random bytes. */
+/* glibc 2.36: fill buffer with random bytes.
+ * getrandom() fills up to 256 bytes atomically with flags=0 (blocking).
+ * Loop for larger requests. */
 void arc4random_buf(void *buf, size_t nbytes)
 {
-    int fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
-    if (fd >= 0) {
-        size_t done = 0;
-        while (done < nbytes) {
-            ssize_t n = read(fd, (char *)buf + done, nbytes - done);
-            if (n <= 0) break;
-            done += (size_t)n;
-        }
-        close(fd);
+    size_t done = 0;
+    while (done < nbytes) {
+        ssize_t n = syscall(SYS_getrandom, (char *)buf + done, nbytes - done, 0);
+        if (n <= 0) break;
+        done += (size_t)n;
     }
 }
 
