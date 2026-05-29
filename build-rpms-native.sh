@@ -418,7 +418,12 @@ cat > "${S}/usr/bin/atlantic-browser-env" <<LAUNCHER
 ATLANTIC_LD_PRELOAD='${WPE_COMPAT_PRELOAD}'
 ATLANTIC_LD_LIBRARY_PATH='${WPE_HELPER_LIBRARY_PATH}'
 atlantic_export_browser_env
-exec /usr/bin/atlantic-browser.bin "\$@"
+# Pin to big cores (Kryo 260 Gold / A73 @ 2.0 GHz) on Snapdragon 665.
+if command -v taskset >/dev/null 2>&1; then
+    exec taskset -c 4-7 /usr/bin/atlantic-browser.bin "\$@"
+else
+    exec /usr/bin/atlantic-browser.bin "\$@"
+fi
 LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser-env"
 
