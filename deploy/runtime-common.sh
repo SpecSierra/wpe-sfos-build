@@ -116,7 +116,7 @@ atlantic_export_browser_env() {
     export JSC_largeHeapSize="${JSC_largeHeapSize:-67108864}"
 
     # ── Skia painting thread caps (Adreno 610: single GPU command queue) ──────
-    export WEBKIT_SKIA_GPU_PAINTING_THREADS="${WEBKIT_SKIA_GPU_PAINTING_THREADS:-2}"
+    export WEBKIT_SKIA_GPU_PAINTING_THREADS="${WEBKIT_SKIA_GPU_PAINTING_THREADS:-3}"
     export WEBKIT_SKIA_CPU_PAINTING_THREADS="${WEBKIT_SKIA_CPU_PAINTING_THREADS:-2}"
 
     # ── Tile size alignment ───────────────────────────────────────────────────
