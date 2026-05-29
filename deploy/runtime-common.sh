@@ -107,10 +107,12 @@ atlantic_export_browser_env() {
     export JSC_thresholdForOptimizeAfterWarmUp="${JSC_thresholdForOptimizeAfterWarmUp:-500}"
 
     # ── JSC GC heap tuning ────────────────────────────────────────────────────
-    # Allow the JS heap to use up to 80–90% of available RAM before triggering
-    # GC, reducing churn on SPA / JS-heavy pages.
-    export JSC_smallHeapRAMFraction="${JSC_smallHeapRAMFraction:-0.8}"
-    export JSC_largeHeapRAMFraction="${JSC_largeHeapRAMFraction:-0.9}"
+    # Cap JS heap at 35% of available RAM. Setting 0.8/0.9 let the heap grow
+    # to ~900 MB before GC, pushing this device into heavy zram swap (884/1024 MB
+    # used) — swap latency is far worse than GC churn. 35% ≈ 350 MB for JS
+    # on this 3.5 GB device, enough for large SPAs without thrashing swap.
+    export JSC_smallHeapRAMFraction="${JSC_smallHeapRAMFraction:-0.35}"
+    export JSC_largeHeapRAMFraction="${JSC_largeHeapRAMFraction:-0.35}"
     export JSC_largeHeapSize="${JSC_largeHeapSize:-67108864}"
 
     # ── Skia painting thread caps (Adreno 610: single GPU command queue) ──────
