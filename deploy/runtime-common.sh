@@ -86,6 +86,40 @@ atlantic_export_browser_env() {
     export QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-threaded}"
     export ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS}"
     export WEBKIT_GST_ENABLE_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT}"
+
+    # ── JSC JIT thread tuning (Snapdragon 665: 8-core big.LITTLE) ────────────
+    # Default JSC spawns 7 FTL threads + 8 GC markers on an 8-core device,
+    # flooding the CPU during page load.  Cap to sane mobile limits.
+    export JSC_numberOfFTLCompilerThreads="${JSC_numberOfFTLCompilerThreads:-2}"
+    export JSC_numberOfDFGCompilerThreads="${JSC_numberOfDFGCompilerThreads:-2}"
+    export JSC_numberOfBaselineCompilerThreads="${JSC_numberOfBaselineCompilerThreads:-2}"
+    export JSC_numberOfGCMarkers="${JSC_numberOfGCMarkers:-4}"
+    export JSC_maxNumberOfWorklistThreads="${JSC_maxNumberOfWorklistThreads:-4}"
+    export JSC_worklistLoadFactor="${JSC_worklistLoadFactor:-20}"
+    export JSC_worklistFTLLoadWeight="${JSC_worklistFTLLoadWeight:-20}"
+    export JSC_worklistDFGLoadWeight="${JSC_worklistDFGLoadWeight:-5}"
+    export JSC_worklistBaselineLoadWeight="${JSC_worklistBaselineLoadWeight:-2}"
+
+    # ── JSC JIT tier-up thresholds ────────────────────────────────────────────
+    # Lower thresholds so hot functions reach JIT earlier without waiting for
+    # the default call-count watermarks (500/1000).
+    export JSC_thresholdForJITAfterWarmUp="${JSC_thresholdForJITAfterWarmUp:-100}"
+    export JSC_thresholdForOptimizeAfterWarmUp="${JSC_thresholdForOptimizeAfterWarmUp:-500}"
+
+    # ── JSC GC heap tuning ────────────────────────────────────────────────────
+    # Allow the JS heap to use up to 80–90% of available RAM before triggering
+    # GC, reducing churn on SPA / JS-heavy pages.
+    export JSC_smallHeapRAMFraction="${JSC_smallHeapRAMFraction:-0.8}"
+    export JSC_largeHeapRAMFraction="${JSC_largeHeapRAMFraction:-0.9}"
+    export JSC_largeHeapSize="${JSC_largeHeapSize:-67108864}"
+
+    # ── Skia painting thread caps (Adreno 610: single GPU command queue) ──────
+    export WEBKIT_SKIA_GPU_PAINTING_THREADS="${WEBKIT_SKIA_GPU_PAINTING_THREADS:-1}"
+    export WEBKIT_SKIA_CPU_PAINTING_THREADS="${WEBKIT_SKIA_CPU_PAINTING_THREADS:-2}"
+
+    # ── Tile size alignment ───────────────────────────────────────────────────
+    # Align tiles to 512 px to halve texture uploads vs default 256 px.
+    export WEBKIT_LAYERS_TILE_SIZE="${WEBKIT_LAYERS_TILE_SIZE:-512}"
 }
 
 atlantic_cleanup_runtime_artifacts() {
