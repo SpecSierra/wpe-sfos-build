@@ -31,6 +31,7 @@
  */
 
 #include <dlfcn.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /* Minimal EGL type definitions */
