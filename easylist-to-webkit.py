@@ -158,8 +158,13 @@ def abp_pattern_to_regex(raw):
             escaped.append(ch)
     p = ''.join(escaped)
 
-    # Restore ABP tokens as their regex equivalents
-    p = p.replace(PH_DOMAIN, '^[^:]+:(//)?([^/]+\\.)?')
+    # Restore ABP tokens as their regex equivalents.
+    # The ABP domain anchor (||) becomes a simple substring prefix matching
+    # "[scheme]://[optional-subdomain.]domain" without the expensive
+    # ^[^:]+:(//)?([^/]+\.)? preamble that caused DFA state explosion in
+    # WebKit's YARR engine when tens of thousands of rules shared it.
+    # "://" covers http://, https://, and ws:// — sufficient for ad blocking.
+    p = p.replace(PH_DOMAIN, '://')
     p = p.replace(PH_ANCHOR, '')
     p = p.replace(PH_WILD,   '.*')
     p = p.replace(PH_SEP,    '[/:?&=]')

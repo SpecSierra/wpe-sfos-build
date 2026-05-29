@@ -385,11 +385,11 @@ rm -rf "${CONTENT_BLOCKER_BUILD_DIR}"
 mkdir -p "${CONTENT_BLOCKER_BUILD_DIR}"
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_DATA_DIR}/easylist.txt" \
-    --max-rules 40000 \
+    --max-rules 10000 \
     -o "${CONTENT_BLOCKER_BUILD_DIR}/easylist.json"
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_DATA_DIR}/easyprivacy.txt" \
-    --max-rules 20000 \
+    --max-rules 5000 \
     -o "${CONTENT_BLOCKER_BUILD_DIR}/easyprivacy.json"
 python3 - "${CONTENT_BLOCKER_BUILD_DIR}/easylist.json" \
     "${CONTENT_BLOCKER_BUILD_DIR}/easyprivacy.json" \
