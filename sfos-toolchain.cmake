@@ -25,8 +25,8 @@ add_compile_definitions(U_DISABLE_RENAMING=1)
 #   perf cores = Kryo 260 Gold (≈ Cortex-A73 @ 2.0 GHz)
 #   eff  cores = Kryo 260 Silver (≈ Cortex-A53 @ 1.8 GHz)
 # JSC JIT, layout, and compositing all run on the A73 cores; 2–5% free win.
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition")
 
 if("$ENV{PKG_CONFIG_SYSROOT_DIR}" STREQUAL "")
     # The Qt5 bridge consumes pkg-config files from the staged WPE prefix, not

@@ -5,8 +5,8 @@ set(CMAKE_SYSTEM_NAME  Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 set(CMAKE_STAGING_PREFIX /opt/wpe-sfos)
 
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -I/usr/include/gio-unix-2.0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -I/usr/include/gio-unix-2.0")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -I/usr/include/gio-unix-2.0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -I/usr/include/gio-unix-2.0")
 
 set(STATIC_RUNTIME_FLAGS "-static-libstdc++ -static-libgcc -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64")
 set(CMAKE_EXE_LINKER_FLAGS_INIT    "${STATIC_RUNTIME_FLAGS}")
