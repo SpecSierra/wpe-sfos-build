@@ -391,18 +391,27 @@ python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_DATA_DIR}/easyprivacy.txt" \
     --max-rules 5000 \
     -o "${CONTENT_BLOCKER_BUILD_DIR}/easyprivacy.json"
-python3 - "${CONTENT_BLOCKER_BUILD_DIR}/easylist.json" \
+# Generate default manual domain-block rules (always included regardless of EasyList limits)
+python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
+    --default \
+    -o "${CONTENT_BLOCKER_BUILD_DIR}/defaults.json"
+python3 - "${CONTENT_BLOCKER_BUILD_DIR}/defaults.json" \
+    "${CONTENT_BLOCKER_BUILD_DIR}/easylist.json" \
     "${CONTENT_BLOCKER_BUILD_DIR}/easyprivacy.json" \
     "${CONTENT_BLOCKER_JSON}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-easylist_path = Path(sys.argv[1])
-easyprivacy_path = Path(sys.argv[2])
-output_path = Path(sys.argv[3])
+defaults_path = Path(sys.argv[1])
+easylist_path = Path(sys.argv[2])
+easyprivacy_path = Path(sys.argv[3])
+output_path = Path(sys.argv[4])
 
-rules = json.loads(easylist_path.read_text()) + json.loads(easyprivacy_path.read_text())
+# defaults first so they are never displaced by EasyList rule limits
+rules = (json.loads(defaults_path.read_text())
+         + json.loads(easylist_path.read_text())
+         + json.loads(easyprivacy_path.read_text()))
 output_path.write_text(json.dumps(rules, indent=2))
 print(f"Wrote {len(rules)} content blocker rules to {output_path}")
 PY

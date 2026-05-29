@@ -35,6 +35,10 @@ BLOCK_DOMAINS = [
     "eyeota.net", "bluekai.com", "krxd.net", "exelator.com",
     "demdex.net", "omtrdc.net", "sc-static.net",
     "quantserve.com", "scorecardresearch.com",
+    # Piano Analytics / AT Internet (used by French media incl. Radio France)
+    "piano.io", "api.piano.io", "id.piano.io", "tag.aticdn.net",
+    "atinternet.io", "api.atinternet.io", "logs.xiti.com",
+    "ati-host.net", "xiti.com",
     "hotjar.com", "mouseflow.com", "crazyegg.com",
     "mixpanel.com", "amplitude.com", "segment.com",
     "optimizely.com", "adobedtm.com",
