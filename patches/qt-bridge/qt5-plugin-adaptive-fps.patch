@@ -1,0 +1,86 @@
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.h	2026-05-29 22:04:38.944514501 +0000
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.h	2026-05-29 22:22:29.721853100 +0000
+@@ -31,6 +31,7 @@
+ #include <QHoverEvent>
+ #include <QKeyEvent>
+ #include <QMouseEvent>
++#include <QElapsedTimer>
+ #include <QOffscreenSurface>
+ #include <QOpenGLContext>
+ #include <QPointer>
+@@ -75,6 +76,10 @@
+     struct wpe_fdo_egl_exported_image* m_pendingImage { nullptr };
+     struct wpe_fdo_egl_exported_image* m_committedImage { nullptr };
+     bool m_frameUpdateRequested { false };
++    QElapsedTimer m_frameThrottleTimer;  // time since last throttle interval start
++    QElapsedTimer m_frameCompleteTimer;  // time since last frame_complete dispatch
++    qint64 m_frameIntervalMs { 41 };     // current throttle interval (0=unlimited)
++    qint64 m_wpeRenderTimeEma { 41 };    // EMA of WPE round-trip render time
+ 
+     QPointer<WPEQtView> m_view;
+     QOffscreenSurface m_surface;
+--- a/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.cpp	2026-05-29 22:04:38.948514534 +0000
++++ b/Source/WebKit/UIProcess/API/wpe/qt5/WPEQtViewBackend.cpp	2026-05-29 22:22:29.721853100 +0000
+@@ -24,6 +24,7 @@
+ #include "WPEQtView.h"
+ #include <QGuiApplication>
+ #include <QMetaObject>
++#include <QTimer>
+ #include <QOpenGLFunctions>
+ #include <QQuickWindow>
+ #include <QtGlobal>
+@@ -221,7 +222,29 @@
+     if (!m_frameUpdateRequested || !m_exportable)
+         return;
+ 
++    // Throttle: defer frame_complete until m_frameIntervalMs has elapsed.
++    // m_frameIntervalMs is updated adaptively in displayImage() based on
++    // the EMA of WPE's actual render time. When 0 (light page), no throttle.
++    const qint64 interval = m_frameIntervalMs;
++    if (interval > 0 && m_frameThrottleTimer.isValid()) {
++        const qint64 elapsed = m_frameThrottleTimer.elapsed();
++        if (elapsed < interval) {
++            if (m_view) {
++                if (QQuickWindow* w = m_view->window()) {
++                    const qint64 remaining = interval - elapsed;
++                    QTimer::singleShot(remaining, w, [w]() { w->update(); });
++                }
++            }
++            return;
++        }
++    }
++
+     m_frameUpdateRequested = false;
++    if (!m_frameThrottleTimer.isValid())
++        m_frameThrottleTimer.start();
++    else
++        m_frameThrottleTimer.restart();
++    m_frameCompleteTimer.restart();
+     wpe_view_backend_exportable_fdo_dispatch_frame_complete(m_exportable);
+     if (m_committedImage)
+         wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_committedImage);
+@@ -235,6 +258,24 @@
+         wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_pendingImage);
+ 
+     m_pendingImage = image;
++
++    // Adaptive FPS: measure WPE's actual render round-trip time.
++    // m_frameCompleteTimer tracks elapsed since last frame_complete dispatch.
++    // EMA (alpha=0.2) smooths out spikes; tiers are:
++    //   < 12ms -> 60fps (interval=0)   light pages, static content
++    //  12-28ms -> 30fps (interval=33)  moderate JS
++    //   > 28ms -> 24fps (interval=41)  heavy React/rAF loops
++    if (m_frameCompleteTimer.isValid()) {
++        const qint64 sample = m_frameCompleteTimer.elapsed();
++        m_wpeRenderTimeEma = (m_wpeRenderTimeEma * 4 + sample) / 5;
++        if (m_wpeRenderTimeEma < 12)
++            m_frameIntervalMs = 0;   // 60fps
++        else if (m_wpeRenderTimeEma < 28)
++            m_frameIntervalMs = 33;  // 30fps
++        else
++            m_frameIntervalMs = 41;  // 24fps
++    }
++
+     if (m_view) {
+         m_view->triggerUpdate();
+         // QQuickItem::update() from triggerUpdate() is not sufficient on hybris
