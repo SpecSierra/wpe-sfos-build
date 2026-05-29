@@ -1,3 +1,14 @@
+--- a/Source/WebCore/platform/graphics/PlatformDisplay.h
++++ b/Source/WebCore/platform/graphics/PlatformDisplay.h
+@@ -77,7 +77,7 @@
+ #if OS(ANDROID)
+         Android,
+ #endif
+-#if PLATFORM(GTK) || OS(ANDROID)
++#if PLATFORM(GTK) || PLATFORM(WPE) || OS(ANDROID)
+         Default,
+ #endif
+     };
 --- a/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h
 +++ b/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h
 @@ -25,7 +25,7 @@
