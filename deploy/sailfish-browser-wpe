@@ -16,4 +16,10 @@ ATLANTIC_LD_LIBRARY_PATH="$(atlantic_default_library_path)"
 atlantic_export_browser_env
 
 echo $$ > /tmp/sfos-browser-wpe.pid
-exec /usr/bin/sailfish-browser "$@"
+# Pin to big (performance) cores 4-7 on Snapdragon 665 (Kryo 260 Gold / A73 @ 2.0 GHz).
+# Falls back to unconstrained if taskset is unavailable.
+if command -v taskset >/dev/null 2>&1; then
+    exec taskset -c 4-7 /usr/bin/sailfish-browser "$@"
+else
+    exec /usr/bin/sailfish-browser "$@"
+fi
