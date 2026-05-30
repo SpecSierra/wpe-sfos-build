@@ -8,7 +8,14 @@ ATLANTIC_QT_QPA_PLATFORM="${ATLANTIC_QT_QPA_PLATFORM:-wayland}"
 ATLANTIC_XDG_RUNTIME_DIR="${ATLANTIC_XDG_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/run/user/100000}}"
 ATLANTIC_WAYLAND_DISPLAY="${ATLANTIC_WAYLAND_DISPLAY:-../../display/wayland-0}"
 ATLANTIC_GSTREAMER_PLUGIN_DIR="${ATLANTIC_GSTREAMER_PLUGIN_DIR:-${ATLANTIC_RUNTIME_LIBDIR}/gstreamer-1.0}"
-ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:0,droidvenc:0}"
+# droidvdec:0 disables Android hybris hardware video decoder.
+# On SFOS 5.0 this prevented crashes in the hybris EGL → GStreamer path.
+# On SFOS 5.1 with a working hybris stack, set ATLANTIC_ENABLE_HW_DECODER=1 to re-enable.
+if [ "${ATLANTIC_ENABLE_HW_DECODER:-0}" = "1" ]; then
+    ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-}"
+else
+    ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:0,droidvenc:0}"
+fi
 ATLANTIC_WEBKIT_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT:-1}"
 ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS:-2000}"
 
@@ -78,6 +85,10 @@ atlantic_export_helper_env() {
     export GST_PLUGIN_SYSTEM_PATH_1_0="${ATLANTIC_GSTREAMER_PLUGIN_DIR}"
     export GST_PLUGIN_PATH="${ATLANTIC_GSTREAMER_PLUGIN_DIR}"
     export GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK}"
+    export WEBKIT_GST_BUFFER_SIZE="${WEBKIT_GST_BUFFER_SIZE:-10485760}"
+    export WEBKIT_GST_AUDIO_BUFFER_SIZE="${WEBKIT_GST_AUDIO_BUFFER_SIZE:-4194304}"
+    export GST_BUFFER_HIGH_PERCENT="${GST_BUFFER_HIGH_PERCENT:-15}"
+    export GST_BUFFER_LOW_PERCENT="${GST_BUFFER_LOW_PERCENT:-5}"
 }
 
 atlantic_export_browser_env() {
@@ -86,6 +97,21 @@ atlantic_export_browser_env() {
     export QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-threaded}"
     export ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS}"
     export WEBKIT_GST_ENABLE_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT}"
+
+    # ── GStreamer buffer tuning (reduce startup buffering delay) ──────────────
+    # WebKit's GStreamer HTTP source by default waits for ~20% fill before
+    # starting playback. Lower the low/high watermarks so the browser starts
+    # playing sooner at the cost of slightly higher risk of rebuffering.
+    # Low  = 2%  → start playing when 2% is buffered
+    # High = 10% → buffer up to 10% ahead (then pause pipeline)
+    # These map to WebKit's internal GstQueue2 fill-level policy.
+    export WEBKIT_GST_BUFFER_SIZE="${WEBKIT_GST_BUFFER_SIZE:-10485760}"        # 10 MB ring buffer
+    export WEBKIT_GST_AUDIO_BUFFER_SIZE="${WEBKIT_GST_AUDIO_BUFFER_SIZE:-4194304}"  # 4 MB for audio
+    export GST_BUFFER_HIGH_PERCENT="${GST_BUFFER_HIGH_PERCENT:-15}"
+    export GST_BUFFER_LOW_PERCENT="${GST_BUFFER_LOW_PERCENT:-5}"
+
+    # ── GStreamer debug (uncomment to diagnose buffering issues) ──────────────
+    # export GST_DEBUG="${GST_DEBUG:-webkit*:4,GstQueue2:3}"
 
     # ── JSC JIT thread tuning (Snapdragon 665: 8-core big.LITTLE) ────────────
     # Default JSC spawns 7 FTL threads + 8 GC markers on an 8-core device,

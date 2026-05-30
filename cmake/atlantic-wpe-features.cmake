@@ -18,7 +18,23 @@ set(ENABLE_BUBBLEWRAP_SANDBOX OFF CACHE BOOL "" FORCE)
 
 set(USE_ATK OFF CACHE BOOL "" FORCE)
 set(USE_GSTREAMER ON CACHE BOOL "" FORCE)
+
+# WebKit 2.52.3 in this tree registers webkitwebsrc, but does not expose a
+# USE_GSTREAMER_WEBKIT_HTTP_SRC CMake toggle to force here.
+
+# Keep GL integration off for now: hybris EGL in the WPEWebProcess subprocess
+# has historically been unstable on SFOS. Revisit when subprocesses are stable.
+# set(USE_GSTREAMER_GL ON CACHE BOOL "" FORCE)
 set(USE_GSTREAMER_GL OFF CACHE BOOL "" FORCE)
+
+# Enable Media Source Extensions (MSE) — required for YouTube, Twitch, etc.
+# MSE-based players do not use GStreamer HTTP source directly; they push buffers
+# via JS. MSE is already implicitly enabled via ENABLE_VIDEO but make it explicit.
+set(ENABLE_MEDIA_SOURCE ON CACHE BOOL "" FORCE)
+
+# Enable adaptive bitrate streaming support
+set(ENABLE_VIDEO_TRACK ON CACHE BOOL "" FORCE)
+
 set(USE_LCMS OFF CACHE BOOL "" FORCE)
 set(USE_LIBBACKTRACE OFF CACHE BOOL "" FORCE)
 set(USE_LIBHYPHEN OFF CACHE BOOL "" FORCE)
