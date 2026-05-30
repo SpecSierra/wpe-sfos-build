@@ -91,6 +91,8 @@ atlantic_export_helper_env() {
     export WEBKIT_GST_RING_BUFFER_MAX_SIZE="${WEBKIT_GST_RING_BUFFER_MAX_SIZE:-16777216}"
     export WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE="${WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE:-8388608}"
     export WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES="${WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES:-67108864}"
+    # Identify audio streams to PulseAudio as x-maemo so SFOS media policy routes them correctly.
+    export PULSE_PROP_media.role="x-maemo"
 }
 
 atlantic_export_browser_env() {
