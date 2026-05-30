@@ -148,6 +148,7 @@ for f in \
     patches/webkit/webkit-icu-imported-targets.patch \
     patches/webkit/webkit-renderbox-isnan.patch \
     patches/webkit/webkit-shapeoutside-isnan.patch \
+    patches/webkit/webkit-gst-buffer-tuning.patch \
     patch-glibc-versions.py \
     cmake/atlantic-wpe-features.cmake \
     scripts/write-webkit-feature-flags.py; do

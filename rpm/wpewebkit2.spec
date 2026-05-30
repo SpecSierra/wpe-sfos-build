@@ -12,8 +12,9 @@ Source3:    patch-glibc-versions.py
 Source4:    webkit-icu-imported-targets.patch
 Source5:    webkit-renderbox-isnan.patch
 Source6:    webkit-shapeoutside-isnan.patch
-Source7:    atlantic-wpe-features.cmake
-Source8:    write-webkit-feature-flags.py
+Source7:    webkit-gst-buffer-tuning.patch
+Source8:    atlantic-wpe-features.cmake
+Source9:    write-webkit-feature-flags.py
 
 BuildRequires:  cmake >= 3.20
 BuildRequires:  ninja
@@ -78,13 +79,14 @@ patch -p1 < %{SOURCE2}
 patch -p1 < %{SOURCE4}
 patch -p1 < %{SOURCE5}
 patch -p1 < %{SOURCE6}
+patch -p1 < %{SOURCE7}
 
 %build
 cmake -B WebKitBuild/Release -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=%{SOURCE1} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-    -C %{SOURCE7} \
+    -C %{SOURCE8} \
     -DPORT=WPE \
     -DENABLE_MINIBROWSER=OFF \
     -DUSE_SKIA=ON \
@@ -111,7 +113,7 @@ install -m 644 WebKitBuild/Release/CMakeCache.txt \
     %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/CMakeCache.txt
 install -m 644 WebKitBuild/Release/cmakeconfig.h \
     %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/cmakeconfig.h
-python3 %{SOURCE8} \
+python3 %{SOURCE9} \
     WebKitBuild/Release/CMakeCache.txt \
     %{buildroot}%{_datadir}/wpe-webkit-2.0/build-config/feature-flags.txt \
     %{version} \

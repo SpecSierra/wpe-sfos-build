@@ -86,9 +86,11 @@ atlantic_export_helper_env() {
     export GST_PLUGIN_PATH="${ATLANTIC_GSTREAMER_PLUGIN_DIR}"
     export GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK}"
     export WEBKIT_GST_BUFFER_SIZE="${WEBKIT_GST_BUFFER_SIZE:-10485760}"
-    export WEBKIT_GST_AUDIO_BUFFER_SIZE="${WEBKIT_GST_AUDIO_BUFFER_SIZE:-4194304}"
-    export GST_BUFFER_HIGH_PERCENT="${GST_BUFFER_HIGH_PERCENT:-15}"
-    export GST_BUFFER_LOW_PERCENT="${GST_BUFFER_LOW_PERCENT:-5}"
+    # GStreamer pipeline tuning (via patched WebKit source)
+    export WEBKIT_GST_QUEUE_HIGH_WATERMARK="${WEBKIT_GST_QUEUE_HIGH_WATERMARK:-0.05}"
+    export WEBKIT_GST_RING_BUFFER_MAX_SIZE="${WEBKIT_GST_RING_BUFFER_MAX_SIZE:-16777216}"
+    export WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE="${WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE:-8388608}"
+    export WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES="${WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES:-67108864}"
 }
 
 atlantic_export_browser_env() {
@@ -98,17 +100,12 @@ atlantic_export_browser_env() {
     export ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS}"
     export WEBKIT_GST_ENABLE_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT}"
 
-    # ── GStreamer buffer tuning (reduce startup buffering delay) ──────────────
-    # WebKit's GStreamer HTTP source by default waits for ~20% fill before
-    # starting playback. Lower the low/high watermarks so the browser starts
-    # playing sooner at the cost of slightly higher risk of rebuffering.
-    # Low  = 2%  → start playing when 2% is buffered
-    # High = 10% → buffer up to 10% ahead (then pause pipeline)
-    # These map to WebKit's internal GstQueue2 fill-level policy.
+    # ── GStreamer buffer tuning (via patched WebKit source) ──────────────────
     export WEBKIT_GST_BUFFER_SIZE="${WEBKIT_GST_BUFFER_SIZE:-10485760}"        # 10 MB ring buffer
-    export WEBKIT_GST_AUDIO_BUFFER_SIZE="${WEBKIT_GST_AUDIO_BUFFER_SIZE:-4194304}"  # 4 MB for audio
-    export GST_BUFFER_HIGH_PERCENT="${GST_BUFFER_HIGH_PERCENT:-15}"
-    export GST_BUFFER_LOW_PERCENT="${GST_BUFFER_LOW_PERCENT:-5}"
+    export WEBKIT_GST_QUEUE_HIGH_WATERMARK="${WEBKIT_GST_QUEUE_HIGH_WATERMARK:-0.05}"    # 5% fill threshold (was hardcoded 10%)
+    export WEBKIT_GST_RING_BUFFER_MAX_SIZE="${WEBKIT_GST_RING_BUFFER_MAX_SIZE:-16777216}"  # 16 MB ring buffer (was 2 MB)
+    export WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE="${WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE:-8388608}"  # 8 MB multiqueue (was 2 MB)
+    export WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES="${WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES:-67108864}"  # 64 MB disk cache
 
     # ── GStreamer debug (uncomment to diagnose buffering issues) ──────────────
     # export GST_DEBUG="${GST_DEBUG:-webkit*:4,GstQueue2:3}"
