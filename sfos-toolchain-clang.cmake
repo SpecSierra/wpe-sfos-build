@@ -24,6 +24,12 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
 
+# Pre-seed Threads detection — cmake's try_compile for pthread fails under
+# ThinLTO because -flto=thin + -rtlib=compiler-rt trip up the minimal
+# check_c_source_compiles test harness.  On any glibc ≥ 2.34 Linux host
+# pthread_create lives in libc with no extra flags required.
+set(CMAKE_HAVE_LIBC_PTHREAD 1 CACHE INTERNAL "")
+
 set(CMAKE_C_COMPILER   clang-18)
 set(CMAKE_CXX_COMPILER clang++-18)
 
