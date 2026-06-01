@@ -5,6 +5,11 @@ set(CMAKE_SYSTEM_NAME  Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 set(CMAKE_STAGING_PREFIX /opt/wpe-sfos)
 
+# Native build — let cmake search host libraries freely.
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
 
 # +simd enables NEON (Advanced SIMD) — B3/FTL backend emits vectorised code,
 # WTF string ops auto-vectorise, DOM layout benefits from float-vector arithmetic.
