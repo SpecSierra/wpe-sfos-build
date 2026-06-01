@@ -48,6 +48,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-gpu-process-by-default-wpe.patch"
     "patches/webkit/webkit-gpu-process-egl-default-display-fallback.patch"
     "patches/webkit/webkit-jsc-linux-arm64-thread-tuning.patch"
+    "patches/webkit/webkit-jsc-linux-arm64-jit-thresholds.patch"
 )
 
 readonly QT5_PLUGIN_PATCHES=(

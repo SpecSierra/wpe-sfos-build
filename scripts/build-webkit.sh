@@ -72,6 +72,23 @@ install_webkit_build_metadata() {
 
 echo ""
 echo "--- [8] Building WPEWebKit ${WPE_WEBKIT_VERSION} (expect 60-90 min) ---"
+# Select compiler toolchain.  WEBKIT_COMPILER=clang uses Clang 18 + lld which
+# enables ThinLTO via WebKit's own COMPILER_IS_CLANG guard in
+# WebKitCompilerFlags.cmake (GCC LTO is explicitly disabled there because it
+# dead-strips LLInt assembly symbols).  The default falls back to GCC.
+WEBKIT_COMPILER="${WEBKIT_COMPILER:-gcc}"
+if [ "${WEBKIT_COMPILER}" = "clang" ]; then
+    WEBKIT_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain-clang.cmake"
+    echo "  Compiler: Clang 18 + lld (ThinLTO)"
+    # ccache needs CCACHE_CPP2=1 to work correctly with Clang; without it
+    # ccache re-preprocesses the source through the compiler preprocessor
+    # and misses the cache on second runs.
+    export CCACHE_CPP2=1
+else
+    WEBKIT_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain-native.cmake"
+    echo "  Compiler: GCC (no LTO)"
+fi
+
 if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     webkit_source_parent="$(dirname "${WPE_SOURCE_DIR}")"
     mkdir -p "${webkit_source_parent}"
@@ -94,7 +111,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
 
     PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
     cmake -B WebKitBuild/Release -G Ninja \
-        -DCMAKE_TOOLCHAIN_FILE="${BUILD_TOOLS}/sfos-toolchain-native.cmake" \
+        -DCMAKE_TOOLCHAIN_FILE="${WEBKIT_TOOLCHAIN_FILE}" \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_BUILD_TYPE=Release \

@@ -5,8 +5,18 @@ set(CMAKE_SYSTEM_NAME  Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 set(CMAKE_STAGING_PREFIX /opt/wpe-sfos)
 
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -I/usr/include/gio-unix-2.0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -I/usr/include/gio-unix-2.0")
+
+# +simd enables NEON (Advanced SIMD) — B3/FTL backend emits vectorised code,
+# WTF string ops auto-vectorise, DOM layout benefits from float-vector arithmetic.
+# +crypto enables hardware AES/SHA2 — accelerates TLS and WebCrypto without
+# touching JS execution directly, but frees CPU cycles from crypto dispatching.
+# Both extensions are present on every Snapdragon 665 (Cortex-A73/A53) core.
+#
+# -ffunction-sections / -fdata-sections + --gc-sections dead-strips unused code
+# from the final shared library, shrinking the text segment and improving
+# instruction-cache utilisation, especially for the large JSC code body.
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a+simd+crypto -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -ffunction-sections -fdata-sections -I/usr/include/gio-unix-2.0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -ffunction-sections -fdata-sections -I/usr/include/gio-unix-2.0")
 
 # ── LTO note ─────────────────────────────────────────────────────────────────
 # GCC -flto=auto is NOT used here.  WebKit's JSC LLInt/IPInt (offline assembler
@@ -22,11 +32,14 @@ set(CMAKE_NM     "gcc-nm")
 set(CMAKE_RANLIB "gcc-ranlib")
 
 set(STATIC_RUNTIME_FLAGS "-static-libstdc++ -static-libgcc -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64")
-set(CMAKE_EXE_LINKER_FLAGS_INIT    "${STATIC_RUNTIME_FLAGS}")
-set(CMAKE_SHARED_LINKER_FLAGS_INIT "${STATIC_RUNTIME_FLAGS}")
-set(CMAKE_MODULE_LINKER_FLAGS_INIT "${STATIC_RUNTIME_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    ${STATIC_RUNTIME_FLAGS}")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${STATIC_RUNTIME_FLAGS}")
-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${STATIC_RUNTIME_FLAGS}")
+# --gc-sections removes dead functions/data stripped by -ffunction-sections.
+# -O1 enables string-table and section merging in the linker.
+set(GC_SECTIONS_FLAGS "-Wl,--gc-sections -Wl,-O1")
+set(CMAKE_EXE_LINKER_FLAGS_INIT    "${STATIC_RUNTIME_FLAGS} ${GC_SECTIONS_FLAGS}")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "${STATIC_RUNTIME_FLAGS} ${GC_SECTIONS_FLAGS}")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT "${STATIC_RUNTIME_FLAGS} ${GC_SECTIONS_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    ${STATIC_RUNTIME_FLAGS} ${GC_SECTIONS_FLAGS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${STATIC_RUNTIME_FLAGS} ${GC_SECTIONS_FLAGS}")
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${STATIC_RUNTIME_FLAGS} ${GC_SECTIONS_FLAGS}")
 
 add_compile_definitions(U_DISABLE_RENAMING=1)

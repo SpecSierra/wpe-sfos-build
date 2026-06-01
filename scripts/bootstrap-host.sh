@@ -47,6 +47,7 @@ apt-get update -qq
 apt-get install -y \
     build-essential gcc g++ cmake ninja-build meson \
     ccache \
+    clang-18 lld-18 llvm-18 \
     pkg-config python3 python3-pip \
     git curl wget p7zip-full \
     patchelf bzip2 xz-utils \
