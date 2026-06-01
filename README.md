@@ -6,12 +6,12 @@ Build, packaging, and compatibility work for **Atlantic Browser** on **Sailfish 
 
 This repo is now being used to move Atlantic onto a cleaner baseline:
 
-- **Target OS:** Sailfish OS **5.1.0.5**
+- **Target OS:** Sailfish OS **5.1.0.8**
 - **Target engine:** WPE WebKit **2.52.3**
 - **Priority:** smaller patch queue, simpler packaging, faster engine updates
 - **Not a priority right now:** `bubblewrap`, `sailjail`, or growing the old preload stack
 
-The live scripts in this repo now default to the **SFOS 5.1.0.5 / WPE 2.52.3**
+The live scripts in this repo now default to the **SFOS 5.1.0.8 / WPE 2.52.3**
 line. The older **WPE 2.52.1** line is still available by explicit override while
 the Qt5 bridge continues to be carried forward from the existing **2.52.1** source
 snapshot. Those pins are explicit in `versions.env` so the remaining runtime work
@@ -63,7 +63,7 @@ The important pins now live in `versions.env`.
 
 | Item | Version |
 | --- | --- |
-| SFOS sysroot | `5.1.0.5` |
+| SFOS sysroot | `5.1.0.8` |
 | libwpe | `1.17.0` |
 | libepoxy | `1.5.11` |
 | WPEBackend-fdo | `1.17.0` |
@@ -74,7 +74,7 @@ The important pins now live in `versions.env`.
 
 | Item | Version |
 | --- | --- |
-| SFOS baseline | `5.1.0.5` |
+| SFOS baseline | `5.1.0.8` |
 | WPE WebKit | `2.52.3` |
 
 ## Current script behavior
@@ -86,8 +86,8 @@ important things:
 1. Removes hard-coded version drift by sourcing `versions.env`.
 2. Fixes the missing `WPE_SOURCE_DIR` wiring in `build-all.sh`.
 3. Stops packaging and depending on `bubblewrap` even though the current WPE build already sets `-DENABLE_BUBBLEWRAP_SANDBOX=OFF`.
-4. Drops `libglibc-compat.so`, `libglib-compat.so`, and default GLIBC retagging from the normal **SFOS 5.1.0.5** path while keeping the still-uncertain shims explicit.
-5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.5 / WPE 2.52.3 line without editing one rescue-style script.
+4. Drops `libglibc-compat.so`, `libglib-compat.so`, and default GLIBC retagging from the normal **SFOS 5.1.0.8** path while keeping the still-uncertain shims explicit.
+5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.8 / WPE 2.52.3 line without editing one rescue-style script.
 6. Makes the Qt5 bridge carry-forward explicit by sourcing it from the existing `wpewebkit-2.52.1` snapshot instead of pretending a clean `2.50.5` tarball is sufficient on its own.
 
 Recent validation tightened the live flow further:
@@ -176,7 +176,7 @@ These are the repo-local patches currently relevant to the live build flow.
 
 The next useful repo changes should be:
 
-1. Run device/runtime validation for the rebuilt **SFOS 5.1.0.5 / WPE 2.52.3** packages.
+1. Run device/runtime validation for the rebuilt **SFOS 5.1.0.8 / WPE 2.52.3** packages.
 2. Re-check the remaining explicit shims (`libsigill_skip.so`, `libegl-stubs.so`) against real runtime behavior.
 3. Make fresh install match the staged tree exactly, with no manual device-side fixes.
 4. Decide whether the remaining older RPM specs beyond the WebKit pair should be aligned further or retired in favor of the native packaging path.
@@ -205,11 +205,11 @@ host sysroot when the raw 5.1 SDK target archive is not publicly downloadable:
 - `WPE_PREFIX=${CI_ROOT}/wpe-sfos-prefix`
 - `OUT=${CI_ROOT}/wpe-sfos-rpms`
 - `STAGING=${CI_ROOT}/wpe-sfos-stage`
-- `PUBLIC_SFOS_BASE_VERSION=5.0.0.62`
+- `PUBLIC_SFOS_BASE_VERSION=5.1.0.8`
 - `LOCAL_SFOS_SOURCE_SYSROOT=/opt/sfos-sysroot`
 - `QT5_PLUGIN_SOURCE_DIR=/release/workspace/wpewebkit-2.52.1`
 - `NPROC=6`
-- `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.5`
+- `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.8`
 
 The WPE source tree and install prefix now live under a stable cache root
 (``/opt/github-runner/cache/atlantic-build``) so ccache sees consistent paths

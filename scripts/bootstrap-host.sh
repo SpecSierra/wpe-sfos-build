@@ -3,7 +3,7 @@ set -euo pipefail
 
 source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 
-PUBLIC_SFOS_BASE_VERSION="${PUBLIC_SFOS_BASE_VERSION:-5.0.0.62}"
+PUBLIC_SFOS_BASE_VERSION="${PUBLIC_SFOS_BASE_VERSION:-5.1.0.8}"
 LOCAL_SFOS_SOURCE_SYSROOT="${LOCAL_SFOS_SOURCE_SYSROOT:-/opt/sfos-sysroot}"
 
 sysroot_version_of() {
