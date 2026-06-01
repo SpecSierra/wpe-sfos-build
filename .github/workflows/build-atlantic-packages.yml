@@ -274,15 +274,18 @@ jobs:
         run: |
           set -euo pipefail
           rpms=("${ARTIFACT_ROOT}/rpms/"*.rpm)
+          printf '%s\n' \
+            'Stable RPM release for SailfishOS 5.1+ (aarch64).' \
+            '' \
+            'Install via zypper:' \
+            '```' \
+            'rpm --import https://specsierra.github.io/atlantic-release/RPM-GPG-KEY-atlantic-ci' \
+            'zypper ar -f https://specsierra.github.io/atlantic-release/aarch64 atlantic' \
+            'zypper ref && zypper in atlantic-browser wpewebkit2 wpewebkit2-qt5' \
+            '```' \
+            'Or download RPMs directly from the assets below.' \
+            > /tmp/release-notes.md
           gh release create "${{ github.ref_name }}" \
             --title "Atlantic ${{ github.ref_name }}" \
-            --notes "Stable RPM release for SailfishOS 5.1+ (aarch64).
-
-Install via zypper:
-\`\`\`
-rpm --import https://specsierra.github.io/atlantic-release/RPM-GPG-KEY-atlantic-ci
-zypper ar -f https://specsierra.github.io/atlantic-release/aarch64 atlantic
-zypper ref && zypper in atlantic-browser wpewebkit2 wpewebkit2-qt5
-\`\`\`
-Or download RPMs directly from the assets below." \
+            --notes-file /tmp/release-notes.md \
             "${rpms[@]}"
