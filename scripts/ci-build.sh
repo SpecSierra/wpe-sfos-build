@@ -69,9 +69,18 @@ ccache_smoke_test() {
 int smoke() { return 42; }
 CPP
 
+    # Use the same compiler the WebKit build will use so we actually validate
+    # the ccache path that matters.
+    local smoke_cxx
+    if [ "${WEBKIT_COMPILER:-gcc}" = "clang" ]; then
+        smoke_cxx="clang++-18"
+    else
+        smoke_cxx="g++"
+    fi
+
     ccache -z >/dev/null
-    ccache g++ -c "${smoke_source}" -o "${smoke_dir}/first.o"
-    ccache g++ -c "${smoke_source}" -o "${smoke_dir}/second.o"
+    ccache "${smoke_cxx}" -c "${smoke_source}" -o "${smoke_dir}/first.o"
+    ccache "${smoke_cxx}" -c "${smoke_source}" -o "${smoke_dir}/second.o"
     ccache -s > "${ARTIFACT_ROOT}/ccache-smoke.txt"
 
     local hits
