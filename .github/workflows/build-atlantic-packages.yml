@@ -40,7 +40,7 @@ jobs:
       PUBLIC_SFOS_BASE_VERSION: 5.0.0.62
       LOCAL_SFOS_SOURCE_SYSROOT: /opt/sfos-sysroot
       QT5_PLUGIN_SOURCE_DIR: /release/workspace/wpewebkit-2.52.1
-      NPROC: "6"
+      NPROC: ""
       CCACHE_DIR: /opt/github-runner/cache/ccache
       CCACHE_MAXSIZE: 40G
       CCACHE_BASEDIR: /opt/github-runner/cache/atlantic-build

@@ -129,7 +129,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DENABLE_WPE_LEGACY_API=ON \
         -DUSE_JPEGXL=OFF
 
-    ninja -C WebKitBuild/Release -j"${NPROC}"
+    ninja -C WebKitBuild/Release -j"${NPROC:-$(nproc)}"
     cmake --install WebKitBuild/Release --prefix "${WPE_PREFIX}"
 
     stage_webkit_pkgconfig_files "${WPE_SOURCE_DIR}/WebKitBuild/Release"
@@ -200,7 +200,7 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
         -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWPE_WEBKIT_BUILD_DIR="${WPE_SOURCE_DIR}/WebKitBuild/Release"
-    ninja -C build -j"${NPROC}"
+    ninja -C build -j"${NPROC:-$(nproc)}"
     cmake --install build --prefix "${WPE_PREFIX}"
     echo "  Qt5 WPE plugin installed."
 else
