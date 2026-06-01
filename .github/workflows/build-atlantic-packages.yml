@@ -13,6 +13,8 @@ on:
       - patches/**
       - rpm/**
       - versions.env
+    tags:
+      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -207,6 +209,20 @@ jobs:
           </body></html>
           HTML
 
+      - name: Prepare release rpm-repo (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          cp -r "${ARTIFACT_ROOT}/rpm-repo" "${ARTIFACT_ROOT}/release-rpm-repo"
+          # Patch all text files to point at atlantic-release instead of this repo
+          find "${ARTIFACT_ROOT}/release-rpm-repo" -type f \( -name "*.repo" -o -name "*.html" \) | \
+            xargs sed -i \
+              -e 's|specsierra\.github\.io/atlantic-engine|specsierra.github.io/atlantic-release|g' \
+              -e 's|atlantic-ci\.repo|atlantic.repo|g' \
+              -e 's|Atlantic CI RPM repository|Atlantic RPM repository|g'
+          mv "${ARTIFACT_ROOT}/release-rpm-repo/atlantic-ci.repo" \
+             "${ARTIFACT_ROOT}/release-rpm-repo/atlantic.repo" 2>/dev/null || true
+
       - name: Fix artifact ownership
         if: always()
         run: |
@@ -238,3 +254,35 @@ jobs:
           enable_jekyll: false
           force_orphan: true
           commit_message: "ci: publish rpm repo run ${{ github.run_number }}.${{ github.run_attempt }}"
+
+      - name: Publish to atlantic-release (stable channel)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.RELEASE_REPO_TOKEN }}
+          external_repository: SpecSierra/atlantic-release
+          publish_branch: gh-pages
+          publish_dir: artifacts/release-rpm-repo
+          enable_jekyll: false
+          force_orphan: true
+          commit_message: "release: ${{ github.ref_name }}"
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          rpms=("${ARTIFACT_ROOT}/rpms/"*.rpm)
+          gh release create "${{ github.ref_name }}" \
+            --title "Atlantic ${{ github.ref_name }}" \
+            --notes "Stable RPM release for SailfishOS 5.1+ (aarch64).
+
+Install via zypper:
+\`\`\`
+rpm --import https://specsierra.github.io/atlantic-release/RPM-GPG-KEY-atlantic-ci
+zypper ar -f https://specsierra.github.io/atlantic-release/aarch64 atlantic
+zypper ref && zypper in atlantic-browser wpewebkit2 wpewebkit2-qt5
+\`\`\`
+Or download RPMs directly from the assets below." \
+            "${rpms[@]}"
