@@ -209,7 +209,7 @@ host sysroot when the raw 5.1 SDK target archive is not publicly downloadable:
 - `LOCAL_SFOS_SOURCE_SYSROOT=/opt/sfos-sysroot`
 - `QT5_PLUGIN_SOURCE_DIR=/release/workspace/wpewebkit-2.52.1`
 - `NPROC=6`
-- `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.8`
+- `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.5`
 
 The WPE source tree and install prefix now live under a stable cache root
 (``/opt/github-runner/cache/atlantic-build``) so ccache sees consistent paths

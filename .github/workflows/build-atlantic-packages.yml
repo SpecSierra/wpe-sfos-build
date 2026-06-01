@@ -50,7 +50,7 @@ jobs:
       WEBKIT_COMPILER: clang
       RPM_ITERATION: ${{ github.run_number }}.${{ github.run_attempt }}
       WPE_PREFIX: /opt/github-runner/cache/atlantic-build/wpe-sfos-prefix
-      SYSROOT: /opt/github-runner/cache/sfos-sysroot-5.1.0.8
+      SYSROOT: /opt/github-runner/cache/sfos-sysroot-5.1.0.5
       OUT: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/wpe-sfos-rpms
       STAGING: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/wpe-sfos-stage
       ARTIFACT_ROOT: ${{ github.workspace }}/artifacts
