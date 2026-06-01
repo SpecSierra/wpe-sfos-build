@@ -128,6 +128,17 @@ if [ ! -f "${SOURCES_DIR}/${QT5_SNAPSHOT_TARBALL}" ]; then
   fi
   TMP=$(mktemp -d)
   cp -a "${QT5_SNAPSHOT_ROOT}" "${TMP}/wpewebkit-qt5-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}"
+  # Apply all qt-bridge patches to the temporary source tree before packaging
+  QT_BRIDGE_PATCHES_DIR="$(dirname "$0")/patches/qt-bridge"
+  if [ -d "${QT_BRIDGE_PATCHES_DIR}" ]; then
+    for p in "${QT_BRIDGE_PATCHES_DIR}"/qt5-plugin-*.patch "${QT_BRIDGE_PATCHES_DIR}"/wpeqtview-carryforward.patch; do
+      [ -f "$p" ] || continue
+      echo "  Applying qt-bridge patch: $(basename $p)"
+      patch -p3 -d "${TMP}/wpewebkit-qt5-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}" \
+        --forward --silent < "$p" || \
+        echo "  (already applied or does not apply cleanly: $(basename $p))"
+    done
+  fi
   tar -C "${TMP}" -cJf "${SOURCES_DIR}/${QT5_SNAPSHOT_TARBALL}" \
     "wpewebkit-qt5-${LEGACY_QT5_PLUGIN_SOURCE_VERSION}"
   rm -rf "${TMP}"
