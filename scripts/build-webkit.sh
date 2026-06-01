@@ -129,7 +129,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DENABLE_WPE_LEGACY_API=ON \
         -DUSE_JPEGXL=OFF \
         -DUSE_THIN_ARCHIVES=ON \
-        -DLTO_MODE=Thin
+        -DLTO_MODE=thin
 
     ninja -C WebKitBuild/Release -j"${NPROC:-$(nproc)}"
     cmake --install WebKitBuild/Release --prefix "${WPE_PREFIX}"
