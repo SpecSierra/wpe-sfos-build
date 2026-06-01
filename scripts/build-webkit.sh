@@ -127,7 +127,9 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DICU_DATA_LIBRARY_RELEASE="${ICU_DATA_LIB}" \
         -DPORT=WPE \
         -DENABLE_WPE_LEGACY_API=ON \
-        -DUSE_JPEGXL=OFF
+        -DUSE_JPEGXL=OFF \
+        -DUSE_THIN_ARCHIVES=ON \
+        -DLTO_MODE=Thin
 
     ninja -C WebKitBuild/Release -j"${NPROC:-$(nproc)}"
     cmake --install WebKitBuild/Release --prefix "${WPE_PREFIX}"

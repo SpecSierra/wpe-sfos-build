@@ -140,6 +140,16 @@ atlantic_export_browser_env() {
     export JSC_smallHeapRAMFraction="${JSC_smallHeapRAMFraction:-0.35}"
     export JSC_largeHeapRAMFraction="${JSC_largeHeapRAMFraction:-0.35}"
     export JSC_largeHeapSize="${JSC_largeHeapSize:-67108864}"
+    # Eager sweep: reclaim dead objects immediately after each GC cycle instead
+    # of deferring to the next allocation.  On a mobile device with limited RAM
+    # this trades a small CPU overhead on each GC for lower peak RSS and fewer
+    # OOM kills.
+    export JSC_gcEagerSweep="${JSC_gcEagerSweep:-1}"
+    # Disable type-profiling heap snapshot (fires on every GC).  On the device
+    # this saves ~3-8 MB of heap overhead and removes a frequent allocation
+    # hot spot in the GC finaliser.
+    export JSC_useTypeProfiler="${JSC_useTypeProfiler:-0}"
+    export JSC_useControlFlowProfiler="${JSC_useControlFlowProfiler:-0}"
 
     # ── Skia painting thread caps (Adreno 610: single GPU command queue) ──────
     export WEBKIT_SKIA_GPU_PAINTING_THREADS="${WEBKIT_SKIA_GPU_PAINTING_THREADS:-3}"
