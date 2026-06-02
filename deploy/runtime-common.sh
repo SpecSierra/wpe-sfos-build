@@ -116,21 +116,21 @@ atlantic_export_browser_env() {
     # ── JSC JIT thread tuning (Snapdragon 665: 8-core big.LITTLE) ────────────
     # Default JSC spawns 7 FTL threads + 8 GC markers on an 8-core device,
     # flooding the CPU during page load.  Cap to sane mobile limits.
-    export JSC_numberOfFTLCompilerThreads="${JSC_numberOfFTLCompilerThreads:-2}"
-    export JSC_numberOfDFGCompilerThreads="${JSC_numberOfDFGCompilerThreads:-2}"
-    export JSC_numberOfBaselineCompilerThreads="${JSC_numberOfBaselineCompilerThreads:-2}"
+    export JSC_numberOfFTLCompilerThreads=2
+    export JSC_numberOfDFGCompilerThreads=2
+    export JSC_numberOfBaselineCompilerThreads=2
     export JSC_numberOfGCMarkers=2
-    export JSC_maxNumberOfWorklistThreads="${JSC_maxNumberOfWorklistThreads:-4}"
-    export JSC_worklistLoadFactor="${JSC_worklistLoadFactor:-20}"
-    export JSC_worklistFTLLoadWeight="${JSC_worklistFTLLoadWeight:-20}"
-    export JSC_worklistDFGLoadWeight="${JSC_worklistDFGLoadWeight:-5}"
-    export JSC_worklistBaselineLoadWeight="${JSC_worklistBaselineLoadWeight:-2}"
+    export JSC_maxNumberOfWorklistThreads=4
+    export JSC_worklistLoadFactor=20
+    export JSC_worklistFTLLoadWeight=20
+    export JSC_worklistDFGLoadWeight=5
+    export JSC_worklistBaselineLoadWeight=2
 
     # ── JSC JIT tier-up thresholds ────────────────────────────────────────────
     # Lower thresholds so hot functions reach JIT earlier without waiting for
     # the default call-count watermarks (500/1000).
-    export JSC_thresholdForJITAfterWarmUp="${JSC_thresholdForJITAfterWarmUp:-100}"
-    export JSC_thresholdForOptimizeAfterWarmUp="${JSC_thresholdForOptimizeAfterWarmUp:-500}"
+    export JSC_thresholdForJITAfterWarmUp=100
+    export JSC_thresholdForOptimizeAfterWarmUp=500
 
     # ── JSC GC heap tuning ────────────────────────────────────────────────────
     # Cap JS heap at 35% of available RAM. Setting 0.8/0.9 let the heap grow
@@ -139,20 +139,21 @@ atlantic_export_browser_env() {
     # on this 3.5 GB device, enough for large SPAs without thrashing swap.
     export JSC_smallHeapRAMFraction=0.50
     export JSC_largeHeapRAMFraction=0.50
-    export JSC_largeHeapSize="${JSC_largeHeapSize:-67108864}"
+    export JSC_largeHeapSize=67108864
     # Disable type-profiling heap snapshot (fires on every GC).  On the device
     # this saves ~3-8 MB of heap overhead and removes a frequent allocation
     # hot spot in the GC finaliser.
-    export JSC_useTypeProfiler="${JSC_useTypeProfiler:-0}"
-    export JSC_useControlFlowProfiler="${JSC_useControlFlowProfiler:-0}"
+    export JSC_useTypeProfiler=0
+    export JSC_useControlFlowProfiler=0
 
     # ── Skia painting thread caps (Adreno 610: single GPU command queue) ──────
     export WEBKIT_SKIA_GPU_PAINTING_THREADS=3
-    export WEBKIT_SKIA_CPU_PAINTING_THREADS="${WEBKIT_SKIA_CPU_PAINTING_THREADS:-2}"
+    export WEBKIT_SKIA_CPU_PAINTING_THREADS=2
 
     # ── Tile size alignment ───────────────────────────────────────────────────
-    # Align tiles to 512 px to halve texture uploads vs default 256 px.
-    export WEBKIT_LAYERS_TILE_SIZE="${WEBKIT_LAYERS_TILE_SIZE:-256}"
+    # 256 px tiles for Adreno 610 — smaller texture uploads reduce GPU pipeline
+    # stalls vs 512 px, avoiding dropped frames during scroll on limited-bandwidth GPUs.
+    export WEBKIT_LAYERS_TILE_SIZE=256
 }
 
 atlantic_cleanup_runtime_artifacts() {
