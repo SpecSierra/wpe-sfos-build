@@ -119,7 +119,7 @@ atlantic_export_browser_env() {
     export JSC_numberOfFTLCompilerThreads="${JSC_numberOfFTLCompilerThreads:-2}"
     export JSC_numberOfDFGCompilerThreads="${JSC_numberOfDFGCompilerThreads:-2}"
     export JSC_numberOfBaselineCompilerThreads="${JSC_numberOfBaselineCompilerThreads:-2}"
-    export JSC_numberOfGCMarkers="${JSC_numberOfGCMarkers:-2}"
+    export JSC_numberOfGCMarkers=2
     export JSC_maxNumberOfWorklistThreads="${JSC_maxNumberOfWorklistThreads:-4}"
     export JSC_worklistLoadFactor="${JSC_worklistLoadFactor:-20}"
     export JSC_worklistFTLLoadWeight="${JSC_worklistFTLLoadWeight:-20}"
@@ -137,8 +137,8 @@ atlantic_export_browser_env() {
     # to ~900 MB before GC, pushing this device into heavy zram swap (884/1024 MB
     # used) — swap latency is far worse than GC churn. 35% ≈ 350 MB for JS
     # on this 3.5 GB device, enough for large SPAs without thrashing swap.
-    export JSC_smallHeapRAMFraction="${JSC_smallHeapRAMFraction:-0.35}"
-    export JSC_largeHeapRAMFraction="${JSC_largeHeapRAMFraction:-0.35}"
+    export JSC_smallHeapRAMFraction=0.35
+    export JSC_largeHeapRAMFraction=0.35
     export JSC_largeHeapSize="${JSC_largeHeapSize:-67108864}"
     # Disable type-profiling heap snapshot (fires on every GC).  On the device
     # this saves ~3-8 MB of heap overhead and removes a frequent allocation
@@ -147,7 +147,7 @@ atlantic_export_browser_env() {
     export JSC_useControlFlowProfiler="${JSC_useControlFlowProfiler:-0}"
 
     # ── Skia painting thread caps (Adreno 610: single GPU command queue) ──────
-    export WEBKIT_SKIA_GPU_PAINTING_THREADS="${WEBKIT_SKIA_GPU_PAINTING_THREADS:-3}"
+    export WEBKIT_SKIA_GPU_PAINTING_THREADS=3
     export WEBKIT_SKIA_CPU_PAINTING_THREADS="${WEBKIT_SKIA_CPU_PAINTING_THREADS:-2}"
 
     # ── Tile size alignment ───────────────────────────────────────────────────
