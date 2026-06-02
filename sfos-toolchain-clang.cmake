@@ -39,15 +39,8 @@ set(CMAKE_CXX_COMPILER clang++-18)
 # -mno-outline-atomics: keep inline LL/SC atomics; Kryo 260 does not need the
 #   out-of-line LSE atomic fallback dispatcher.
 # -fno-semantic-interposition: devirtualise intra-DSO calls (same as GCC path).
-# -mllvm -enable-machine-outliner: let LLVM identify repeated instruction
-#   sequences and hoist them into out-of-line stubs.  JSC's DFG/FTL JIT code
-#   generator, the B3 assembler, and the assembler common helpers emit many
-#   identical codegen patterns — the outliner recovers 4-8 MB of hot-code space,
-#   which translates directly to better I-cache hit rates.
-# -mllvm -enable-linkonceodr-outlining: extend outlining to linkonce_odr
-#   functions (stricter semantics than plain outliner, safe with ThinLTO).
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -mllvm -enable-machine-outliner -mllvm -enable-linkonceodr-outlining -I/usr/include/gio-unix-2.0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -Wno-c++11-narrowing -mllvm -enable-machine-outliner -mllvm -enable-linkonceodr-outlining -I/usr/include/gio-unix-2.0")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -ffunction-sections -fdata-sections -I/usr/include/gio-unix-2.0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -ffunction-sections -fdata-sections -Wno-c++11-narrowing -I/usr/include/gio-unix-2.0")
 
 # ── Linker ───────────────────────────────────────────────────────────────────
 # lld is mandatory for ThinLTO (LLVM bitcode sections).
@@ -62,9 +55,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto -mtune=cortex
 #   callees across translation units — important for JSC where inline cache
 #   helpers, GC write barriers, and DFG node specialisations are spread across
 #   dozens of .o files.
-set(CMAKE_EXE_LINKER_FLAGS_INIT    "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
-set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
-set(CMAKE_MODULE_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
+set(CMAKE_EXE_LINKER_FLAGS_INIT    "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
 set(CMAKE_EXE_LINKER_FLAGS         "${CMAKE_EXE_LINKER_FLAGS}    ${CMAKE_EXE_LINKER_FLAGS_INIT}")
 set(CMAKE_SHARED_LINKER_FLAGS      "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_INIT}")
 set(CMAKE_MODULE_LINKER_FLAGS      "${CMAKE_MODULE_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS_INIT}")
