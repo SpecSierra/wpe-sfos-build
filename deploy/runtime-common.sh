@@ -137,8 +137,8 @@ atlantic_export_browser_env() {
     # to ~900 MB before GC, pushing this device into heavy zram swap (884/1024 MB
     # used) — swap latency is far worse than GC churn. 35% ≈ 350 MB for JS
     # on this 3.5 GB device, enough for large SPAs without thrashing swap.
-    export JSC_smallHeapRAMFraction=0.35
-    export JSC_largeHeapRAMFraction=0.35
+    export JSC_smallHeapRAMFraction=0.50
+    export JSC_largeHeapRAMFraction=0.50
     export JSC_largeHeapSize="${JSC_largeHeapSize:-67108864}"
     # Disable type-profiling heap snapshot (fires on every GC).  On the device
     # this saves ~3-8 MB of heap overhead and removes a frequent allocation
@@ -152,7 +152,7 @@ atlantic_export_browser_env() {
 
     # ── Tile size alignment ───────────────────────────────────────────────────
     # Align tiles to 512 px to halve texture uploads vs default 256 px.
-    export WEBKIT_LAYERS_TILE_SIZE="${WEBKIT_LAYERS_TILE_SIZE:-512}"
+    export WEBKIT_LAYERS_TILE_SIZE="${WEBKIT_LAYERS_TILE_SIZE:-256}"
 }
 
 atlantic_cleanup_runtime_artifacts() {
