@@ -39,8 +39,8 @@ set(CMAKE_CXX_COMPILER clang++-18)
 # -mno-outline-atomics: keep inline LL/SC atomics; Kryo 260 does not need the
 #   out-of-line LSE atomic fallback dispatcher.
 # -fno-semantic-interposition: devirtualise intra-DSO calls (same as GCC path).
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -ffunction-sections -fdata-sections -I/usr/include/gio-unix-2.0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -ffunction-sections -fdata-sections -Wno-c++11-narrowing -I/usr/include/gio-unix-2.0")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -fomit-frame-pointer -fvisibility=hidden -ffunction-sections -fdata-sections -I/usr/include/gio-unix-2.0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -fomit-frame-pointer -fvisibility=hidden -ffunction-sections -fdata-sections -Wno-c++11-narrowing -I/usr/include/gio-unix-2.0")
 
 # ── Linker ───────────────────────────────────────────────────────────────────
 # lld is mandatory for ThinLTO (LLVM bitcode sections).

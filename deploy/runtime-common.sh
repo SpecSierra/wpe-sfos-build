@@ -129,8 +129,9 @@ atlantic_export_browser_env() {
     # ── JSC JIT tier-up thresholds ────────────────────────────────────────────
     # Lower thresholds so hot functions reach JIT earlier without waiting for
     # the default call-count watermarks (500/1000).
-    export JSC_thresholdForJITAfterWarmUp=100
-    export JSC_thresholdForOptimizeAfterWarmUp=500
+    export JSC_thresholdForJITAfterWarmUp=50
+    export JSC_thresholdForOptimizeAfterWarmUp=200
+    export JSC_forceDebuggerBytecodeGeneration=0
 
     # ── JSC GC heap tuning ────────────────────────────────────────────────────
     # Cap JS heap at 35% of available RAM. Setting 0.8/0.9 let the heap grow
