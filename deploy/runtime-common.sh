@@ -131,7 +131,6 @@ atlantic_export_browser_env() {
     # the default call-count watermarks (500/1000).
     export JSC_thresholdForJITAfterWarmUp=50
     export JSC_thresholdForOptimizeAfterWarmUp=200
-    export JSC_forceDebuggerBytecodeGeneration=0
 
     # ── JSC GC heap tuning ────────────────────────────────────────────────────
     # Cap JS heap at 35% of available RAM. Setting 0.8/0.9 let the heap grow
