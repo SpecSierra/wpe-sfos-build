@@ -90,7 +90,8 @@ else
 fi
 
 # ── Toolchain cache-busting ──────────────────────────────────────────────────
-# When the compiler flags change (e.g. adding/removing -fvisibility=hidden),
+# When the compiler flags change (e.g. adding/removing -fvisibility=hidden,
+# changing -mtune from cortex-a73 to cortex-a73.cortex-a53 for Kryo 260),
 # the stale .so must be invalidated.  A simple file-exists check would
 # preserve the old library forever.  Instead, hash the toolchain and
 # compare against a stamp; mismatch → force rebuild.

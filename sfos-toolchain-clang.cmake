@@ -34,13 +34,18 @@ set(CMAKE_C_COMPILER   clang-18)
 set(CMAKE_CXX_COMPILER clang++-18)
 
 # ── Architecture ─────────────────────────────────────────────────────────────
-# Same target ISA as the GCC toolchain: ARMv8.0-A for Kryo 260.
+# Same target ISA as the GCC toolchain: ARMv8.0-A for Snapdragon 665 (Kryo 260).
+# The Kryo 260 has 4× Cortex-A73 (big) + 4× Cortex-A53 (LITTLE).
 # +simd+crypto: NEON vector ops + hardware AES/SHA2.
+# +crc: CRC32 instructions (present on both A73 and A53).
+# -mtune=cortex-a73.cortex-a53: optimise instruction scheduling for both core
+#   types in the big.LITTLE cluster — the linker can emit AArch64 branch
+#   stubs that are friendly to both pipeline depths.
 # -mno-outline-atomics: keep inline LL/SC atomics; Kryo 260 does not need the
 #   out-of-line LSE atomic fallback dispatcher.
 # -fno-semantic-interposition: devirtualise intra-DSO calls (same as GCC path).
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -fomit-frame-pointer -ffunction-sections -fdata-sections -I/usr/include/gio-unix-2.0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto -mtune=cortex-a73 -mno-outline-atomics -fno-semantic-interposition -fomit-frame-pointer -ffunction-sections -fdata-sections -Wno-c++11-narrowing -I/usr/include/gio-unix-2.0")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -march=armv8-a+simd+crypto+crc -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -fomit-frame-pointer -ffunction-sections -fdata-sections -I/usr/include/gio-unix-2.0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto+crc -mtune=cortex-a73.cortex-a53 -mno-outline-atomics -fno-semantic-interposition -fomit-frame-pointer -ffunction-sections -fdata-sections -Wno-c++11-narrowing -I/usr/include/gio-unix-2.0")
 
 # ── Linker ───────────────────────────────────────────────────────────────────
 # lld is mandatory for ThinLTO (LLVM bitcode sections).
