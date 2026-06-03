@@ -133,7 +133,6 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG" \
         -DCMAKE_INSTALL_PREFIX="${WPE_PREFIX}" \
-        # Kryo 260: mtune=cortex-a73 for big cores, +crc in march for both clusters.
         -C "${BUILD_TOOLS}/cmake/atlantic-wpe-features.cmake" \
         -DICU_INCLUDE_DIR="${SYSROOT}/usr/include" \
         -DICU_INCLUDE_DIRS="${SYSROOT}/usr/include" \
