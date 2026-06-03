@@ -207,6 +207,21 @@ fi
 
 echo ""
 echo "--- [10] Building Qt5 WPE plugin ---"
+# ── Qt5 plugin cache-busting ─────────────────────────────────────────────────
+# Like the WebKit version/toolchain stamps above: the cached prefix keeps
+# libqtwpe.so forever, so a change to qt5-plugin/ sources would silently
+# never be rebuilt.  Hash the plugin source tree and force a rebuild (and a
+# fresh copy into the WebKit source tree) when it changes.
+_qt5_plugin_hash="$( (cd "${QT5_PLUGIN_SOURCE_DIR}" 2>/dev/null && find . -type f ! -path './build/*' -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}') || true)"
+_qt5_plugin_stamp="${WPE_PREFIX}/lib/.qtwpe-source-hash"
+if [ -n "${_qt5_plugin_hash}" ] && [ -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
+    _saved_qt5_hash="$(cat "${_qt5_plugin_stamp}" 2>/dev/null || true)"
+    if [ "${_qt5_plugin_hash}" != "${_saved_qt5_hash}" ]; then
+        echo "  Qt5 plugin source changed (${_saved_qt5_hash:0:8} → ${_qt5_plugin_hash:0:8}), forcing plugin rebuild"
+        rm -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so"
+        rm -rf "${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5"
+    fi
+fi
 if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     export PATH="${SYSROOT}/usr/lib64/qt5/bin:${PATH}"
 
@@ -238,6 +253,9 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
     ninja -C build -j"${NPROC:-$(nproc)}"
     cmake --install build --prefix "${WPE_PREFIX}"
     echo "  Qt5 WPE plugin installed."
+    if [ -n "${_qt5_plugin_hash}" ]; then
+        printf '%s\n' "${_qt5_plugin_hash}" > "${_qt5_plugin_stamp}"
+    fi
 else
     echo "  Qt5 WPE plugin already built."
 fi
