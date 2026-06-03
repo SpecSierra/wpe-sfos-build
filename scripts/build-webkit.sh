@@ -89,6 +89,21 @@ else
     echo "  Compiler: GCC (no LTO)"
 fi
 
+# ── Toolchain cache-busting ──────────────────────────────────────────────────
+# When the compiler flags change (e.g. adding/removing -fvisibility=hidden),
+# the stale .so must be invalidated.  A simple file-exists check would
+# preserve the old library forever.  Instead, hash the toolchain and
+# compare against a stamp; mismatch → force rebuild.
+_toolchain_hash="$(sha256sum "${WEBKIT_TOOLCHAIN_FILE}" 2>/dev/null | awk '{print $1}')"
+_toolchain_stamp="${WPE_PREFIX}/lib/.webkit-toolchain-hash"
+if [ -n "${_toolchain_hash}" ] && [ -f "${_toolchain_stamp}" ] && [ -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
+    _saved_hash="$(cat "${_toolchain_stamp}" 2>/dev/null)"
+    if [ "${_toolchain_hash}" != "${_saved_hash}" ]; then
+        echo "  Toolchain changed (${_saved_hash:0:8} → ${_toolchain_hash:0:8}), forcing rebuild"
+        rm -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so"
+    fi
+fi
+
 if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     webkit_source_parent="$(dirname "${WPE_SOURCE_DIR}")"
     mkdir -p "${webkit_source_parent}"
@@ -148,6 +163,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     cp WebKitBuild/Release/lib/libWPEInjectedBundle.so "${WPE_PREFIX}/lib/" 2>/dev/null || true
 
     echo "  WPEWebKit installed."
+    printf '%s\n' "${_toolchain_hash}" > "${_toolchain_stamp}"
 else
     echo "  WPEWebKit already built."
     cmake --install "${WPE_SOURCE_DIR}/WebKitBuild/Release" --prefix "${WPE_PREFIX}"
