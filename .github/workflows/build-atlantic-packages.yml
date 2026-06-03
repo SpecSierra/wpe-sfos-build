@@ -38,10 +38,9 @@ jobs:
       GNUPGHOME: /opt/github-runner/builds/${{ github.run_id }}-${{ github.run_attempt }}/gnupg
       WORK: ${{ github.workspace }}/..
       BUILD_TOOLS: ${{ github.workspace }}
-      BROWSER_SRC: ${{ github.workspace }}/../sailfish-browser-wpe
+      BROWSER_SRC: ${{ github.workspace }}/../atlantic-browser
       PUBLIC_SFOS_BASE_VERSION: 5.1.0.8
       LOCAL_SFOS_SOURCE_SYSROOT: /opt/sfos-sysroot
-      QT5_PLUGIN_SOURCE_DIR: /release/workspace/wpewebkit-2.52.1
       NPROC: ""
       CCACHE_DIR: /opt/github-runner/cache/ccache
       CCACHE_MAXSIZE: 40G

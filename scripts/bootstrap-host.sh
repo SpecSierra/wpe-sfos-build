@@ -136,15 +136,15 @@ echo "--- [3] Cloning repositories ---"
 mkdir -p "${WORK}"
 
 if [ ! -d "${BUILD_TOOLS}/.git" ]; then
-    git clone https://github.com/SpecSierra/wpe-sfos-build "${BUILD_TOOLS}"
+    git clone https://github.com/SpecSierra/atlantic-engine "${BUILD_TOOLS}"
 else
-    echo "  wpe-sfos-build already cloned"
+    echo "  atlantic-engine already cloned"
 fi
 
 if [ ! -d "${BROWSER_SRC}/.git" ]; then
-    git clone -b next https://github.com/SpecSierra/sailfish-browser "${BROWSER_SRC}"
+    git clone https://github.com/SpecSierra/atlantic-browser "${BROWSER_SRC}"
 else
-    echo "  sailfish-browser already cloned"
+    echo "  atlantic-browser already cloned"
 fi
 
 mkdir -p "${WPE_PREFIX}"

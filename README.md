@@ -1,4 +1,4 @@
-# wpe-sfos-build
+# atlantic-engine
 
 Build, packaging, and compatibility work for **Atlantic Browser** on **Sailfish OS**.
 
@@ -30,8 +30,8 @@ Current checkouts on the build host:
 
 | Path | Role |
 | --- | --- |
-| `/release/workspace/wpe-sfos-build` | engine build, packaging, compatibility cleanup |
-| `/release/workspace/sailfish-browser-wpe` | Atlantic browser UI/application |
+| `/release/workspace/atlantic-engine` | engine build, packaging, compatibility cleanup |
+| `/release/workspace/atlantic-browser` | Atlantic browser UI/application |
 
 ## Repo layout
 
@@ -232,7 +232,7 @@ Artifacts uploaded from each run include:
 On successful `master` builds, the workflow also publishes the same rpm-md tree
 to GitHub Pages (`gh-pages` branch):
 
-- `https://specsierra.github.io/wpe-sfos-build/aarch64/`
+- `https://specsierra.github.io/atlantic-engine/aarch64/`
 
 RPMs and repository metadata are signed in CI. Configure these GitHub repository
 secrets for signing:
@@ -249,8 +249,8 @@ Phone setup for updates:
 
 ```bash
 devel-su
-rpm --import https://specsierra.github.io/wpe-sfos-build/RPM-GPG-KEY-atlantic-ci
-zypper ar -f https://specsierra.github.io/wpe-sfos-build/aarch64 atlantic-ci
+rpm --import https://specsierra.github.io/atlantic-engine/RPM-GPG-KEY-atlantic-ci
+zypper ar -f https://specsierra.github.io/atlantic-engine/aarch64 atlantic-ci
 zypper ref
 zypper up atlantic-browser wpewebkit2 wpewebkit2-qt5 wpebackend-fdo libwpe libepoxy wpe-sfos-compat
 ```

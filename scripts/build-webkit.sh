@@ -200,8 +200,8 @@ if [ ! -f "${WPE_PREFIX}/lib/qt5/qml/org/wpewebkit/qtwpe/libqtwpe.so" ]; then
             echo "ERROR: ${QT5_PLUGIN_SOURCE_DIR} not found; required to copy the carried-forward Qt5 plugin into ${WPE_WEBKIT_VERSION}" >&2
             exit 1
         fi
-        echo "  Copying Qt5 plugin from $(basename "${QT5_PLUGIN_SOURCE_DIR}")..."
-        cp -a "${QT5_PLUGIN_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5" \
+        echo "  Copying Qt5 plugin from ${QT5_PLUGIN_SOURCE_DIR}..."
+        cp -a "${QT5_PLUGIN_SOURCE_DIR}" \
               "${WPE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt5"
     fi
 

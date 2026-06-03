@@ -22,7 +22,7 @@ for lib in libQt5Core.so.5 libQt5Xml.so.5 libicui18n.so.70 libicuuc.so.70 libicu
 done
 
 echo ""
-echo "--- [12] Building sailfish-browser (atlantic-browser) ---"
+echo "--- [12] Building atlantic-browser ---"
 cd "${BROWSER_SRC}"
 rm -rf build_browser build_wpe
 mkdir -p build_browser build_wpe
@@ -66,4 +66,4 @@ find build -name "libsailfishbrowser.so*" \
     -exec cp -a {} build_wpe/ \; 2>/dev/null || true
 find build -name "*.qm" -exec cp {} build_browser/ \; 2>/dev/null || true
 
-echo "  sailfish-browser built."
+echo "  atlantic-browser built."
