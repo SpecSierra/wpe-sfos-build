@@ -105,6 +105,20 @@ if [ -n "${_toolchain_hash}" ] && [ -f "${_toolchain_stamp}" ] && [ -f "${WPE_PR
     fi
 fi
 
+# ── Version cache-busting ────────────────────────────────────────────────────
+# The cached prefix may hold the previous WebKit version's build; without this
+# check a versions.env bump would silently ship stale binaries under the new
+# version label.  A missing stamp (cache predates this check) also forces a
+# rebuild — the one-time cost beats shipping a mislabelled engine.
+_version_stamp="${WPE_PREFIX}/lib/.webkit-version"
+if [ -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
+    _saved_version="$(cat "${_version_stamp}" 2>/dev/null || true)"
+    if [ "${WPE_WEBKIT_VERSION}" != "${_saved_version}" ]; then
+        echo "  WebKit version changed (${_saved_version:-unstamped} → ${WPE_WEBKIT_VERSION}), forcing rebuild"
+        rm -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so"
+    fi
+fi
+
 if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     webkit_source_parent="$(dirname "${WPE_SOURCE_DIR}")"
     mkdir -p "${webkit_source_parent}"
@@ -166,6 +180,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
 
     echo "  WPEWebKit installed."
     printf '%s\n' "${_toolchain_hash}" > "${_toolchain_stamp}"
+    printf '%s\n' "${WPE_WEBKIT_VERSION}" > "${_version_stamp}"
 else
     echo "  WPEWebKit already built."
     cmake --install "${WPE_SOURCE_DIR}/WebKitBuild/Release" --prefix "${WPE_PREFIX}"

@@ -1,8 +1,8 @@
 %global qt5_snapshot_version 2.52.1
 
 Name:       wpewebkit2-qt5
-Summary:    Qt5 QML plugin for WPE WebKit 2.52.3
-Version:    2.52.3
+Summary:    Qt5 QML plugin for WPE WebKit 2.52.4
+Version:    2.52.4
 Release:    1
 License:    LGPLv2+
 URL:        https://wpewebkit.org

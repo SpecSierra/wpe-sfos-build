@@ -7,11 +7,11 @@ Build, packaging, and compatibility work for **Atlantic Browser** on **Sailfish 
 This repo is now being used to move Atlantic onto a cleaner baseline:
 
 - **Target OS:** Sailfish OS **5.1.0.8**
-- **Target engine:** WPE WebKit **2.52.3**
+- **Target engine:** WPE WebKit **2.52.4**
 - **Priority:** smaller patch queue, simpler packaging, faster engine updates
 - **Not a priority right now:** `bubblewrap`, `sailjail`, or growing the old preload stack
 
-The live scripts in this repo now default to the **SFOS 5.1.0.8 / WPE 2.52.3**
+The live scripts in this repo now default to the **SFOS 5.1.0.8 / WPE 2.52.4**
 line. The older **WPE 2.52.1** line is still available by explicit override while
 the Qt5 bridge continues to be carried forward from the existing **2.52.1** source
 snapshot. Those pins are explicit in `versions.env` so the remaining runtime work
@@ -20,9 +20,9 @@ scripts.
 
 The repo-side validation baseline is now stronger than it was on the old line:
 
-- the engine, WebKit, Qt5 bridge, and Atlantic UI all build cleanly against a fresh **2.52.3** temp prefix
+- the engine, WebKit, Qt5 bridge, and Atlantic UI all build cleanly against a fresh **2.52.4** temp prefix
 - the native RPM path can package that validated temp prefix directly without hard-coded soname drift
-- `setup-rpmbuild.sh` and the WebKit RPM specs now stage the **2.52.3** engine source plus the explicit **2.52.1** Qt5 carry-forward snapshot
+- `setup-rpmbuild.sh` and the WebKit RPM specs now stage the **2.52.4** engine source plus the explicit **2.52.1** Qt5 carry-forward snapshot
 
 ## Live workspace
 
@@ -67,7 +67,7 @@ The important pins now live in `versions.env`.
 | libwpe | `1.17.0` |
 | libepoxy | `1.5.11` |
 | WPEBackend-fdo | `1.17.0` |
-| WPE WebKit | `2.52.3` |
+| WPE WebKit | `2.52.4` |
 | Qt5 plugin source fallback | `2.52.1` |
 
 ### Migration target
@@ -75,7 +75,7 @@ The important pins now live in `versions.env`.
 | Item | Version |
 | --- | --- |
 | SFOS baseline | `5.1.0.8` |
-| WPE WebKit | `2.52.3` |
+| WPE WebKit | `2.52.4` |
 
 ## Current script behavior
 
@@ -87,14 +87,14 @@ important things:
 2. Fixes the missing `WPE_SOURCE_DIR` wiring in `build-all.sh`.
 3. Stops packaging and depending on `bubblewrap` even though the current WPE build already sets `-DENABLE_BUBBLEWRAP_SANDBOX=OFF`.
 4. Drops `libglibc-compat.so`, `libglib-compat.so`, and default GLIBC retagging from the normal **SFOS 5.1.0.8** path while keeping the still-uncertain shims explicit.
-5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.8 / WPE 2.52.3 line without editing one rescue-style script.
+5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.8 / WPE 2.52.4 line without editing one rescue-style script.
 6. Makes the Qt5 bridge carry-forward explicit by sourcing it from the existing `wpewebkit-2.52.1` snapshot instead of pretending a clean `2.50.5` tarball is sufficient on its own.
 
 Recent validation tightened the live flow further:
 
 1. `scripts/build-ui.sh` now drives the qmake-generated `apps/` subproject correctly and builds only the Atlantic browser targets instead of tripping over unrelated subapps.
 2. `build-rpms-native.sh` now stages shared-library families dynamically, avoids mutating the source prefix in place, and can package from an alternate validated prefix while keeping the runtime `/opt/wpe-sfos` paths explicit.
-3. `setup-rpmbuild.sh`, `rpm/wpewebkit2.spec`, and `rpm/wpewebkit2-qt5.spec` now reflect the real **2.52.3 + 2.52.1 carry-forward** source layout instead of the stale **2.50.5** assumptions.
+3. `setup-rpmbuild.sh`, `rpm/wpewebkit2.spec`, and `rpm/wpewebkit2-qt5.spec` now reflect the real **2.52.4 + 2.52.1 carry-forward** source layout instead of the stale **2.50.5** assumptions.
 
 That last point is intentional: isolation work is out of the default path for this migration
 unless it becomes a release requirement again later.
@@ -105,7 +105,7 @@ This is the current keep/drop inventory for the old SFOS 5.0 compatibility stack
 
 | Item | Status | Why |
 | --- | --- | --- |
-| `libglibc-compat.so` | `keep temporarily` | 2.52.3 helper/runtime binaries still require `__libc_single_threaded@GLIBC_2.17` on-device |
+| `libglibc-compat.so` | `keep temporarily` | 2.52.4 helper/runtime binaries still require `__libc_single_threaded@GLIBC_2.17` on-device |
 | `patch-glibc-versions.py` | `remove` on SFOS 5.1 unless a specific binary still needs it | should not stay in the normal path if the new baseline already matches runtime glibc |
 | `libglib-compat.so` | `remove` on SFOS 5.1 if GLib ABI is sufficient | carried for older GLib behavior on the SFOS 5.0 line |
 | `libcow_string_compat.so` | `remove` on SFOS 5.1 | the rebuilt 5.1 runtime makes `invoker` fail on `__libc_single_threaded`, so this shim is no longer safe in the default path |
@@ -126,10 +126,10 @@ These are the repo-local patches currently relevant to the live build flow.
 | --- | --- | --- |
 | `patches/engine/libepoxy-rtld-default-fallback.patch` | `keep temporarily` | currently applied in the engine build so `libegl-stubs.so` can satisfy missing EGL symbols on Sailfish/hybris |
 | `patches/webkit/webkit-quirks-no-video.patch` | `keep` | harmless compatibility patch while the WebKit carry-forward is still being rebased |
-| `patches/webkit/webkit-icu-imported-targets.patch` | `keep temporarily` | fixes the 2.52.3 configure path on Ubuntu 24.04 by repairing the `ICU::` imported targets after `find_package(ICU ...)` |
-| `patches/webkit/webkit-ramsize-cstddef.patch` | `keep temporarily` | fixes the 2.52.3 WTF compile on Ubuntu 24.04 by adding the missing `<cstddef>` include for `size_t` in `RAMSize.h` |
+| `patches/webkit/webkit-icu-imported-targets.patch` | `keep temporarily` | fixes the 2.52.4 configure path on Ubuntu 24.04 by repairing the `ICU::` imported targets after `find_package(ICU ...)` |
+| `patches/webkit/webkit-ramsize-cstddef.patch` | `keep temporarily` | fixes the 2.52.4 WTF compile on Ubuntu 24.04 by adding the missing `<cstddef>` include for `size_t` in `RAMSize.h` |
 | `patches/webkit/webkit-wtf-header-includes.patch` | `keep temporarily` | fixes newer WTF header self-sufficiency issues on Ubuntu 24.04 by adding missing `<cstdint>` and `Assertions.h` includes for `EnumTraits.h` and `TypeCasts.h` |
-| `patches/webkit/webkit-wtf-platform-stdint.patch` | `keep temporarily` | fixes additional WTF 2.52.3 portability/self-sufficiency issues by importing `Platform.h` anywhere new Android WTF files use `OS(ANDROID)` and `<cstdint>` where `uint8_t` is used in `UTF8Conversion.h` |
+| `patches/webkit/webkit-wtf-platform-stdint.patch` | `keep temporarily` | fixes additional WTF 2.52.4 portability/self-sufficiency issues by importing `Platform.h` anywhere new Android WTF files use `OS(ANDROID)` and `<cstdint>` where `uint8_t` is used in `UTF8Conversion.h` |
 | `patches/webkit/webkit-wtf-glib-platform.patch` | `keep temporarily` | fixes the same self-sufficient header problem across the new WTF GLib files by importing `Platform.h` wherever `USE(GLIB)`, `PLATFORM(WPE)`, or `OS(...)` guards are used directly |
 | `patches/webkit/webkit-wtf-glib-header-includes.patch` | `keep temporarily` | fixes the next GLib WTF self-sufficiency layer by importing the headers that own `WTF_EXPORT_PRIVATE` and `WTF_MAKE_TZONE_ALLOCATED` in the new GLib headers |
 | `patches/webkit/webkit-wtf-linux-header-includes.patch` | `keep temporarily` | fixes the same self-sufficiency issue in the Linux WTF memory/thread headers by importing `Platform.h` and `ExportMacros.h` where `OS(...)` and `WTF_EXPORT_PRIVATE` are used directly |
@@ -163,8 +163,8 @@ These are the repo-local patches currently relevant to the live build flow.
 | `patches/webkit/webkit-webcore-context-export-macros.patch` | `keep temporarily` | fixes `ContextDestructionObserver.h` by importing `PlatformExportMacros.h` before it uses `WEBCORE_EXPORT` directly |
 | `patches/webkit/webkit-webcore-bitmaptexturepool-owners.patch` | `keep temporarily` | fixes `BitmapTexturePool.h` by importing `PlatformExportMacros.h` before it uses `WEBCORE_EXPORT` directly in the texmap pool singleton API |
 | `patches/webkit/webkit-webcore-texmap-owner-headers.patch` | `keep temporarily` | fixes the next WebCore texmap ownership wave by importing `Platform.h` / `PlatformExportMacros.h` before texmap headers use `ENABLE()`, `USE()`, and `WEBCORE_EXPORT` directly |
-| `patches/webkit/webkit-renderbox-isnan.patch` | `keep temporarily` | fixes the 2.52.3 WebCore compile on Ubuntu 24.04 by making `RenderBox.h` use `std::isnan` with an explicit `<cmath>` include |
-| `patches/webkit/webkit-shapeoutside-isnan.patch` | `keep temporarily` | fixes the 2.52.3 WebCore shape-outside compile on Ubuntu 24.04 by making `ShapeOutsideInfo.cpp` use `std::isnan` with an explicit `<cmath>` include |
+| `patches/webkit/webkit-renderbox-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore compile on Ubuntu 24.04 by making `RenderBox.h` use `std::isnan` with an explicit `<cmath>` include |
+| `patches/webkit/webkit-shapeoutside-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore shape-outside compile on Ubuntu 24.04 by making `ShapeOutsideInfo.cpp` use `std::isnan` with an explicit `<cmath>` include |
 | `patches/qt-bridge/qt5-plugin-texture-cache.patch` | `keep temporarily` | avoids rebuilding the Qt scene-graph texture wrapper every frame in the carried-forward Qt5 bridge; measured improvements were strongest on Canvas2D/WebGL perf probes |
 | `patches/qt-bridge/qt5-plugin-exported-image-lifetime.patch` | `keep temporarily` | defers release of exported EGL images in the Qt5 bridge until the frame has actually swapped, avoiding stale-texture / premature-free faults on Adreno devices |
 | `patches/qt-bridge/qt5-plugin-gnuinstalldirs.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this install-path fix, so it is no longer re-applied in the default path |
@@ -176,7 +176,7 @@ These are the repo-local patches currently relevant to the live build flow.
 
 The next useful repo changes should be:
 
-1. Run device/runtime validation for the rebuilt **SFOS 5.1.0.8 / WPE 2.52.3** packages.
+1. Run device/runtime validation for the rebuilt **SFOS 5.1.0.8 / WPE 2.52.4** packages.
 2. Re-check the remaining explicit shims (`libsigill_skip.so`, `libegl-stubs.so`) against real runtime behavior.
 3. Make fresh install match the staged tree exactly, with no manual device-side fixes.
 4. Decide whether the remaining older RPM specs beyond the WebKit pair should be aligned further or retired in favor of the native packaging path.
