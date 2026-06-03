@@ -12,9 +12,12 @@ This repo is now being used to move Atlantic onto a cleaner baseline:
 - **Not a priority right now:** `bubblewrap`, `sailjail`, or growing the old preload stack
 
 The live scripts in this repo now default to the **SFOS 5.1.0.8 / WPE 2.52.4**
-line. The older **WPE 2.52.1** line is still available by explicit override while
-the Qt5 bridge continues to be carried forward from the existing **2.52.1** source
-snapshot. Those pins are explicit in `versions.env` so the remaining runtime work
+line. The older **WPE 2.52.1** line is still available by explicit override. The
+Qt5 bridge is **no longer carried forward from the old 2.52.1 source snapshot**:
+it lives in this repo as a self-contained source tree (`qt5-plugin/`, adapted
+from the upstream qt6 bindings) that is overlaid onto the current WebKit source
+at build time — effectively a patch on whatever engine version `versions.env`
+pins. Those pins are explicit in `versions.env` so the remaining runtime work
 can happen deliberately instead of chasing hard-coded versions scattered through the
 scripts.
 
@@ -22,7 +25,7 @@ The repo-side validation baseline is now stronger than it was on the old line:
 
 - the engine, WebKit, Qt5 bridge, and Atlantic UI all build cleanly against a fresh **2.52.4** temp prefix
 - the native RPM path can package that validated temp prefix directly without hard-coded soname drift
-- `setup-rpmbuild.sh` and the WebKit RPM specs now stage the **2.52.4** engine source plus the explicit **2.52.1** Qt5 carry-forward snapshot
+- `setup-rpmbuild.sh` and the WebKit RPM specs now stage the **2.52.4** engine source plus the in-repo **`qt5-plugin/`** bridge source
 
 ## Live workspace
 
@@ -41,7 +44,7 @@ Current checkouts on the build host:
 | `build-all.sh` | top-level orchestrator over the split build entrypoints |
 | `scripts/bootstrap-host.sh` | host dependencies, sysroot setup, and workspace bootstrap |
 | `scripts/build-engine.sh` | engine dependency build (`libwpe`, `libepoxy`, `WPEBackend-fdo`) |
-| `scripts/build-webkit.sh` | WPE WebKit build, legacy Qt5 bridge carry-forward, and GLIBC patching |
+| `scripts/build-webkit.sh` | WPE WebKit build, in-repo Qt5 bridge overlay, and GLIBC patching |
 | `scripts/build-ui.sh` | Atlantic UI/browser build against the staged engine |
 | `scripts/package-rpms.sh` | packaging entrypoint that delegates to the native RPM staging script |
 | `build-rpms-native.sh` | native RPM staging/packaging script |
@@ -52,6 +55,7 @@ Current checkouts on the build host:
 | `docs/RENDERING-AUDIT.md` | live rendering-path audit notes and remaining GPU-path checks |
 | `native-meson.ini` | native meson config for engine-side dependencies |
 | `sfos-toolchain.cmake` | SFOS sysroot toolchain for Qt/UI builds |
+| `qt5-plugin/` | self-contained Qt5 WPE bridge source (adapted from upstream qt6), overlaid onto the pinned WebKit version at build time |
 | `patches/` | repo-local engine, WebKit, Qt bridge, and historical patches grouped by area |
 | `shims/compat/` | C shim sources and linker maps for the remaining compatibility package/workarounds |
 
@@ -68,7 +72,7 @@ The important pins now live in `versions.env`.
 | libepoxy | `1.5.11` |
 | WPEBackend-fdo | `1.17.0` |
 | WPE WebKit | `2.52.4` |
-| Qt5 plugin source fallback | `2.52.1` |
+| Qt5 plugin source | in-repo `qt5-plugin/` (tracks the pinned WebKit; the `2.52.1` label in `versions.env` survives only for RPM snapshot-tarball naming) |
 
 ### Migration target
 
@@ -88,13 +92,13 @@ important things:
 3. Stops packaging and depending on `bubblewrap` even though the current WPE build already sets `-DENABLE_BUBBLEWRAP_SANDBOX=OFF`.
 4. Drops `libglibc-compat.so`, `libglib-compat.so`, and default GLIBC retagging from the normal **SFOS 5.1.0.8** path while keeping the still-uncertain shims explicit.
 5. Makes the build flow easier to rework incrementally for the SFOS 5.1.0.8 / WPE 2.52.4 line without editing one rescue-style script.
-6. Makes the Qt5 bridge carry-forward explicit by sourcing it from the existing `wpewebkit-2.52.1` snapshot instead of pretending a clean `2.50.5` tarball is sufficient on its own.
+6. Makes the Qt5 bridge explicit by building it from the in-repo `qt5-plugin/` source overlaid onto the pinned WebKit version, instead of carrying it forward from an old engine snapshot.
 
 Recent validation tightened the live flow further:
 
 1. `scripts/build-ui.sh` now drives the qmake-generated `apps/` subproject correctly and builds only the Atlantic browser targets instead of tripping over unrelated subapps.
 2. `build-rpms-native.sh` now stages shared-library families dynamically, avoids mutating the source prefix in place, and can package from an alternate validated prefix while keeping the runtime `/opt/wpe-sfos` paths explicit.
-3. `setup-rpmbuild.sh`, `rpm/wpewebkit2.spec`, and `rpm/wpewebkit2-qt5.spec` now reflect the real **2.52.4 + 2.52.1 carry-forward** source layout instead of the stale **2.50.5** assumptions.
+3. `setup-rpmbuild.sh`, `rpm/wpewebkit2.spec`, and `rpm/wpewebkit2-qt5.spec` now reflect the real **2.52.4 + in-repo `qt5-plugin/`** source layout instead of the stale **2.50.5** assumptions.
 
 That last point is intentional: isolation work is out of the default path for this migration
 unless it becomes a release requirement again later.
@@ -165,11 +169,11 @@ These are the repo-local patches currently relevant to the live build flow.
 | `patches/webkit/webkit-webcore-texmap-owner-headers.patch` | `keep temporarily` | fixes the next WebCore texmap ownership wave by importing `Platform.h` / `PlatformExportMacros.h` before texmap headers use `ENABLE()`, `USE()`, and `WEBCORE_EXPORT` directly |
 | `patches/webkit/webkit-renderbox-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore compile on Ubuntu 24.04 by making `RenderBox.h` use `std::isnan` with an explicit `<cmath>` include |
 | `patches/webkit/webkit-shapeoutside-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore shape-outside compile on Ubuntu 24.04 by making `ShapeOutsideInfo.cpp` use `std::isnan` with an explicit `<cmath>` include |
-| `patches/qt-bridge/qt5-plugin-texture-cache.patch` | `keep temporarily` | avoids rebuilding the Qt scene-graph texture wrapper every frame in the carried-forward Qt5 bridge; measured improvements were strongest on Canvas2D/WebGL perf probes |
-| `patches/qt-bridge/qt5-plugin-exported-image-lifetime.patch` | `keep temporarily` | defers release of exported EGL images in the Qt5 bridge until the frame has actually swapped, avoiding stale-texture / premature-free faults on Adreno devices |
-| `patches/qt-bridge/qt5-plugin-gnuinstalldirs.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this install-path fix, so it is no longer re-applied in the default path |
-| `patches/qt-bridge/qt5-plugin-epoxy-gl-fix.patch` | `reference only` | the current `wpewebkit-2.52.1` Qt5 carry-forward snapshot already contains this header/include fix |
-| `patches/qt-bridge/wpeqtview-carryforward.patch` | `reference only` | records the SFOS API additions, deferred device scale, and Qt 5.6 touch guard already carried by the `wpewebkit-2.52.1` Qt5 source snapshot |
+| `patches/qt-bridge/qt5-plugin-texture-cache.patch` | `reference only` | baked into the in-repo `qt5-plugin/` source; avoids rebuilding the Qt scene-graph texture wrapper every frame — measured improvements were strongest on Canvas2D/WebGL perf probes |
+| `patches/qt-bridge/qt5-plugin-exported-image-lifetime.patch` | `reference only` | baked into the in-repo `qt5-plugin/` source; defers release of exported EGL images until the frame has actually swapped, avoiding stale-texture / premature-free faults on Adreno devices |
+| `patches/qt-bridge/qt5-plugin-gnuinstalldirs.patch` | `reference only` | the in-repo `qt5-plugin/` source already contains this install-path fix, so it is no longer re-applied in the default path |
+| `patches/qt-bridge/qt5-plugin-epoxy-gl-fix.patch` | `reference only` | the in-repo `qt5-plugin/` source already contains this header/include fix |
+| `patches/qt-bridge/wpeqtview-carryforward.patch` | `reference only` | records the SFOS API additions, deferred device scale, and Qt 5.6 touch guard already present in the in-repo `qt5-plugin/` source |
 | `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `drop from default path` | historical SFOS 5.0 isolation workaround; no longer part of the main build flow |
 
 ## Practical next steps
@@ -207,7 +211,7 @@ host sysroot when the raw 5.1 SDK target archive is not publicly downloadable:
 - `STAGING=${CI_ROOT}/wpe-sfos-stage`
 - `PUBLIC_SFOS_BASE_VERSION=5.1.0.8`
 - `LOCAL_SFOS_SOURCE_SYSROOT=/opt/sfos-sysroot`
-- `QT5_PLUGIN_SOURCE_DIR=/release/workspace/wpewebkit-2.52.1`
+- `QT5_PLUGIN_SOURCE_DIR` is unset — CI builds the bridge from the in-repo `qt5-plugin/` default
 - `NPROC=6`
 - `SYSROOT=/opt/github-runner/cache/sfos-sysroot-5.1.0.5`
 
