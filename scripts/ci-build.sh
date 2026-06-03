@@ -11,7 +11,6 @@ export BROWSER_SRC="${BROWSER_SRC:-${WORK}/atlantic-browser}"
 # actual cached sysroot from its updated 5.1 tree.
 export PUBLIC_SFOS_BASE_VERSION="${PUBLIC_SFOS_BASE_VERSION:-5.1.0.8}"
 export LOCAL_SFOS_SOURCE_SYSROOT="${LOCAL_SFOS_SOURCE_SYSROOT:-/opt/sfos-sysroot}"
-export QT5_PLUGIN_SOURCE_DIR="${QT5_PLUGIN_SOURCE_DIR:-/release/workspace/wpewebkit-2.52.1}"
 export CI_CACHE_ROOT="${CI_CACHE_ROOT:-/opt/github-runner/cache/atlantic-build}"
 export WPE_PREFIX="${WPE_PREFIX:-${WORK}/wpe-sfos-prefix}"
 export SYSROOT="${SYSROOT:-/opt/github-runner/cache/sfos-sysroot-5.1.0.5}"
