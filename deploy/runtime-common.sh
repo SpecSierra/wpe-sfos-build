@@ -113,6 +113,17 @@ atlantic_export_browser_env() {
     # ── GStreamer debug (uncomment to diagnose buffering issues) ──────────────
     # export GST_DEBUG="${GST_DEBUG:-webkit*:4,GstQueue2:3}"
 
+    # ── DFG JIT disabled (2026-06-03) ─────────────────────────────────────────
+    # The DFG tier miscompiles on the current clang 18 + ThinLTO build: during
+    # page load, DFG-compiled code returns wrong values (e.g. webpack
+    # __webpack_require__ returning `true` instead of module.exports), causing
+    # cascading TypeErrors in wp-polyfill/jQuery.  Visible as jolla.com stuck
+    # behind its loading-screen overlay.  Baseline JIT remains enabled and is
+    # correct; only the DFG (and implicitly FTL) tier is turned off.
+    # Suspect build flags: -Wl,--icf=safe and/or ThinLTO import-instr-limit=200
+    # in sfos-toolchain-clang.cmake.  Re-enable once root-caused.
+    export JSC_useDFGJIT="${JSC_useDFGJIT:-0}"
+
     # ── JSC JIT thread tuning (Snapdragon 665: 8-core big.LITTLE) ────────────
     # Default JSC spawns 7 FTL threads + 8 GC markers on an 8-core device,
     # flooding the CPU during page load.  Cap to sane mobile limits.
