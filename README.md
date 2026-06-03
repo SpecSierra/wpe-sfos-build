@@ -9,7 +9,8 @@ This repo is now being used to move Atlantic onto a cleaner baseline:
 - **Target OS:** Sailfish OS **5.1.0.8**
 - **Target engine:** WPE WebKit **2.52.4**
 - **Priority:** smaller patch queue, simpler packaging, faster engine updates
-- **Not a priority right now:** `bubblewrap`, `sailjail`, or growing the old preload stack
+- **Coming next:** re-enabling `bubblewrap`/`sailjail` isolation (related patches and the `sailjail/` profiles are kept for that)
+- **Not a priority right now:** growing the old preload stack
 
 The live scripts in this repo now default to the **SFOS 5.1.0.8 / WPE 2.52.4**
 line. The older **WPE 2.52.1** line is still available by explicit override. The
@@ -56,7 +57,7 @@ Current checkouts on the build host:
 | `native-meson.ini` | native meson config for engine-side dependencies |
 | `sfos-toolchain.cmake` | SFOS sysroot toolchain for Qt/UI builds |
 | `qt5-plugin/` | self-contained Qt5 WPE bridge source (adapted from upstream qt6), overlaid onto the pinned WebKit version at build time |
-| `patches/` | repo-local engine, WebKit, Qt bridge, and historical patches grouped by area |
+| `patches/` | repo-local engine, WebKit, and historical patches grouped by area |
 | `shims/compat/` | C shim sources and linker maps for the remaining compatibility package/workarounds |
 
 ## Version pins
@@ -119,8 +120,8 @@ This is the current keep/drop inventory for the old SFOS 5.0 compatibility stack
 | broad `LD_PRELOAD` stacks | `remove` | migration goal is a minimal runtime closure, not global preload repair |
 | `libegl-stubs.so` | `keep temporarily` | still potentially relevant if Sailfish/hybris EGL remains short on required symbols |
 | `patches/engine/libepoxy-rtld-default-fallback.patch` | `keep temporarily` | coupled to `libegl-stubs.so`; re-check once the 5.1 runtime is exercised |
-| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `remove from default path` | no longer part of the main migration direction |
-| sailjail-disabled packaging/profile workarounds | `re-check` | keep only if they are still required to launch the app cleanly on 5.1 |
+| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `keep` | bubblewrap/sailjail isolation is planned to be re-enabled soon; this patch is the starting point |
+| sailjail-disabled packaging/profile workarounds | `keep` | sailjail re-enable is planned; revisit these together with the bubblewrap work |
 
 ## Current local patch queue
 
@@ -169,12 +170,8 @@ These are the repo-local patches currently relevant to the live build flow.
 | `patches/webkit/webkit-webcore-texmap-owner-headers.patch` | `keep temporarily` | fixes the next WebCore texmap ownership wave by importing `Platform.h` / `PlatformExportMacros.h` before texmap headers use `ENABLE()`, `USE()`, and `WEBCORE_EXPORT` directly |
 | `patches/webkit/webkit-renderbox-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore compile on Ubuntu 24.04 by making `RenderBox.h` use `std::isnan` with an explicit `<cmath>` include |
 | `patches/webkit/webkit-shapeoutside-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore shape-outside compile on Ubuntu 24.04 by making `ShapeOutsideInfo.cpp` use `std::isnan` with an explicit `<cmath>` include |
-| `patches/qt-bridge/qt5-plugin-texture-cache.patch` | `reference only` | baked into the in-repo `qt5-plugin/` source; avoids rebuilding the Qt scene-graph texture wrapper every frame — measured improvements were strongest on Canvas2D/WebGL perf probes |
-| `patches/qt-bridge/qt5-plugin-exported-image-lifetime.patch` | `reference only` | baked into the in-repo `qt5-plugin/` source; defers release of exported EGL images until the frame has actually swapped, avoiding stale-texture / premature-free faults on Adreno devices |
-| `patches/qt-bridge/qt5-plugin-gnuinstalldirs.patch` | `reference only` | the in-repo `qt5-plugin/` source already contains this install-path fix, so it is no longer re-applied in the default path |
-| `patches/qt-bridge/qt5-plugin-epoxy-gl-fix.patch` | `reference only` | the in-repo `qt5-plugin/` source already contains this header/include fix |
-| `patches/qt-bridge/wpeqtview-carryforward.patch` | `reference only` | records the SFOS API additions, deferred device scale, and Qt 5.6 touch guard already present in the in-repo `qt5-plugin/` source |
-| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `drop from default path` | historical SFOS 5.0 isolation workaround; no longer part of the main build flow |
+| `patches/qt-bridge/` | `removed` | all historical qt-bridge patches (texture cache, exported-image lifetime, display/window update, adaptive fps, gnuinstalldirs, epoxy-gl fix, wpeqtview carry-forward) are baked into the in-repo `qt5-plugin/` source; the patch files were deleted — see git history |
+| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `keep` | SFOS isolation work — kept on purpose: bubblewrap/sailjail are planned to be re-enabled soon |
 
 ## Practical next steps
 
