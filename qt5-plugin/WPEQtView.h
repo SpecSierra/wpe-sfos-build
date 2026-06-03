@@ -54,6 +54,17 @@ public:
 
     void triggerUpdate() { QMetaObject::invokeMethod(this, "update"); };
 
+    // Called by WPEQtViewBackend's libwpe fullscreen handler when the page
+    // requests entering/leaving fullscreen.  Re-emitted as Qt signals so the
+    // embedding UI can switch the window state.
+    void notifyFullscreenRequest(bool enter)
+    {
+        if (enter)
+            Q_EMIT enterFullscreenRequested();
+        else
+            Q_EMIT leaveFullscreenRequested();
+    }
+
     QUrl url() const;
     void setUrl(const QUrl&);
     int loadProgress() const;

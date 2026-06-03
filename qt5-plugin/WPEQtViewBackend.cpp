@@ -131,6 +131,16 @@ WPEQtViewBackend::WPEQtViewBackend(const QSizeF& size, EGLDisplay display, EGLCo
 
     wpe_view_backend_add_activity_state(backend(), wpe_view_activity_state_visible | wpe_view_activity_state_focused | wpe_view_activity_state_in_window);
 
+    // Register the libwpe fullscreen handler.  Without it,
+    // wpe_view_backend_platform_set_fullscreen() returns false, which makes
+    // WebKit's PageClientImpl::enterFullScreen() immediately call
+    // requestExitFullScreen() — DOM fullscreen enters and reverts within
+    // ~100 ms (video fullscreen "exits after a second").  The handler accepts
+    // the transition and forwards it to the embedding WPEQtView.
+    wpe_view_backend_set_fullscreen_handler(backend(), [](void* data, bool enable) -> bool {
+        return static_cast<WPEQtViewBackend*>(data)->handleFullscreenChanged(enable);
+    }, this);
+
     m_surface.setFormat(context->format());
     m_surface.create();
 }
@@ -145,6 +155,18 @@ WPEQtViewBackend::~WPEQtViewBackend()
     m_committedImage = nullptr;
     wpe_view_backend_exportable_fdo_destroy(m_exportable);
     eglDestroyContext(m_eglDisplay, m_eglContext);
+}
+
+bool WPEQtViewBackend::handleFullscreenChanged(bool enable)
+{
+    if (!m_view)
+        return false;
+
+    // Forward to the embedding view; the browser UI switches the window state
+    // (and injects the JS-side cleanup on leave).  Returning true completes
+    // the libwpe handshake so WebKit keeps the DOM fullscreen state.
+    m_view->notifyFullscreenRequest(enable);
+    return true;
 }
 
 void WPEQtViewBackend::resize(const QSizeF& newSize)

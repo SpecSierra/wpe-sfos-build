@@ -66,6 +66,8 @@ public:
 
     struct wpe_view_backend* backend() const { return wpe_view_backend_exportable_fdo_get_view_backend(m_exportable); };
 
+    bool handleFullscreenChanged(bool enable);
+
 private:
     void displayImage(struct wpe_fdo_egl_exported_image*);
     uint32_t modifiers() const;
