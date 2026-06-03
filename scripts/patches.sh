@@ -53,10 +53,13 @@ readonly WEBKIT_SOURCE_PATCHES=(
 )
 
 readonly QT5_PLUGIN_PATCHES=(
-    "patches/qt-bridge/qt5-plugin-texture-cache.patch"
-    "patches/qt-bridge/qt5-plugin-exported-image-lifetime.patch"
-    "patches/qt-bridge/qt5-plugin-displayimage-window-update.patch"
-    "patches/qt-bridge/qt5-plugin-adaptive-fps.patch"
+    # All qt5-plugin patches are now baked into the self-contained
+    # qt5-plugin/ source directory.  The patches below are kept as
+    # reference but should not be re-applied against the live source.
+    # "patches/qt-bridge/qt5-plugin-texture-cache.patch"
+    # "patches/qt-bridge/qt5-plugin-exported-image-lifetime.patch"
+    # "patches/qt-bridge/qt5-plugin-displayimage-window-update.patch"
+    # "patches/qt-bridge/qt5-plugin-adaptive-fps.patch"
 )
 
 apply_single_repo_patch() {
