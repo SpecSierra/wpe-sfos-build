@@ -138,7 +138,6 @@ atlantic_export_browser_env() {
     # used) — swap latency is far worse than GC churn. 35% ≈ 350 MB for JS
     # on this 3.5 GB device, enough for large SPAs without thrashing swap.
     export JSC_smallHeapRAMFraction=0.50
-    export JSC_largeHeapRAMFraction=0.50
     export JSC_largeHeapSize=67108864
     # Disable type-profiling heap snapshot (fires on every GC).  On the device
     # this saves ~3-8 MB of heap overhead and removes a frequent allocation
