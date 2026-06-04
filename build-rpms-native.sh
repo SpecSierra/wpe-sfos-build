@@ -176,6 +176,36 @@ fpm_rpm wpebackend-fdo "$WPEBACKEND_FDO_VERSION" "WPE backend (freedesktop.org/W
     --depends libwpe --depends libepoxy
 
 # ===========================================================================
+# 3b. Sandbox runtime executables (bwrap, xdg-dbus-proxy)
+# ===========================================================================
+# These are the device-side binaries libWPEWebKit exec's when the bubblewrap
+# sandbox is enabled (the compiled-in BWRAP_EXECUTABLE / DBUS_PROXY_EXECUTABLE
+# paths are /usr/bin/bwrap and /usr/bin/xdg-dbus-proxy).  Built by
+# scripts/build-sandbox-deps.sh into ${WPE_PREFIX}/bin.  Packaged under their
+# upstream names so atlantic-browser can Requires them; libcap (bwrap) and
+# glib2 (xdg-dbus-proxy) are core SFOS libs always present, so they are not
+# listed as explicit Requires here.
+if [ -x "${WPE_PREFIX}/bin/bwrap" ]; then
+    echo "--- Staging bubblewrap ---"
+    S="${STAGING}/bubblewrap"; rm -rf "$S"; mkdir -p "${S}/usr/bin"
+    cp -a "${WPE_PREFIX}/bin/bwrap" "${S}/usr/bin/bwrap"
+    maybe_patch_glibc_versions "${S}/usr/bin/bwrap"
+    fpm_rpm bubblewrap "$BUBBLEWRAP_VERSION" "Bubblewrap sandbox helper (for the WPE WebKit sandbox)" "$S"
+else
+    echo "WARNING: ${WPE_PREFIX}/bin/bwrap missing — skipping bubblewrap package (run scripts/build-sandbox-deps.sh)" >&2
+fi
+
+if [ -x "${WPE_PREFIX}/bin/xdg-dbus-proxy" ]; then
+    echo "--- Staging xdg-dbus-proxy ---"
+    S="${STAGING}/xdg-dbus-proxy"; rm -rf "$S"; mkdir -p "${S}/usr/bin"
+    cp -a "${WPE_PREFIX}/bin/xdg-dbus-proxy" "${S}/usr/bin/xdg-dbus-proxy"
+    maybe_patch_glibc_versions "${S}/usr/bin/xdg-dbus-proxy"
+    fpm_rpm xdg-dbus-proxy "$XDG_DBUS_PROXY_VERSION" "D-Bus proxy for the WPE WebKit sandbox" "$S"
+else
+    echo "WARNING: ${WPE_PREFIX}/bin/xdg-dbus-proxy missing — skipping xdg-dbus-proxy package (run scripts/build-sandbox-deps.sh)" >&2
+fi
+
+# ===========================================================================
 # 4. wpewebkit2
 # ===========================================================================
 echo "--- Staging wpewebkit2 ---"
@@ -549,7 +579,9 @@ FPM_POST_EXTRA='[ -w /sys/class/kgsl/kgsl-3d0/min_pwrlevel ] && echo 2 > /sys/cl
 fpm_rpm atlantic-browser "$ATLANTIC_BROWSER_VERSION" "Atlantic Browser (WPE WebKit engine)" "$S" \
     --depends wpewebkit2 \
     --depends wpewebkit2-qt5 \
-    --depends wpe-sfos-compat
+    --depends wpe-sfos-compat \
+    --depends bubblewrap \
+    --depends xdg-dbus-proxy
 unset FPM_POST_EXTRA
 
 # ===========================================================================
