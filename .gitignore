@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# Content-blocker lists are fetched at build time, not vendored (see versions.env)
+data/content-blocker/easylist.txt
+data/content-blocker/easyprivacy.txt

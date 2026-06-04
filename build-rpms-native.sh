@@ -422,6 +422,35 @@ CONTENT_BLOCKER_BUILD_DIR="${STAGING}/content-blocker-build"
 CONTENT_BLOCKER_JSON="${CONTENT_BLOCKER_BUILD_DIR}/content-blocker.json"
 rm -rf "${CONTENT_BLOCKER_BUILD_DIR}"
 mkdir -p "${CONTENT_BLOCKER_BUILD_DIR}"
+
+# Fetch EasyList sources at build time (no longer vendored in git; see versions.env).
+# Cached: an existing file is reused, so a manually-placed copy also works offline.
+fetch_content_blocker_list() {
+    local name="$1" url="$2" pin="$3"
+    local dest="${CONTENT_BLOCKER_DATA_DIR}/${name}.txt"
+    mkdir -p "${CONTENT_BLOCKER_DATA_DIR}"
+    if [ ! -s "${dest}" ]; then
+        echo "  Downloading ${name} from ${url}"
+        wget -q "${url}" -O "${dest}.tmp"
+        mv "${dest}.tmp" "${dest}"
+    else
+        echo "  Using cached ${name}.txt"
+    fi
+    if [ -n "${pin}" ]; then
+        local got; got="$(sha256sum "${dest}" | awk '{print $1}')"
+        if [ "${got}" != "${pin}" ]; then
+            echo "  WARNING: ${name}.txt sha256 ${got} != pinned ${pin} (EasyList updates daily)." >&2
+            if [ "${CONTENT_BLOCKER_STRICT:-0}" = "1" ]; then
+                echo "  CONTENT_BLOCKER_STRICT=1 set — aborting on snapshot drift." >&2
+                exit 1
+            fi
+        fi
+    fi
+    echo "  ${name}: $(grep -m1 '^! Version:' "${dest}" 2>/dev/null || echo 'version unknown')"
+}
+fetch_content_blocker_list easylist    "${EASYLIST_URL}"    "${EASYLIST_SHA256:-}"
+fetch_content_blocker_list easyprivacy "${EASYPRIVACY_URL}" "${EASYPRIVACY_SHA256:-}"
+
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_DATA_DIR}/easylist.txt" \
     --max-rules 10000 \
