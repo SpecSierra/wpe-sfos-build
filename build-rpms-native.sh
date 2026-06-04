@@ -232,11 +232,17 @@ cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so"
 cp -a "${WPE_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/libWPEInjectedBundle.so" \
       "${S}${PACKAGE_RUNTIME_PREFIX}/lib/wpe-webkit-2.0/injected-bundle/"
 
-# Helper process binaries — patch GLIBC version requirements (2.34→2.17) so they run on SFOS
+# Helper process binaries — patch GLIBC version requirements (2.34→2.17) so they run on SFOS.
+# WPEGPUProcess only exists when ENABLE_GPU_PROCESS=ON; skip any helper that the
+# WebKit build did not produce (the GPU process is disabled on no-GBM/hybris).
 mkdir -p "${S}/usr/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
-    cp -a "${WPE_PREFIX}/libexec/wpe-webkit-2.0/${helper}" \
-          "${S}/usr/libexec/wpe-webkit-2.0/"
+    src="${WPE_PREFIX}/libexec/wpe-webkit-2.0/${helper}"
+    if [ ! -e "${src}" ]; then
+        echo "  helper ${helper} not built — skipping"
+        continue
+    fi
+    cp -a "${src}" "${S}/usr/libexec/wpe-webkit-2.0/"
     maybe_patch_glibc_versions "${S}/usr/libexec/wpe-webkit-2.0/${helper}"
 done
 
@@ -248,6 +254,9 @@ install -m 755 "${SCRIPT_DIR}/deploy/runtime-common.sh" \
 # Wrapper scripts for helper processes (set runtime env and launch the real helper).
 mkdir -p "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0"
 for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
+    # Only wrap helpers that were actually staged (WPEGPUProcess absent when the
+    # GPU process is disabled).
+    [ -e "${S}/usr/libexec/wpe-webkit-2.0/${helper}" ] || continue
     cat > "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0/${helper}" <<WRAPPER
 #!/bin/sh
 . "${PACKAGE_RUNTIME_PREFIX}/libexec/atlantic/runtime-common.sh"
