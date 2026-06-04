@@ -106,12 +106,15 @@ if [ -n "${_toolchain_hash}" ] && [ -f "${_toolchain_stamp}" ] && [ -f "${WPE_PR
 fi
 
 # ── Feature-policy cache-busting ─────────────────────────────────────────────
-# The shared feature cmake (-C atlantic-wpe-features.cmake) and the baked-in
-# sandbox executable paths are NOT part of the toolchain or version stamps, so
-# a change like flipping ENABLE_BUBBLEWRAP_SANDBOX would otherwise keep the
-# stale .so forever.  Hash the feature file together with the bwrap/dbus-proxy
-# paths and force a rebuild on mismatch.
-_features_hash="$( { sha256sum "${BUILD_TOOLS}/cmake/atlantic-wpe-features.cmake" 2>/dev/null; printf '%s\n%s\n' "${BWRAP_EXECUTABLE:-/usr/bin/bwrap}" "${DBUS_PROXY_EXECUTABLE:-/usr/bin/xdg-dbus-proxy}"; } | sha256sum | awk '{print $1}')"
+# The shared feature cmake (-C atlantic-wpe-features.cmake), the baked-in sandbox
+# executable paths, AND the applied WebKit patch set are NOT part of the
+# toolchain or version stamps, so a change like flipping ENABLE_BUBBLEWRAP_SANDBOX
+# or adding/removing a source patch would otherwise keep the stale .so forever.
+# Hash the feature file + bwrap/dbus-proxy paths + patches.sh + every applied
+# webkit patch, and force a rebuild on mismatch.  (Patch changes silently NOT
+# rebuilding WebKit is exactly how the GPU-process-DOM-rendering regression
+# shipped — see scripts/patches.sh.)
+_features_hash="$( { sha256sum "${BUILD_TOOLS}/cmake/atlantic-wpe-features.cmake" "${BUILD_TOOLS}/scripts/patches.sh" "${BUILD_TOOLS}"/patches/webkit/*.patch 2>/dev/null; printf '%s\n%s\n' "${BWRAP_EXECUTABLE:-/usr/bin/bwrap}" "${DBUS_PROXY_EXECUTABLE:-/usr/bin/xdg-dbus-proxy}"; } | sha256sum | awk '{print $1}')"
 _features_stamp="${WPE_PREFIX}/lib/.webkit-features-hash"
 if [ -n "${_features_hash}" ] && [ -f "${_features_stamp}" ] && [ -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     _saved_features_hash="$(cat "${_features_stamp}" 2>/dev/null)"

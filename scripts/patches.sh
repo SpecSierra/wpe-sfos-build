@@ -45,7 +45,15 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-webcore-texmap-owner-headers.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
-    "patches/webkit/webkit-gpu-process-by-default-wpe.patch"
+    # webkit-gpu-process-by-default-wpe.patch: DISABLED. It hard-enables
+    # ENABLE_GPU_PROCESS_DOM_RENDERING_BY_DEFAULT, moving DOM rendering into the
+    # GPU process. On this libhybris/Adreno device there is no GBM / DRM render
+    # node, so the GPU process cannot export composited frames — pages render
+    # blank (chrome draws, content area white). Verified on-device (Xperia 10 II).
+    # Keep DOM rendering in the WebProcess (the path that exports via WPEBackend-fdo).
+    # The patch file is kept in patches/webkit/ for reference / future hybris
+    # GPU-export work. See also webkit-gpu-process-egl-default-display-fallback.
+    # "patches/webkit/webkit-gpu-process-by-default-wpe.patch"
     "patches/webkit/webkit-gpu-process-egl-default-display-fallback.patch"
     "patches/webkit/webkit-jsc-linux-arm64-thread-tuning.patch"
     "patches/webkit/webkit-jsc-linux-arm64-jit-thresholds.patch"
