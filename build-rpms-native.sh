@@ -423,12 +423,23 @@ CONTENT_BLOCKER_JSON="${CONTENT_BLOCKER_BUILD_DIR}/content-blocker.json"
 rm -rf "${CONTENT_BLOCKER_BUILD_DIR}"
 mkdir -p "${CONTENT_BLOCKER_BUILD_DIR}"
 
-# Fetch EasyList sources at build time (no longer vendored in git; see versions.env).
-# Cached: an existing file is reused, so a manually-placed copy also works offline.
+# Fetch the EasyList sources into the build/staging dir, NOT into the git
+# checkout.  Writing them under ${SCRIPT_DIR}/data used to leave root-owned
+# files in the working tree that the (non-root) CI runner could not `git clean`,
+# breaking the checkout of every subsequent build.  Staging is build-scratch and
+# outside the repo, so the checkout is never affected.
+CONTENT_BLOCKER_FETCH_DIR="${CONTENT_BLOCKER_BUILD_DIR}"
+
+# Cached: an existing fetched copy is reused; a vendored/offline copy under
+# data/content-blocker (read-only seed) is also honoured.
 fetch_content_blocker_list() {
     local name="$1" url="$2" pin="$3"
-    local dest="${CONTENT_BLOCKER_DATA_DIR}/${name}.txt"
-    mkdir -p "${CONTENT_BLOCKER_DATA_DIR}"
+    local dest="${CONTENT_BLOCKER_FETCH_DIR}/${name}.txt"
+    local seed="${CONTENT_BLOCKER_DATA_DIR}/${name}.txt"
+    if [ ! -s "${dest}" ] && [ -s "${seed}" ]; then
+        echo "  Seeding ${name}.txt from vendored copy"
+        cp "${seed}" "${dest}"
+    fi
     if [ ! -s "${dest}" ]; then
         echo "  Downloading ${name} from ${url}"
         wget -q "${url}" -O "${dest}.tmp"
@@ -452,11 +463,11 @@ fetch_content_blocker_list easylist    "${EASYLIST_URL}"    "${EASYLIST_SHA256:-
 fetch_content_blocker_list easyprivacy "${EASYPRIVACY_URL}" "${EASYPRIVACY_SHA256:-}"
 
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
-    "${CONTENT_BLOCKER_DATA_DIR}/easylist.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
     --max-rules 10000 \
     -o "${CONTENT_BLOCKER_BUILD_DIR}/easylist.json"
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
-    "${CONTENT_BLOCKER_DATA_DIR}/easyprivacy.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/easyprivacy.txt" \
     --max-rules 5000 \
     -o "${CONTENT_BLOCKER_BUILD_DIR}/easyprivacy.json"
 # Generate default manual domain-block rules (always included regardless of EasyList limits)
