@@ -1,6 +1,18 @@
 # Shared Atlantic WebKit feature policy used by both the native build script
 # and the rpmbuild/spec path.
 
+# GPU process: OFF. WPE defaults ENABLE_GPU_PROCESS ON (OptionsWPE.cmake), and it
+# DEPENDS ON USE_GBM (OptionsWPE.cmake: WEBKIT_OPTION_DEPEND ENABLE_GPU_PROCESS
+# USE_GBM). The build host has libgbm so it compiles in, but the libhybris/Adreno
+# *device* has no GBM / DRM render node (/dev/dri/renderD128 absent) — the GPU
+# process starts via the EGL fallback but cannot export composited frames, so
+# pages render blank (chrome draws, content area white; verified on Xperia 10 II).
+# Disable it so all rendering/compositing happens in the WebProcess (the proven
+# hybris path; Skia GPU painting in the WebProcess is unaffected). Revisit on the
+# future Mali/Mesa device where GBM should exist — ideally make this runtime-
+# conditional on a DRM render node. See target-devices-roadmap.
+set(ENABLE_GPU_PROCESS OFF CACHE BOOL "" FORCE)
+
 set(ENABLE_VIDEO ON CACHE BOOL "" FORCE)
 set(ENABLE_MEDIA_STREAM ON CACHE BOOL "" FORCE)
 set(ENABLE_MEDIA_RECORDER OFF CACHE BOOL "" FORCE)
