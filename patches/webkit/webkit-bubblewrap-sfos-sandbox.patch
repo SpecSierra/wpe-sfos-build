@@ -1,0 +1,119 @@
+SFOS / Android-kernel-4.14 compatibility for the WPE bubblewrap sandbox.
+
+Ported from the historical prose patch (patches/historical/BubblewrapLauncher-sfos-sandbox.patch,
+written for 2.50.5) to the 2.52.4 source layout.  Three changes, all in
+Source/WebKit/UIProcess/Launcher/glib/BubblewrapLauncher.cpp:
+
+  1. Replace the selective bind-mount sandbox layout with "--dev-bind", "/", "/"
+     (the 4.14 kernel cannot pivot_root into a fresh tmpfs root inside a userns)
+     and drop "--dev", "/dev" so Android GPU device nodes stay visible (else:
+     black screen).  Also add --die-with-parent so sandboxed children are reaped.
+  2. Keep the network namespace shared for the Web and GPU processes, because the
+     libhybris/Adreno GPU stack uses per-netns abstract Unix sockets.
+  3. Force flatpakInfoFd = -1: SFOS has no xdg-desktop-portal, and the read-only
+     rootfs (now the sandbox root via --dev-bind / /) cannot host the
+     /.flatpak-info mount point.
+
+--- a/Source/WebKit/UIProcess/Launcher/glib/BubblewrapLauncher.cpp
++++ b/Source/WebKit/UIProcess/Launcher/glib/BubblewrapLauncher.cpp
+@@ -731,6 +731,18 @@
+     }
+ #endif
+ 
++    // SFOS / hybris: Android GPU drivers (e.g. Adreno via libhybris) talk to
++    // vendor HAL services over *abstract* Unix sockets, which are scoped per
++    // network namespace.  --unshare-net makes those sockets unreachable, so EGL
++    // initialisation fails silently and the page renders to a black screen.
++    // Keep the network namespace shared for processes that touch the GPU.
++    if (processType == ProcessLauncher::ProcessType::Web
++#if ENABLE(GPU_PROCESS)
++        || processType == ProcessLauncher::ProcessType::GPU
++#endif
++        )
++        return false;
++
+     // Otherwise, only the network process should have network access. If we are the network
+     // process, then we are not sandboxed and have already bailed out before this point.
+     return true;
+@@ -781,47 +793,33 @@
+         return adoptGRef(g_subprocess_launcher_spawnv(launcher, argv, error));
+ 
+     const char* runDir = g_get_user_runtime_dir();
++    // SFOS / Android kernel 4.14 cannot pivot_root(2) into a freshly created
++    // tmpfs root inside a user namespace, which the upstream selective
++    // bind-mount layout relies on.  Bind the entire host filesystem read-write
++    // instead and rely on seccomp + namespace isolation for security.  This
++    // gives up filesystem isolation but is the only layout that boots on this
++    // kernel.
++    //
++    // CRITICAL: do NOT add "--dev", "/dev" below.  Overlaying a minimal
++    // devtmpfs hides the Android device nodes (/dev/kgsl-3d0, /dev/ion,
++    // binder, ...) that the libhybris / Adreno GPU stack in WPEWebProcess
++    // needs; the symptom is a black screen — EGL renders but exported frames
++    // never reach the UI process.  Host /dev is already present via
++    // "--dev-bind", "/", "/".
++    //
++    // --die-with-parent ensures bwrap / WPEWebProcess / xdg-dbus-proxy are
++    // reaped when the browser exits, otherwise orphaned children hold sockets
++    // that block the next launch.
+     Vector<CString> sandboxArgs = {
++        "--die-with-parent",
+         "--unshare-uts",
+ 
+-        // We assume /etc has safe permissions.
+-        // At a later point we can start masking privacy-concerning files.
+-        "--ro-bind", "/etc", "/etc",
+-        "--dev", "/dev",
++        "--dev-bind", "/", "/",
+         "--proc", "/proc",
+         "--tmpfs", "/tmp",
+         "--unsetenv", "TMPDIR",
+         "--dir", runDir,
+         "--setenv", "XDG_RUNTIME_DIR", runDir,
+-        "--symlink", "../run", "/var/run",
+-        "--symlink", "../tmp", "/var/tmp",
+-        "--ro-bind", "/sys/block", "/sys/block",
+-        "--ro-bind", "/sys/bus", "/sys/bus",
+-        "--ro-bind", "/sys/class", "/sys/class",
+-        "--ro-bind", "/sys/dev", "/sys/dev",
+-        "--ro-bind", "/sys/devices", "/sys/devices",
+-
+-        "--ro-bind-try", "/usr/share", "/usr/share",
+-        "--ro-bind-try", "/usr/local/share", "/usr/local/share",
+-        "--ro-bind-try", DATADIR, DATADIR,
+-
+-        // We only grant access to the libdirs webkit is built with and
+-        // guess system libdirs. This will always have some edge cases.
+-        "--ro-bind-try", "/lib", "/lib",
+-        "--ro-bind-try", "/usr/lib", "/usr/lib",
+-        "--ro-bind-try", "/usr/local/lib", "/usr/local/lib",
+-        "--ro-bind-try", LIBDIR, LIBDIR,
+-#if CPU(ADDRESS64)
+-        "--ro-bind-try", "/lib64", "/lib64",
+-        "--ro-bind-try", "/usr/lib64", "/usr/lib64",
+-        "--ro-bind-try", "/usr/local/lib64", "/usr/local/lib64",
+-#else
+-        "--ro-bind-try", "/lib32", "/lib32",
+-        "--ro-bind-try", "/usr/lib32", "/usr/lib32",
+-        "--ro-bind-try", "/usr/local/lib32", "/usr/local/lib32",
+-#endif
+-
+-        "--ro-bind-try", PKGLIBEXECDIR, PKGLIBEXECDIR,
+     };
+ 
+     if (enableDebugPermissions()) {
+@@ -892,7 +890,13 @@
+     // The easiest method is for us to pretend to be a flatpak and if that
+     // fails just blocking portals entirely as it just becomes a sandbox escape.
+     GUniquePtr<char> instanceID(g_strdup_printf("webkit-%d-%" PRIu64, getpid(), launchOptions.processIdentifier.toUInt64()));
+-    int flatpakInfoFd = createFlatpakInfo(instanceID.get());
++    // SFOS does not run xdg-desktop-portal, so there is no portal to satisfy by
++    // masquerading as a flatpak.  More importantly, with "--dev-bind", "/", "/"
++    // the sandbox root is the host's *read-only* SFOS rootfs, so bwrap cannot
++    // create the /.flatpak-info mount point and the whole spawn fails with
++    // EROFS.  Skip it entirely.  (createFlatpakInfo stays defined but unused.)
++    (void)&createFlatpakInfo;
++    int flatpakInfoFd = -1;
+     if (flatpakInfoFd != -1) {
+         g_subprocess_launcher_take_fd(launcher, flatpakInfoFd, flatpakInfoFd);
+         GUniquePtr<char> flatpakInfoFdStr(g_strdup_printf("%d", flatpakInfoFd));

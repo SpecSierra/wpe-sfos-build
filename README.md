@@ -9,7 +9,7 @@ This repo is now being used to move Atlantic onto a cleaner baseline:
 - **Target OS:** Sailfish OS **5.1.0.8**
 - **Target engine:** WPE WebKit **2.52.4**
 - **Priority:** smaller patch queue, simpler packaging, faster engine updates
-- **Coming next:** re-enabling `bubblewrap`/`sailjail` isolation (related patches and the `sailjail/` profiles are kept for that)
+- **In progress:** `bubblewrap` process sandbox is re-enabled in the build (`ENABLE_BUBBLEWRAP_SANDBOX=ON` + ported SFOS patch), runtime-gated behind `ATLANTIC_ENABLE_SANDBOX=1`, pending on-device validation; `sailjail` isolation is still to come (the `sailjail/` profiles are kept for that)
 - **Not a priority right now:** growing the old preload stack
 
 The live scripts in this repo now default to the **SFOS 5.1.0.8 / WPE 2.52.4**
@@ -120,8 +120,8 @@ This is the current keep/drop inventory for the old SFOS 5.0 compatibility stack
 | broad `LD_PRELOAD` stacks | `remove` | migration goal is a minimal runtime closure, not global preload repair |
 | `libegl-stubs.so` | `keep temporarily` | still potentially relevant if Sailfish/hybris EGL remains short on required symbols |
 | `patches/engine/libepoxy-rtld-default-fallback.patch` | `keep temporarily` | coupled to `libegl-stubs.so`; re-check once the 5.1 runtime is exercised |
-| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `keep` | bubblewrap/sailjail isolation is planned to be re-enabled soon; this patch is the starting point |
-| sailjail-disabled packaging/profile workarounds | `keep` | sailjail re-enable is planned; revisit these together with the bubblewrap work |
+| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `keep (reference)` | the prose source for the now-active `patches/webkit/webkit-bubblewrap-sfos-sandbox.patch`; kept as the rationale record |
+| sailjail-disabled packaging/profile workarounds | `keep` | sailjail re-enable is still planned; the bubblewrap process sandbox is now wired in separately |
 
 ## Current local patch queue
 
@@ -171,7 +171,8 @@ These are the repo-local patches currently relevant to the live build flow.
 | `patches/webkit/webkit-renderbox-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore compile on Ubuntu 24.04 by making `RenderBox.h` use `std::isnan` with an explicit `<cmath>` include |
 | `patches/webkit/webkit-shapeoutside-isnan.patch` | `keep temporarily` | fixes the 2.52.4 WebCore shape-outside compile on Ubuntu 24.04 by making `ShapeOutsideInfo.cpp` use `std::isnan` with an explicit `<cmath>` include |
 | `patches/qt-bridge/` | `removed` | all historical qt-bridge patches (texture cache, exported-image lifetime, display/window update, adaptive fps, gnuinstalldirs, epoxy-gl fix, wpeqtview carry-forward) are baked into the in-repo `qt5-plugin/` source; the patch files were deleted — see git history |
-| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `keep` | SFOS isolation work — kept on purpose: bubblewrap/sailjail are planned to be re-enabled soon |
+| `patches/webkit/webkit-bubblewrap-sfos-sandbox.patch` | `keep` | re-enables the WPE bubblewrap process sandbox on SFOS/Android-4.14: `--dev-bind / /` (no `pivot_root`/`--dev` masking of GPU nodes), shared netns for Web/GPU (hybris abstract sockets), and `flatpakInfoFd = -1` (read-only rootfs). Ported from the historical prose patch |
+| `patches/historical/BubblewrapLauncher-sfos-sandbox.patch` | `keep (reference)` | prose source/rationale for the active webkit-bubblewrap-sfos-sandbox.patch above |
 
 ## Practical next steps
 

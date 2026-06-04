@@ -69,6 +69,7 @@ apt-get install -y \
     wayland-protocols \
     libmanette-0.2-dev \
     unifdef gperf flex bison perl \
+    libseccomp-dev bubblewrap xdg-dbus-proxy \
     2>/dev/null
 
 gem list fpm | grep -q fpm || gem install --no-document fpm

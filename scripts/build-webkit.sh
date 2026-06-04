@@ -105,6 +105,22 @@ if [ -n "${_toolchain_hash}" ] && [ -f "${_toolchain_stamp}" ] && [ -f "${WPE_PR
     fi
 fi
 
+# ── Feature-policy cache-busting ─────────────────────────────────────────────
+# The shared feature cmake (-C atlantic-wpe-features.cmake) and the baked-in
+# sandbox executable paths are NOT part of the toolchain or version stamps, so
+# a change like flipping ENABLE_BUBBLEWRAP_SANDBOX would otherwise keep the
+# stale .so forever.  Hash the feature file together with the bwrap/dbus-proxy
+# paths and force a rebuild on mismatch.
+_features_hash="$( { sha256sum "${BUILD_TOOLS}/cmake/atlantic-wpe-features.cmake" 2>/dev/null; printf '%s\n%s\n' "${BWRAP_EXECUTABLE:-/usr/bin/bwrap}" "${DBUS_PROXY_EXECUTABLE:-/usr/bin/xdg-dbus-proxy}"; } | sha256sum | awk '{print $1}')"
+_features_stamp="${WPE_PREFIX}/lib/.webkit-features-hash"
+if [ -n "${_features_hash}" ] && [ -f "${_features_stamp}" ] && [ -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
+    _saved_features_hash="$(cat "${_features_stamp}" 2>/dev/null)"
+    if [ "${_features_hash}" != "${_saved_features_hash}" ]; then
+        echo "  Feature policy changed (${_saved_features_hash:0:8} → ${_features_hash:0:8}), forcing rebuild"
+        rm -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so"
+    fi
+fi
+
 # ── Version cache-busting ────────────────────────────────────────────────────
 # The cached prefix may hold the previous WebKit version's build; without this
 # check a versions.env bump would silently ship stale binaries under the new
@@ -158,6 +174,8 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
         -DICU_DATA_LIBRARY_RELEASE="${ICU_DATA_LIB}" \
         -DPORT=WPE \
         -DENABLE_WPE_LEGACY_API=ON \
+        -DBWRAP_EXECUTABLE="${BWRAP_EXECUTABLE:-/usr/bin/bwrap}" \
+        -DDBUS_PROXY_EXECUTABLE="${DBUS_PROXY_EXECUTABLE:-/usr/bin/xdg-dbus-proxy}" \
         -DUSE_JPEGXL=OFF \
         -DUSE_THIN_ARCHIVES=ON \
         -DLTO_MODE=thin
@@ -181,6 +199,7 @@ if [ ! -f "${WPE_PREFIX}/lib/libWPEWebKit-2.0.so" ]; then
     echo "  WPEWebKit installed."
     printf '%s\n' "${_toolchain_hash}" > "${_toolchain_stamp}"
     printf '%s\n' "${WPE_WEBKIT_VERSION}" > "${_version_stamp}"
+    printf '%s\n' "${_features_hash}" > "${_features_stamp}"
 else
     echo "  WPEWebKit already built."
     cmake --install "${WPE_SOURCE_DIR}/WebKitBuild/Release" --prefix "${WPE_PREFIX}"

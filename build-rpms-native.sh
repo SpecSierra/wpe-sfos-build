@@ -245,8 +245,17 @@ for pc in wpe-webkit-2.0.pc wpe-web-process-extension-2.0.pc; do
     sed -i "s|${WPE_PREFIX}|/usr|g"          "${S}/usr/lib64/pkgconfig/${pc}"
 done
 
+# libseccomp: libWPEWebKit links it unconditionally now that the bubblewrap
+# sandbox is compiled in (ENABLE_BUBBLEWRAP_SANDBOX=ON), so it is a hard runtime
+# dependency even when the sandbox is left disabled at runtime.  SFOS 5.1 ships
+# libseccomp.so.2 (2.5.2), so this resolves on-device.
+# NOTE: bwrap + xdg-dbus-proxy are NOT added as Requires here on purpose — they
+# are only exec'd when the sandbox is actually enabled (ATLANTIC_ENABLE_SANDBOX=1),
+# and hard-depending on packages that may be absent from SFOS repos would break
+# the default (sandbox-off) install.  Provision them separately for the on-device
+# sandbox test.
 fpm_rpm wpewebkit2 "$LEGACY_WPEWEBKIT_VERSION" "WPE WebKit ${LEGACY_WPEWEBKIT_VERSION} for Sailfish OS" "$S" \
-    --depends libwpe --depends libepoxy --depends wpebackend-fdo
+    --depends libwpe --depends libepoxy --depends wpebackend-fdo --depends libseccomp
 
 # ===========================================================================
 # 5. wpewebkit2-qt5

@@ -14,7 +14,14 @@ set(ENABLE_SAMPLING_PROFILER OFF CACHE BOOL "" FORCE)
 set(ENABLE_INTROSPECTION OFF CACHE BOOL "" FORCE)
 set(ENABLE_WEBDRIVER OFF CACHE BOOL "" FORCE)
 set(ENABLE_XSLT OFF CACHE BOOL "" FORCE)
-set(ENABLE_BUBBLEWRAP_SANDBOX OFF CACHE BOOL "" FORCE)
+# Bubblewrap process sandbox (seccomp + namespaces) re-enabled for SFOS 5.1.
+# Build deps: libseccomp + bwrap + xdg-dbus-proxy on the build host; their
+# absolute runtime paths are baked in via -DBWRAP_EXECUTABLE /
+# -DDBUS_PROXY_EXECUTABLE in scripts/build-webkit.sh.  Still defaults OFF *at
+# runtime* in WPE-legacy: deploy/runtime-common.sh turns it on via
+# WEBKIT_FORCE_SANDBOX when ATLANTIC_ENABLE_SANDBOX=1.  SFOS/Android-kernel
+# sandbox workarounds: patches/webkit/webkit-bubblewrap-sfos-sandbox.patch.
+set(ENABLE_BUBBLEWRAP_SANDBOX ON CACHE BOOL "" FORCE)
 
 set(USE_ATK OFF CACHE BOOL "" FORCE)
 set(USE_GSTREAMER ON CACHE BOOL "" FORCE)
