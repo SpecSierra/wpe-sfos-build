@@ -476,12 +476,28 @@ LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser-env"
 
 # WPE launcher wrapper script
+# Optional Sailjail-style confinement via firejail, OFF by default.  When
+# ATLANTIC_ENABLE_SAILJAIL=1 we re-exec the env+browser under firejail with our
+# profile (which retains CAP_SYS_ADMIN so the WebKit bubblewrap sandbox can nest
+# — see /etc/firejail/atlantic-browser.profile).  ATLANTIC_IN_SAILJAIL guards
+# against re-entry.  firejail preserves the environment, so ATLANTIC_ENABLE_SANDBOX
+# and the marker propagate into the confined process.
 cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
 #!/bin/sh
+if [ "\${ATLANTIC_ENABLE_SAILJAIL:-0}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
+    export ATLANTIC_IN_SAILJAIL=1
+    exec firejail --quiet --profile=/etc/firejail/atlantic-browser.profile -- /usr/bin/atlantic-browser-env "\$@"
+fi
 exec /usr/bin/atlantic-browser-env "\$@"
 LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/atlantic-browser.bin"
+
+# Sailjail-style firejail confinement profile (used only when the launcher
+# re-execs under firejail; see above).  Installed to /etc/firejail.
+mkdir -p "${S}/etc/firejail"
+cp -a "${SCRIPT_DIR}/deploy/atlantic-browser.firejail.profile" \
+      "${S}/etc/firejail/atlantic-browser.profile"
 
 # libsailfishbrowser (versioned + symlinks — SONAME is libsailfishbrowser.so.1)
 mkdir -p "${S}/usr/lib64"
@@ -581,7 +597,8 @@ fpm_rpm atlantic-browser "$ATLANTIC_BROWSER_VERSION" "Atlantic Browser (WPE WebK
     --depends wpewebkit2-qt5 \
     --depends wpe-sfos-compat \
     --depends bubblewrap \
-    --depends xdg-dbus-proxy
+    --depends xdg-dbus-proxy \
+    --depends firejail
 unset FPM_POST_EXTRA
 
 # ===========================================================================
