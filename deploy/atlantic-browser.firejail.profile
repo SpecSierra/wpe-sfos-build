@@ -14,8 +14,8 @@
 #   Retaining CAP_SYS_ADMIN in the outer sandbox significantly weakens the
 #   confinement of the browser UI process — it is close to root-equivalent.
 #   The untrusted web *content* still runs in the inner bwrap sandbox (with caps
-#   dropped there).  This profile is gated behind ATLANTIC_ENABLE_SAILJAIL=1 and
-#   is OFF by default.
+#   dropped there).  This profile is applied when ATLANTIC_ENABLE_SAILJAIL=1,
+#   which is now the DEFAULT.  Set ATLANTIC_ENABLE_SAILJAIL=0 to disable.
 #
 # STAGE: this is the bring-up profile.  It establishes the privilege posture
 #   that allows nesting plus a sensible blacklist baseline, but keeps the

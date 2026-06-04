@@ -9,7 +9,7 @@ This repo is now being used to move Atlantic onto a cleaner baseline:
 - **Target OS:** Sailfish OS **5.1.0.8**
 - **Target engine:** WPE WebKit **2.52.4**
 - **Priority:** smaller patch queue, simpler packaging, faster engine updates
-- **In progress:** `bubblewrap` process sandbox is re-enabled in the build (`ENABLE_BUBBLEWRAP_SANDBOX=ON` + ported SFOS patch), runtime-gated behind `ATLANTIC_ENABLE_SANDBOX=1`, pending on-device validation. `sailjail`-style confinement is now wired too, applied via firejail directly (so it can retain `CAP_SYS_ADMIN` for the nested bwrap sandbox — stock Sailjail's `Base` `caps.drop all` is un-overridable), gated behind `ATLANTIC_ENABLE_SAILJAIL=1`; profile at `deploy/atlantic-browser.firejail.profile`, also pending on-device validation
+- **Enabled by default (pending on-device validation):** the `bubblewrap` WebProcess sandbox (`ENABLE_BUBBLEWRAP_SANDBOX=ON` + ported SFOS patch; `ATLANTIC_ENABLE_SANDBOX` defaults to 1) and `sailjail`-style confinement applied via firejail directly (retains `CAP_SYS_ADMIN` for the nested bwrap sandbox, since stock Sailjail's `Base` `caps.drop all` is un-overridable; `ATLANTIC_ENABLE_SAILJAIL` defaults to 1, profile at `deploy/atlantic-browser.firejail.profile`). Both validated only on the build host so far — if the device's Android 4.14 kernel refuses the nested user namespaces, disable over ssh with `ATLANTIC_ENABLE_SANDBOX=0` / `ATLANTIC_ENABLE_SAILJAIL=0`
 - **Not a priority right now:** growing the old preload stack
 
 The live scripts in this repo now default to the **SFOS 5.1.0.8 / WPE 2.52.4**

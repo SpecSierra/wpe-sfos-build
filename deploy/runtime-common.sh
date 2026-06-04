@@ -100,15 +100,13 @@ atlantic_export_browser_env() {
     atlantic_export_helper_env
 
     # ── WPE bubblewrap process sandbox (seccomp + namespaces) ─────────────────
-    # The engine is built with -DENABLE_BUBBLEWRAP_SANDBOX=ON, but WPE-legacy
-    # still defaults the sandbox OFF at runtime; it is enabled only by
-    # WEBKIT_FORCE_SANDBOX=1 (read once by the UIProcess at startup) or a
-    # webkit_web_context_set_sandbox_enabled() call.  Gate it behind an opt-in
-    # flag so the published build stays on the known-good unsandboxed path until
-    # the sandbox is validated on-device.  Flip ATLANTIC_ENABLE_SANDBOX=1 (e.g.
-    # in the launcher's environment) to turn it on.  Requires bwrap +
+    # The engine is built with -DENABLE_BUBBLEWRAP_SANDBOX=ON; WPE-legacy only
+    # turns the sandbox on at runtime when WEBKIT_FORCE_SANDBOX=1 (read once by
+    # the UIProcess at startup).  Enabled BY DEFAULT now (ATLANTIC_ENABLE_SANDBOX
+    # defaults to 1).  Set ATLANTIC_ENABLE_SANDBOX=0 to disable (e.g. over ssh if
+    # the device kernel cannot create the sandbox namespaces).  Requires bwrap +
     # xdg-dbus-proxy + libseccomp present on the device.
-    if [ "${ATLANTIC_ENABLE_SANDBOX:-0}" = "1" ]; then
+    if [ "${ATLANTIC_ENABLE_SANDBOX:-1}" = "1" ]; then
         export WEBKIT_FORCE_SANDBOX=1
     else
         unset WEBKIT_FORCE_SANDBOX 2>/dev/null || true

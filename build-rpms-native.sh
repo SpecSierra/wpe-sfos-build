@@ -476,15 +476,17 @@ LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser-env"
 
 # WPE launcher wrapper script
-# Optional Sailjail-style confinement via firejail, OFF by default.  When
-# ATLANTIC_ENABLE_SAILJAIL=1 we re-exec the env+browser under firejail with our
-# profile (which retains CAP_SYS_ADMIN so the WebKit bubblewrap sandbox can nest
-# — see /etc/firejail/atlantic-browser.profile).  ATLANTIC_IN_SAILJAIL guards
-# against re-entry.  firejail preserves the environment, so ATLANTIC_ENABLE_SANDBOX
-# and the marker propagate into the confined process.
+# Sailjail-style confinement via firejail, ON by default.  When
+# ATLANTIC_ENABLE_SAILJAIL=1 (the default) we re-exec the env+browser under
+# firejail with our profile (which retains CAP_SYS_ADMIN so the WebKit
+# bubblewrap sandbox can nest — see /etc/firejail/atlantic-browser.profile).
+# ATLANTIC_IN_SAILJAIL guards against re-entry.  firejail preserves the
+# environment, so ATLANTIC_ENABLE_SANDBOX and the marker propagate into the
+# confined process.  Set ATLANTIC_ENABLE_SAILJAIL=0 to disable (e.g. over ssh
+# if the device kernel cannot create the nested namespaces).
 cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
 #!/bin/sh
-if [ "\${ATLANTIC_ENABLE_SAILJAIL:-0}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
+if [ "\${ATLANTIC_ENABLE_SAILJAIL:-1}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
     export ATLANTIC_IN_SAILJAIL=1
     exec firejail --quiet --profile=/etc/firejail/atlantic-browser.profile -- /usr/bin/atlantic-browser-env "\$@"
 fi
