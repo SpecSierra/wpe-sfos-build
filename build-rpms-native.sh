@@ -505,17 +505,20 @@ LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser-env"
 
 # WPE launcher wrapper script
-# Sailjail-style confinement via firejail, ON by default.  When
-# ATLANTIC_ENABLE_SAILJAIL=1 (the default) we re-exec the env+browser under
-# firejail with our profile (which retains CAP_SYS_ADMIN so the WebKit
-# bubblewrap sandbox can nest — see /etc/firejail/atlantic-browser.profile).
-# ATLANTIC_IN_SAILJAIL guards against re-entry.  firejail preserves the
-# environment, so ATLANTIC_ENABLE_SANDBOX and the marker propagate into the
-# confined process.  Set ATLANTIC_ENABLE_SAILJAIL=0 to disable (e.g. over ssh
-# if the device kernel cannot create the nested namespaces).
+# Sailjail-style confinement via firejail — OFF by default (experimental).
+# On-device testing (Xperia 10 II, SFOS 5.1) showed this path does NOT work as
+# a direct `firejail --profile=...` re-exec: firejail must be launched through
+# the SFOS booster (invoker --type=browser,silica-qt5 -> mapplauncherd) or it
+# fails with "seteuid(root): Operation not permitted".  And even when launched,
+# SFOS firejail replaces the inner bwrap with `fbwrap` (a no-op), so the nested
+# WebKit sandbox cannot form.  The chosen, working posture is bwrap-only (this
+# flag OFF, ATLANTIC_ENABLE_SANDBOX ON): the WebProcess is confined by bwrap,
+# verified live on-device.  Proper Sailjail would require real booster
+# integration and would *replace* the bwrap sandbox, not nest inside it.
+# Set ATLANTIC_ENABLE_SAILJAIL=1 only to experiment with the firejail path.
 cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
 #!/bin/sh
-if [ "\${ATLANTIC_ENABLE_SAILJAIL:-1}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
+if [ "\${ATLANTIC_ENABLE_SAILJAIL:-0}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
     export ATLANTIC_IN_SAILJAIL=1
     exec firejail --quiet --profile=/etc/firejail/atlantic-browser.profile -- /usr/bin/atlantic-browser-env "\$@"
 fi
