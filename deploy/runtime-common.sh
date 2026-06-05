@@ -100,16 +100,27 @@ atlantic_export_browser_env() {
     atlantic_export_helper_env
 
     # ── WPE bubblewrap process sandbox (seccomp + namespaces) ─────────────────
-    # The engine is built with -DENABLE_BUBBLEWRAP_SANDBOX=ON; WPE-legacy only
-    # turns the sandbox on at runtime when WEBKIT_FORCE_SANDBOX=1 (read once by
-    # the UIProcess at startup).  Enabled BY DEFAULT now (ATLANTIC_ENABLE_SANDBOX
-    # defaults to 1).  Set ATLANTIC_ENABLE_SANDBOX=0 to disable (e.g. over ssh if
-    # the device kernel cannot create the sandbox namespaces).  Requires bwrap +
-    # xdg-dbus-proxy + libseccomp present on the device.
-    if [ "${ATLANTIC_ENABLE_SANDBOX:-1}" = "1" ]; then
+    # The engine is built with -DENABLE_BUBBLEWRAP_SANDBOX=ON.  IMPORTANT: the
+    # browser calls webkit_web_context_add_path_to_sandbox() (WPEWebContainer::
+    # configureSandboxPaths), and in WPE-legacy that *implicitly* calls
+    # setSandboxEnabled(true) — so the sandbox turns itself ON regardless of
+    # WEBKIT_FORCE_SANDBOX.  Unsetting WEBKIT_FORCE_SANDBOX does NOT disable it;
+    # the only runtime switch that does is WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+    # (see Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp setSandboxEnabled).
+    #
+    # The sandbox currently BREAKS rendering on the no-GBM hybris stack: the
+    # WebProcess composites on the GPU but its rendered buffer never reaches the
+    # UIProcess WPEBackend-fdo exportable, so every page is blank (bisected to the
+    # sandbox re-enable, engine commit cdaa26f / build iteration 213).  Keep the
+    # sandbox OFF by default — the known-good rendering path — until it is fixed
+    # to share buffers across the bwrap boundary.  ATLANTIC_ENABLE_SANDBOX=1 opts
+    # back in (needs bwrap + xdg-dbus-proxy + libseccomp on the device).
+    if [ "${ATLANTIC_ENABLE_SANDBOX:-0}" = "1" ]; then
         export WEBKIT_FORCE_SANDBOX=1
+        unset WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS 2>/dev/null || true
     else
         unset WEBKIT_FORCE_SANDBOX 2>/dev/null || true
+        export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
     fi
 
     export QT_QPA_PLATFORM="${ATLANTIC_QT_QPA_PLATFORM}"
