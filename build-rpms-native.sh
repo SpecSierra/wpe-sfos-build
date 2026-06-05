@@ -533,7 +533,7 @@ chmod 755 "${S}/usr/bin/atlantic-browser-env"
 # Set ATLANTIC_ENABLE_SAILJAIL=0 to disable firejail confinement.
 cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
 #!/bin/sh
-if [ "\${ATLANTIC_ENABLE_SAILJAIL:-1}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
+if [ "\${ATLANTIC_ENABLE_SAILJAIL:-0}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
     export ATLANTIC_IN_SAILJAIL=1
     exec firejail --quiet --profile=/etc/firejail/atlantic-browser.profile -- /usr/bin/atlantic-browser-env "\$@"
 fi
@@ -586,7 +586,7 @@ Name=Atlantic
 X-MeeGo-Logical-Id=atlantic-browser-ap-name
 X-MeeGo-Translation-Catalog=atlantic-browser
 Icon=icon-launcher-atlantic
-Exec=/usr/bin/atlantic-browser %U
+Exec=sailjail --profile=atlantic-browser -- /usr/bin/atlantic-browser-env %U
 Comment=Atlantic Browser (WPE WebKit)
 MimeType=text/html;application/xhtml+xml;application/xml;text/xml;x-scheme-handler/http;x-scheme-handler/https;
 X-Maemo-Service=org.atlantic.browser.ui
@@ -594,7 +594,7 @@ X-Maemo-Object-Path=/ui
 X-Maemo-Method=org.atlantic.browser.ui.openUrl
 
 [X-Sailjail]
-Permissions=Internet;Audio
+Permissions=Internet;Audio;WebView;UserDirs;atlantic-browser
 OrganizationName=org.sailfishos
 ApplicationName=browser
 DESKTOP

@@ -1,0 +1,62 @@
+# -*- mode: sh -*-
+#
+# Atlantic Browser — sailjail permission profile.
+#
+# Overrides Base.permission restrictions that would break WPE WebKit
+# rendering on the libhybris/Adreno GPU stack.  Base.permission does
+# caps.drop all, seccomp, nonewprivs, private-etc, net none, nosound,
+# disable-common.inc — all of which we need to selectively override.
+#
+# This file is included AFTER Base.permission by sailjaild, so all
+# our directives override Base's settings.
+
+# x-sailjail-translation-catalog = sailjail-permissions
+# x-sailjail-translation-key-description = permission-la-browser
+# x-sailjail-description = Browser and web content access
+# x-sailjail-translation-key-long-description = permission-la-browser_description
+# x-sailjail-long-description = Full browser functionality: web content, GPU rendering, file downloads, media playback
+
+# ── Network ────────────────────────────────────────────────────────────────
+# Base sets net none; override to allow networking
+ignore net none
+protocol unix,inet,inet6
+
+# ── Sound ──────────────────────────────────────────────────────────────────
+# Base sets nosound; override to allow PulseAudio for media playback
+ignore nosound
+whitelist /run/user/100000/pulse
+
+# ── GPU / hybris / Wayland ─────────────────────────────────────────────────
+# Base includes disable-common.inc which blacklists many paths; unblock them.
+noblacklist /opt/wpe-sfos
+noblacklist /usr/libexec/wpe-webkit-2.0
+noblacklist /usr/libexec/droid-hybris
+noblacklist /usr/lib64/wpe-compat
+noblacklist /usr/lib64/qt5
+noblacklist /usr/share/atlantic-browser
+noblacklist /usr/share/qt5
+noblacklist /odm
+noblacklist /vendor/firmware_mnt
+noblacklist /dev/kgsl-3d0
+noblacklist /dev/ion
+noblacklist /dev/hwbinder
+noblacklist /dev/binder
+noblacklist /dev/__properties__
+noblacklist /dev/dri
+
+# Wayland socket
+whitelist /run/display
+whitelist /run/user/100000
+
+# ── Browser data ───────────────────────────────────────────────────────────
+mkdir     ${HOME}/.local/share/org.sailfishos/browser
+whitelist ${HOME}/.local/share/org.sailfishos/browser
+mkdir     ${HOME}/.cache/org.sailfishos/browser
+whitelist ${HOME}/.cache/org.sailfishos/browser
+mkdir     ${HOME}/.config/atlantic-browser
+whitelist ${HOME}/.config/atlantic-browser
+
+# D-Bus (browser UI service)
+dbus-user.own org.atlantic.browser.ui
+dbus-user.talk org.atlantic.browser.ui
+
