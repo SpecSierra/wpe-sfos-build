@@ -118,6 +118,12 @@ atlantic_export_browser_env() {
     if [ "${ATLANTIC_ENABLE_SANDBOX:-0}" = "1" ]; then
         export WEBKIT_FORCE_SANDBOX=1
         unset WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS 2>/dev/null || true
+        # The Android /dev/__properties__ directory (Android property store)
+        # defaults to mode 0711 (drwx--x--x), which prevents the sandboxed
+        # WebProcess (running as uid 100000) from listing its contents.
+        # The libhybris/Adreno GPU stack needs to enumerate property files
+        # during GPU init.  Bump to 0755 on every launch.
+        chmod 755 /dev/__properties__/ 2>/dev/null || true
     else
         unset WEBKIT_FORCE_SANDBOX 2>/dev/null || true
         export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
