@@ -99,30 +99,24 @@ atlantic_export_helper_env() {
 atlantic_export_browser_env() {
     atlantic_export_helper_env
 
-    # ── WPE bubblewrap process sandbox (seccomp + namespaces) ─────────────────
-    # The engine is built with -DENABLE_BUBBLEWRAP_SANDBOX=ON.  IMPORTANT: the
-    # browser calls webkit_web_context_add_path_to_sandbox() (WPEWebContainer::
-    # configureSandboxPaths), and in WPE-legacy that *implicitly* calls
-    # setSandboxEnabled(true) — so the sandbox turns itself ON regardless of
-    # WEBKIT_FORCE_SANDBOX.  Unsetting WEBKIT_FORCE_SANDBOX does NOT disable it;
-    # the only runtime switch that does is WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
-    # (see Source/WebKit/UIProcess/glib/WebProcessPoolGLib.cpp setSandboxEnabled).
+    # ── WPE bubblewrap process sandbox ──────────────────────────────────────
+    # The bwrap sandbox is FUNDAMENTALLY INCOMPATIBLE with the libhybris
+    # Adreno GPU stack on Sailfish OS: the user namespace strips supplementary
+    # groups (graphics, video, audio) required by the Android GPU HAL, and the
+    # mount namespace hides submounts (/odm, /vendor/firmware_mnt) on kernel
+    # 4.14.  Application-layer confinement is provided by sailjail/firejail
+    # instead (ATLANTIC_ENABLE_SAILJAIL, on by default).
     #
-    # The sandbox currently BREAKS rendering on the no-GBM hybris stack: the
-    # WebProcess composites on the GPU but its rendered buffer never reaches the
-    # UIProcess WPEBackend-fdo exportable, so every page is blank (bisected to the
-    # sandbox re-enable, engine commit cdaa26f / build iteration 213).  Keep the
-    # sandbox OFF by default — the known-good rendering path — until it is fixed
-    # to share buffers across the bwrap boundary.  ATLANTIC_ENABLE_SANDBOX=1 opts
-    # back in (needs bwrap + xdg-dbus-proxy + libseccomp on the device).
+    # The bwrap sandbox remains compiled in (ENABLE_BUBBLEWRAP_SANDBOX=ON) so
+    # that the browser can call webkit_web_context_add_path_to_sandbox()
+    # without linker errors, but the sandbox is always disabled at runtime via
+    # WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1.
+    #
+    # ATLANTIC_ENABLE_SANDBOX=1 can still be set to re-enable bwrap for
+    # debugging, but it WILL produce blank pages on hybris devices.
     if [ "${ATLANTIC_ENABLE_SANDBOX:-0}" = "1" ]; then
         export WEBKIT_FORCE_SANDBOX=1
         unset WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS 2>/dev/null || true
-        # The Android /dev/__properties__ directory (Android property store)
-        # defaults to mode 0711 (drwx--x--x), which prevents the sandboxed
-        # WebProcess (running as uid 100000) from listing its contents.
-        # The libhybris/Adreno GPU stack needs to enumerate property files
-        # during GPU init.  Bump to 0755 on every launch.
         chmod 755 /dev/__properties__/ 2>/dev/null || true
     else
         unset WEBKIT_FORCE_SANDBOX 2>/dev/null || true
