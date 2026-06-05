@@ -58,3 +58,4 @@ whitelist ${HOME}/Downloads
 
 # ── Runtime (Wayland, D-Bus, PulseAudio) ────────────────────────────────────
 whitelist /run/user/100000
+whitelist /run/display
