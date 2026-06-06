@@ -8,13 +8,24 @@ ATLANTIC_QT_QPA_PLATFORM="${ATLANTIC_QT_QPA_PLATFORM:-wayland}"
 ATLANTIC_XDG_RUNTIME_DIR="${ATLANTIC_XDG_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/run/user/100000}}"
 ATLANTIC_WAYLAND_DISPLAY="${ATLANTIC_WAYLAND_DISPLAY:-../../display/wayland-0}"
 ATLANTIC_GSTREAMER_PLUGIN_DIR="${ATLANTIC_GSTREAMER_PLUGIN_DIR:-${ATLANTIC_RUNTIME_LIBDIR}/gstreamer-1.0}"
-# droidvdec:0 disables Android hybris hardware video decoder.
-# On SFOS 5.0 this prevented crashes in the hybris EGL → GStreamer path.
-# On SFOS 5.1 with a working hybris stack, set ATLANTIC_ENABLE_HW_DECODER=1 to re-enable.
-if [ "${ATLANTIC_ENABLE_HW_DECODER:-0}" = "1" ]; then
-    ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-}"
-else
+# Hardware video decode (Qualcomm Venus via droidmedia / gst-droid's droidvdec).
+# ENABLED BY DEFAULT on SFOS 5.1. Validated on 5.1.0.7 (Xperia 10 II): H.264/H.265
+# are hardware-decoded with 0 dropped frames and ~half the WebProcess CPU of the
+# software avdec path (~27% -> ~15% of a big core on 1080p), with mediaswcodec
+# idle (confirming true HW, not the Android software codec). The SFOS 5.0
+# hybris-EGL -> GStreamer crash that originally motivated droidvdec:0 does NOT
+# recur on 5.1's working hybris stack.
+#
+# droidvdec advertises only avc/hevc/mp4v (see /etc/gst-droid/gstdroidcodec.conf),
+# so VP8/VP9 (e.g. YouTube) have no Venus HW path and auto-fall back to software
+# vpxdec — ranking droidvdec up cannot break them. droidvenc (encode) stays
+# disabled: it is unused by the browser and historically less stable.
+#
+# Set ATLANTIC_DISABLE_HW_DECODER=1 to force the all-software decode path.
+if [ "${ATLANTIC_DISABLE_HW_DECODER:-0}" = "1" ]; then
     ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:0,droidvenc:0}"
+else
+    ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:300,droidvenc:0}"
 fi
 ATLANTIC_WEBKIT_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT:-1}"
 ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS:-2000}"
@@ -91,6 +102,14 @@ atlantic_export_helper_env() {
     export WEBKIT_GST_RING_BUFFER_MAX_SIZE="${WEBKIT_GST_RING_BUFFER_MAX_SIZE:-16777216}"
     export WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE="${WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE:-8388608}"
     export WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES="${WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES:-67108864}"
+    # Decode-resolution ceiling (format WIDTHxHEIGHT@FRAMERATE, consumed by
+    # WebCore GStreamerRegistryScanner). The browser advertises support only up
+    # to this, so adaptive sites (YouTube etc.) pick a stream within it. Capped
+    # at 1080p60 to keep Venus HW decode (H.264/H.265) in range while preventing
+    # the device from ever attempting 4K *software* VP9, which would exhaust the
+    # 3.5 GB RAM and OOM-kill the WebProcess. Override with a larger value on the
+    # future Mali device, or unset to remove the ceiling.
+    export WEBKIT_GST_VIDEO_DECODING_LIMIT="${WEBKIT_GST_VIDEO_DECODING_LIMIT:-1920x1080@60}"
     # Identify audio streams to PulseAudio as x-maemo so SFOS media policy routes them correctly.
     # Note: dot-containing property names must be set via PULSE_PROP_OVERRIDE (not PULSE_PROP_x.y).
     export PULSE_PROP_OVERRIDE="media.role=x-maemo"
