@@ -86,7 +86,7 @@ class WriteWebkitFeatureFlagsCliTests(unittest.TestCase):
             self.run_cli(
                 str(cache),
                 str(output),
-                "2.52.3",
+                "2.52.4",
                 "--source-dir",
                 "/tmp/src",
                 "--build-dir",
@@ -95,7 +95,7 @@ class WriteWebkitFeatureFlagsCliTests(unittest.TestCase):
 
             self.assertEqual(
                 output.read_text(encoding="utf-8"),
-                "WPE WebKit version: 2.52.3\n"
+                "WPE WebKit version: 2.52.4\n"
                 "Source dir: /tmp/src\n"
                 "Build dir: /tmp/build\n"
                 "\n"
@@ -111,11 +111,11 @@ class WriteWebkitFeatureFlagsCliTests(unittest.TestCase):
             cache = Path(temp_dir) / "missing" / "CMakeCache.txt"
             output = Path(temp_dir) / "feature-flags.txt"
 
-            self.run_cli(str(cache), str(output), "2.52.3")
+            self.run_cli(str(cache), str(output), "2.52.4")
 
             self.assertEqual(
                 output.read_text(encoding="utf-8"),
-                "WPE WebKit version: 2.52.3\n"
+                "WPE WebKit version: 2.52.4\n"
                 f"Build dir: {cache.parent}\n"
                 "\n"
                 "ENABLE_GPU_PROCESS=<not found>\n"

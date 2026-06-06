@@ -38,7 +38,7 @@ set(ENABLE_BUBBLEWRAP_SANDBOX ON CACHE BOOL "" FORCE)
 set(USE_ATK OFF CACHE BOOL "" FORCE)
 set(USE_GSTREAMER ON CACHE BOOL "" FORCE)
 
-# WebKit 2.52.3 in this tree registers webkitwebsrc, but does not expose a
+# WebKit 2.52.4 in this tree registers webkitwebsrc, but does not expose a
 # USE_GSTREAMER_WEBKIT_HTTP_SRC CMake toggle to force here.
 
 # Keep GL integration off for now: hybris EGL in the WPEWebProcess subprocess
