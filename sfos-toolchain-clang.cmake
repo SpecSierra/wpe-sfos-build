@@ -49,9 +49,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto+crc -mtune=co
 # ── Linker ───────────────────────────────────────────────────────────────────
 # lld is mandatory for ThinLTO (LLVM bitcode sections).
 # -Wl,-O2: lld string-table and section merging at the highest safe level.
-# -Wl,--icf=safe: identical code folding — merge functions with identical machine
-#   code. JSC's template-heavy code (InlineCache, DFGAbstractInterpreter) produces
-#   many duplicates that differ only in template parameters; ICF recovers ~2-3 MB.
+# -Wl,--icf=safe: DISABLED 2026-06-06 — identical code folding merged functions
+#   with identical machine code, but JSC dispatches intrinsics/host functions by
+#   function-pointer identity, so folding two distinct functions to one address
+#   corrupts dispatch. Prime suspect for the DFG miscompile (jolla.com webpack
+#   __webpack_require__ returning the wrong value). Dropped to bisect that bug;
+#   re-enabling DFG (JSC_useDFGJIT default flipped to 1 in runtime-common.sh)
+#   rides on this. Cost of removal: ~2-3 MB binary size, no throughput loss.
 # --allow-shlib-undefined: sysroot is incomplete (SFOS system libs not on
 #   the build host); references are resolved at device runtime.
 # -Wl,-mllvm,-import-instr-limit=200: raise ThinLTO cross-module import limit
@@ -59,9 +63,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd+crypto+crc -mtune=co
 #   callees across translation units — important for JSC where inline cache
 #   helpers, GC write barriers, and DFG node specialisations are spread across
 #   dozens of .o files.
-set(CMAKE_EXE_LINKER_FLAGS_INIT    "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
-set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
-set(CMAKE_MODULE_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,--icf=safe -Wl,-mllvm,-import-instr-limit=200")
+set(CMAKE_EXE_LINKER_FLAGS_INIT    "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,-mllvm,-import-instr-limit=200")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,-mllvm,-import-instr-limit=200")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT "-fuse-ld=lld -rtlib=compiler-rt -static-libstdc++ -Wl,--allow-shlib-undefined -Wl,-rpath-link=/opt/sfos-sysroot/usr/lib64 -Wl,-O2 -Wl,--gc-sections -Wl,-mllvm,-import-instr-limit=200")
 set(CMAKE_EXE_LINKER_FLAGS         "${CMAKE_EXE_LINKER_FLAGS}    ${CMAKE_EXE_LINKER_FLAGS_INIT}")
 set(CMAKE_SHARED_LINKER_FLAGS      "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_INIT}")
 set(CMAKE_MODULE_LINKER_FLAGS      "${CMAKE_MODULE_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS_INIT}")
