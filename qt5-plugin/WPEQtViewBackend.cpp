@@ -194,44 +194,24 @@ GLuint WPEQtViewBackend::texture(QOpenGLContext* context)
         glFunctions->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFunctions->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glFunctions->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFunctions->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_size.width(), m_size.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glFunctions->glBindTexture(GL_TEXTURE_2D, 0);
     }
 
-    glFunctions->glClearColor(1, 0, 0, 1);
-    glFunctions->glClear(GL_COLOR_BUFFER_BIT);
-
-    glFunctions->glUseProgram(m_program);
-
+    // Bind the WPE-exported frame as an EGLImage directly into m_textureId
+    // (zero-copy) and hand that texture straight to Qt. updatePaintNode() wraps
+    // m_textureId in a QSGSimpleTextureNode and Qt's scene graph composites the
+    // EGLImage itself — so the previous per-frame glClear + full-screen textured
+    // quad draw here rendered into a discarded framebuffer and was pure waste:
+    // a full-screen clear + full-screen blit every frame on the single-command-
+    // queue Adreno 610 (which is why the red clear was never visible). The
+    // glTexImage2D(...nullptr) allocation was likewise orphaned immediately by
+    // glEGLImageTargetTexture2DOES, which defines the texture's storage. Removed.
+    // Producer/consumer sync is handled by the wpe-fdo export/frame-complete
+    // handshake (see didRenderFrame), not by this draw.
     glFunctions->glActiveTexture(GL_TEXTURE0);
     glFunctions->glBindTexture(GL_TEXTURE_2D, m_textureId);
     imageTargetTexture2DOES(GL_TEXTURE_2D, wpe_fdo_egl_exported_image_get_egl_image(image));
-    glFunctions->glUniform1i(m_textureUniform, 0);
-
-    static const GLfloat vertices[4][2] = {
-        { -1.0, 1.0 },
-        { 1.0, 1.0 },
-        { -1.0, -1.0 },
-        { 1.0, -1.0 },
-    };
-
-    static const GLfloat texturePos[4][2] = {
-        { 0, 0 },
-        { 1, 0 },
-        { 0, 1 },
-        { 1, 1 },
-    };
-
-    glFunctions->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-    glFunctions->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, texturePos);
-
-    glFunctions->glEnableVertexAttribArray(0);
-    glFunctions->glEnableVertexAttribArray(1);
-
-    glFunctions->glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glFunctions->glDisableVertexAttribArray(0);
-    glFunctions->glDisableVertexAttribArray(1);
+    glFunctions->glBindTexture(GL_TEXTURE_2D, 0);
 
     m_frameUpdateRequested = m_pendingImage;
 
