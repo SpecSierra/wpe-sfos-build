@@ -16,16 +16,26 @@ ATLANTIC_GSTREAMER_PLUGIN_DIR="${ATLANTIC_GSTREAMER_PLUGIN_DIR:-${ATLANTIC_RUNTI
 # hybris-EGL -> GStreamer crash that originally motivated droidvdec:0 does NOT
 # recur on 5.1's working hybris stack.
 #
-# droidvdec advertises only avc/hevc/mp4v (see /etc/gst-droid/gstdroidcodec.conf),
-# so VP8/VP9 (e.g. YouTube) have no Venus HW path and auto-fall back to software
-# vpxdec — ranking droidvdec up cannot break them. droidvenc (encode) stays
-# disabled: it is unused by the browser and historically less stable.
+# CAUTION: droidvdec does NOT only advertise avc/hevc/mp4v. Despite
+# /etc/gst-droid/gstdroidcodec.conf listing only video/hevc + video/avc,
+# droidvdec enumerates codecs from droidmedia/the Android media_codecs list at
+# runtime and on the Xperia 10 II (SFOS 5.1.0.8) it ALSO claims VP8/VP9. With
+# droidvdec ranked above the software vpx decoders it therefore grabs YouTube's
+# VP9 stream and crashes the WebProcess (thread droidvdec0:src; "libI420color-
+# convert.so not found" — its colour-convert path is broken), showing a
+# scrambled texture instead of video. So we must keep HW decode for H.264/H.265
+# (where it's a real win, see above) while forcing VP8/VP9 to software: rank
+# vp9dec/vp8dec ABOVE droidvdec so decodebin prefers them for vp8/vp9 caps,
+# leaving droidvdec to win only for avc/hevc caps it actually handles. Verified
+# on device: YouTube (VP9) decodes via software vp9dec, plays smoothly, no crash.
+# droidvenc (encode) stays disabled: unused by the browser and historically less
+# stable.
 #
 # Set ATLANTIC_DISABLE_HW_DECODER=1 to force the all-software decode path.
 if [ "${ATLANTIC_DISABLE_HW_DECODER:-0}" = "1" ]; then
     ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:0,droidvenc:0}"
 else
-    ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:300,droidvenc:0}"
+    ATLANTIC_GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK:-droidvdec:300,droidvenc:0,vp9dec:310,vp8dec:310}"
 fi
 ATLANTIC_WEBKIT_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT:-1}"
 ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS:-2000}"
