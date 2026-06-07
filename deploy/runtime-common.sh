@@ -201,8 +201,15 @@ atlantic_export_browser_env() {
     export JSC_useTypeProfiler=0
     export JSC_useControlFlowProfiler=0
 
-    # ── Skia painting thread caps (Adreno 610: single GPU command queue) ──────
-    export WEBKIT_SKIA_GPU_PAINTING_THREADS=3
+    # ── Skia painting thread caps ────────────────────────────────────────────
+    # WEBKIT_SKIA_GPU_PAINTING_THREADS is intentionally NOT set here. The browser
+    # auto-selects it from a GPU capability probe in main.cpp
+    # (configureGpuModeFromCapabilities): 1 thread when EGL_KHR_surfaceless_context
+    # is absent — e.g. the libhybris Adreno 610, where >1 concurrent worker
+    # context corrupts shared textures (garbled scrollbar/glyphs, dropped tiles) —
+    # and multi-threaded painting on surfaceless-capable stacks (Mali, desktop).
+    # Export WEBKIT_SKIA_GPU_PAINTING_THREADS=<n> before launch to override the
+    # auto-selection (the probe honours an explicit value).
     export WEBKIT_SKIA_CPU_PAINTING_THREADS=2
 
     # ── Tile size alignment ───────────────────────────────────────────────────
