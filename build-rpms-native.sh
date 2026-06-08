@@ -481,6 +481,7 @@ fetch_content_blocker_list fanboy-annoyance "${FANBOY_ANNOYANCE_URL}"  "${FANBOY
 fetch_content_blocker_list ubo-annoyances   "${UBO_ANNOYANCES_URL}"    "${UBO_ANNOYANCES_SHA256:-}"
 fetch_content_blocker_list fanboy-social     "${FANBOY_SOCIAL_URL}"    "${FANBOY_SOCIAL_SHA256:-}"
 fetch_content_blocker_list anti-cv           "${ANTI_CV_URL}"          "${ANTI_CV_SHA256:-}"
+fetch_content_blocker_list fanboy-cookie     "${FANBOY_COOKIE_URL}"    "${FANBOY_COOKIE_SHA256:-}"
 
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
@@ -536,7 +537,8 @@ echo "--- Compiling filter list cache ---"
     "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-annoyance.txt" \
     "${CONTENT_BLOCKER_FETCH_DIR}/ubo-annoyances.txt" \
     "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-social.txt" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/anti-cv.txt"
+    "${CONTENT_BLOCKER_FETCH_DIR}/anti-cv.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-cookie.txt"
 
 # Binary
 mkdir -p "${S}/usr/bin"
