@@ -22,3 +22,6 @@ mkdir -p "${WPE_PREFIX}/lib"
 cp -a target/release/libatlantic_adblock.so "${WPE_PREFIX}/lib/"
 
 echo "  libatlantic_adblock.so staged to ${WPE_PREFIX}/lib/"
+
+echo "--- Cleaning build artifacts ---"
+rm -rf "${REPO_ROOT}/adblock-engine/target"

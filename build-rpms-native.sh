@@ -519,6 +519,7 @@ echo "--- Building adblock engine ---"
         source "/home/${SUDO_USER}/.cargo/env"
     fi
     cd "${SCRIPT_DIR}/adblock-engine" && cargo build --release
+    rm -rf "${SCRIPT_DIR}/adblock-engine/target"
 )
 
 echo "--- Compiling filter list cache ---"
