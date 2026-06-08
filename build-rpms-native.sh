@@ -13,6 +13,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/scripts/common.sh"
 source "${SCRIPT_DIR}/deploy/runtime-common.sh"
 
+cleanup_target() {
+    rm -rf "${SCRIPT_DIR}/adblock-engine/target"
+}
+trap cleanup_target EXIT
+
 OUT="${OUT:-/tmp/wpe-sfos-rpms}"
 STAGING="${STAGING:-/tmp/wpe-sfos-stage}"
 PACKAGE_RUNTIME_PREFIX="${PACKAGE_RUNTIME_PREFIX:-/opt/wpe-sfos}"
@@ -587,9 +592,6 @@ cp -a "${SCRIPT_DIR}/adblock-engine/target/release/libatlantic_adblock.so" "${S}
 mkdir -p "${S}/usr/share/atlantic-browser"
 cp -a "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat" \
       "${S}/usr/share/atlantic-browser/engine.dat"
-
-# Clean build artifacts so the workspace stays writable
-rm -rf "${SCRIPT_DIR}/adblock-engine/target"
 
 # QML files
 mkdir -p "${S}/usr/share/atlantic-browser"
