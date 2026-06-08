@@ -483,6 +483,11 @@ fetch_content_blocker_list fanboy-social     "${FANBOY_SOCIAL_URL}"    "${FANBOY
 fetch_content_blocker_list anti-cv           "${ANTI_CV_URL}"          "${ANTI_CV_SHA256:-}"
 fetch_content_blocker_list fanboy-cookie     "${FANBOY_COOKIE_URL}"    "${FANBOY_COOKIE_SHA256:-}"
 
+# Regional Anti-CV language lists
+for region in ${REGIONAL_ANTI_CV_LISTS}; do
+    fetch_content_blocker_list "anti-cv-${region}" "${ANTI_CV_REPO_RAW}/${region}.txt" ""
+done
+
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
     --max-rules 10000 \
@@ -530,15 +535,20 @@ echo "--- Building adblock engine ---"
 )
 
 echo "--- Compiling filter list cache ---"
-"${SCRIPT_DIR}/adblock-engine/target/release/builder" \
-    "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/easyprivacy.txt" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-annoyance.txt" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/ubo-annoyances.txt" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-social.txt" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/anti-cv.txt" \
+BUILDER_ARGS=(
+    "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat"
+    "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt"
+    "${CONTENT_BLOCKER_FETCH_DIR}/easyprivacy.txt"
+    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-annoyance.txt"
+    "${CONTENT_BLOCKER_FETCH_DIR}/ubo-annoyances.txt"
+    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-social.txt"
+    "${CONTENT_BLOCKER_FETCH_DIR}/anti-cv.txt"
     "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-cookie.txt"
+)
+for region in ${REGIONAL_ANTI_CV_LISTS}; do
+    BUILDER_ARGS+=("${CONTENT_BLOCKER_FETCH_DIR}/anti-cv-${region}.txt")
+done
+"${SCRIPT_DIR}/adblock-engine/target/release/builder" "${BUILDER_ARGS[@]}"
 
 # Binary
 mkdir -p "${S}/usr/bin"
