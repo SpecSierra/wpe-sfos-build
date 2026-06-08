@@ -519,7 +519,6 @@ echo "--- Building adblock engine ---"
         source "/home/${SUDO_USER}/.cargo/env"
     fi
     cd "${SCRIPT_DIR}/adblock-engine" && cargo build --release
-    rm -rf "${SCRIPT_DIR}/adblock-engine/target"
 )
 
 echo "--- Compiling filter list cache ---"
@@ -587,6 +586,9 @@ cp -a "${SCRIPT_DIR}/adblock-engine/target/release/libatlantic_adblock.so" "${S}
 # Adblock engine cache (FlatBuffers .dat)
 cp -a "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat" \
       "${S}/usr/share/atlantic-browser/engine.dat"
+
+# Clean build artifacts so the workspace stays writable
+rm -rf "${SCRIPT_DIR}/adblock-engine/target"
 
 # QML files
 mkdir -p "${S}/usr/share/atlantic-browser"
