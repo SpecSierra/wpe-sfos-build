@@ -11,6 +11,8 @@ echo "--- Building adblock-rust engine ---"
 
 if [ -f "${HOME}/.cargo/env" ]; then
     source "${HOME}/.cargo/env"
+elif [ -n "${SUDO_USER:-}" ] && [ -f "/home/${SUDO_USER}/.cargo/env" ]; then
+    source "/home/${SUDO_USER}/.cargo/env"
 fi
 
 cd "${REPO_ROOT}/adblock-engine"

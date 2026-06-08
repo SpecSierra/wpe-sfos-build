@@ -512,7 +512,14 @@ PY
 # Build adblock-rust engine and compile filter list cache
 # ---------------------------------------------------------------------------
 echo "--- Building adblock engine ---"
-(cd "${SCRIPT_DIR}/adblock-engine" && cargo build --release)
+(
+    if [ -f "${HOME}/.cargo/env" ]; then
+        source "${HOME}/.cargo/env"
+    elif [ -n "${SUDO_USER:-}" ] && [ -f "/home/${SUDO_USER}/.cargo/env" ]; then
+        source "/home/${SUDO_USER}/.cargo/env"
+    fi
+    cd "${SCRIPT_DIR}/adblock-engine" && cargo build --release
+)
 
 echo "--- Compiling filter list cache ---"
 "${SCRIPT_DIR}/adblock-engine/target/release/builder" \
