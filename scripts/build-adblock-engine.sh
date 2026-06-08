@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${SCRIPT_DIR}/common.sh"
+
+echo ""
+echo "--- Building adblock-rust engine ---"
+
+if [ -f "${HOME}/.cargo/env" ]; then
+    source "${HOME}/.cargo/env"
+fi
+
+cd "${REPO_ROOT}/adblock-engine"
+cargo build --release
+
+mkdir -p "${WPE_PREFIX}/lib"
+cp -a target/release/libatlantic_adblock.so "${WPE_PREFIX}/lib/"
+
+echo "  libatlantic_adblock.so staged to ${WPE_PREFIX}/lib/"
