@@ -38,6 +38,23 @@ unsafe fn str_from_c<'a>(ptr: *const c_char) -> &'a str {
     CStr::from_ptr(ptr).to_str().unwrap_or("")
 }
 
+fn safe_match_result() -> MatchResult {
+    MatchResult {
+        matched: false,
+        important: false,
+        redirect: std::ptr::null_mut(),
+        exception: std::ptr::null_mut(),
+    }
+}
+
+fn safe_cosmetic_result() -> CosmeticResult {
+    CosmeticResult {
+        hide_selectors: std::ptr::null(),
+        injected_script: std::ptr::null(),
+        generated_css: std::ptr::null(),
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn atlantic_adblock_create_from_cache(
     data: *const u8,
@@ -130,55 +147,45 @@ pub unsafe extern "C" fn atlantic_adblock_match_network(
     third_party_raw: i32,
 ) -> MatchResult {
     if engine.is_null() || req_url.is_null() {
-        return MatchResult {
-            matched: false,
-            important: false,
-            redirect: std::ptr::null_mut(),
-            exception: std::ptr::null_mut(),
-        };
+        return safe_match_result();
     }
 
-    let eng = &(*engine).engine;
-    let src = str_from_c(src_url);
-    let req = str_from_c(req_url);
-    let rtype = str_from_c(resource_type);
-    let third_party = third_party_raw != 0;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let eng = &(*engine).engine;
+        let src = str_from_c(src_url);
+        let req = str_from_c(req_url);
+        let rtype = str_from_c(resource_type);
+        let third_party = third_party_raw != 0;
 
-    if rtype.is_empty() {
-        return MatchResult {
-            matched: false,
-            important: false,
-            redirect: std::ptr::null_mut(),
-            exception: std::ptr::null_mut(),
-        };
-    }
+        if rtype.is_empty() {
+            return safe_match_result();
+        }
 
-    let request = Request::preparsed(
-        req,
-        "",
-        if src.is_empty() || third_party {
-            ""
-        } else {
-            src
-        },
-        rtype,
-        third_party,
-    );
+        let request = Request::preparsed(
+            req,
+            "",
+            if src.is_empty() || third_party { "" } else { src },
+            rtype,
+            third_party,
+        );
 
-    let result = eng.check_network_request(&request);
+        let result = eng.check_network_request(&request);
 
-    MatchResult {
-        matched: result.matched,
-        important: result.important,
-        redirect: match &result.redirect {
-            Some(s) => to_c_string(s),
-            None => std::ptr::null_mut(),
-        },
-        exception: match &result.exception {
-            Some(s) => to_c_string(s),
-            None => std::ptr::null_mut(),
-        },
-    }
+        MatchResult {
+            matched: result.matched,
+            important: result.important,
+            redirect: match &result.redirect {
+                Some(s) => to_c_string(s),
+                None => std::ptr::null_mut(),
+            },
+            exception: match &result.exception {
+                Some(s) => to_c_string(s),
+                None => std::ptr::null_mut(),
+            },
+        }
+    }));
+
+    result.unwrap_or_else(|_| safe_match_result())
 }
 
 #[no_mangle]
@@ -197,47 +204,47 @@ pub unsafe extern "C" fn atlantic_adblock_get_cosmetic(
     url: *const c_char,
 ) -> CosmeticResult {
     if engine.is_null() || url.is_null() {
-        return CosmeticResult {
-            hide_selectors: std::ptr::null(),
-            injected_script: std::ptr::null(),
-            generated_css: std::ptr::null(),
+        return safe_cosmetic_result();
+    }
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let eng = &(*engine).engine;
+        let url_str = str_from_c(url);
+
+        let resources = eng.url_cosmetic_resources(url_str);
+
+        let hide = if resources.hide_selectors.is_empty() {
+            std::ptr::null()
+        } else {
+            let combined: Vec<&str> = resources.hide_selectors.iter().map(|s| s.as_str()).collect();
+            let joined = combined.join(", ");
+            CString::new(joined).unwrap().into_raw() as *const c_char
         };
-    }
 
-    let eng = &(*engine).engine;
-    let url_str = str_from_c(url);
+        let script = if resources.injected_script.is_empty() {
+            std::ptr::null()
+        } else {
+            CString::new(resources.injected_script.as_str())
+                .unwrap()
+                .into_raw() as *const c_char
+        };
 
-    let resources = eng.url_cosmetic_resources(url_str);
+        let css = if resources.procedural_actions.is_empty() {
+            std::ptr::null()
+        } else {
+            let combined: Vec<&str> = resources.procedural_actions.iter().map(|s| s.as_str()).collect();
+            let joined = combined.join("\n");
+            CString::new(joined).unwrap().into_raw() as *const c_char
+        };
 
-    let hide = if resources.hide_selectors.is_empty() {
-        std::ptr::null()
-    } else {
-        let combined: Vec<&str> = resources.hide_selectors.iter().map(|s| s.as_str()).collect();
-        let joined = combined.join(", ");
-        CString::new(joined).unwrap().into_raw() as *const c_char
-    };
+        CosmeticResult {
+            hide_selectors: hide,
+            injected_script: script,
+            generated_css: css,
+        }
+    }));
 
-    let script = if resources.injected_script.is_empty() {
-        std::ptr::null()
-    } else {
-        CString::new(resources.injected_script.as_str())
-            .unwrap()
-            .into_raw() as *const c_char
-    };
-
-    let css = if resources.procedural_actions.is_empty() {
-        std::ptr::null()
-    } else {
-        let combined: Vec<&str> = resources.procedural_actions.iter().map(|s| s.as_str()).collect();
-        let joined = combined.join("\n");
-        CString::new(joined).unwrap().into_raw() as *const c_char
-    };
-
-    CosmeticResult {
-        hide_selectors: hide,
-        injected_script: script,
-        generated_css: css,
-    }
+    result.unwrap_or_else(|_| safe_cosmetic_result())
 }
 
 #[no_mangle]

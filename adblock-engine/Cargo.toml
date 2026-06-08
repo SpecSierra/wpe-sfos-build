@@ -14,4 +14,5 @@ name = "builder"
 adblock = { version = "0.12", default-features = false, features = [
     "full-regex-handling",
     "resource-assembler",
+    "embedded-domain-resolver",
 ] }
