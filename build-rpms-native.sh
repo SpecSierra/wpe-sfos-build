@@ -584,6 +584,7 @@ ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so"
 cp -a "${SCRIPT_DIR}/adblock-engine/target/release/libatlantic_adblock.so" "${S}/usr/lib64/"
 
 # Adblock engine cache (FlatBuffers .dat)
+mkdir -p "${S}/usr/share/atlantic-browser"
 cp -a "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat" \
       "${S}/usr/share/atlantic-browser/engine.dat"
 
