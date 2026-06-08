@@ -708,3 +708,4 @@ unset FPM_POST_EXTRA
 echo ""
 echo "All RPMs built successfully:"
 ls -lh "$OUT"/*.rpm
+# CI trigger
