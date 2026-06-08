@@ -479,6 +479,8 @@ fetch_content_blocker_list easyprivacy "${EASYPRIVACY_URL}" "${EASYPRIVACY_SHA25
 # Adblock engine filter lists (cookie consent, annoyance, cosmetic)
 fetch_content_blocker_list fanboy-annoyance "${FANBOY_ANNOYANCE_URL}"  "${FANBOY_ANNOYANCE_SHA256:-}"
 fetch_content_blocker_list ubo-annoyances   "${UBO_ANNOYANCES_URL}"    "${UBO_ANNOYANCES_SHA256:-}"
+fetch_content_blocker_list fanboy-social     "${FANBOY_SOCIAL_URL}"    "${FANBOY_SOCIAL_SHA256:-}"
+fetch_content_blocker_list anti-cv           "${ANTI_CV_URL}"          "${ANTI_CV_SHA256:-}"
 
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
@@ -532,7 +534,9 @@ echo "--- Compiling filter list cache ---"
     "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
     "${CONTENT_BLOCKER_FETCH_DIR}/easyprivacy.txt" \
     "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-annoyance.txt" \
-    "${CONTENT_BLOCKER_FETCH_DIR}/ubo-annoyances.txt"
+    "${CONTENT_BLOCKER_FETCH_DIR}/ubo-annoyances.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-social.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/anti-cv.txt"
 
 # Binary
 mkdir -p "${S}/usr/bin"
