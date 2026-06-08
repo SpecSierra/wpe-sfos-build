@@ -1,0 +1,17 @@
+[package]
+name = "atlantic-adblock"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "builder"
+
+[dependencies]
+adblock = { version = "0.12", default-features = false, features = [
+    "full-regex-handling",
+    "resource-assembler",
+] }

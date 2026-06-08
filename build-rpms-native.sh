@@ -471,6 +471,10 @@ fetch_content_blocker_list() {
 fetch_content_blocker_list easylist    "${EASYLIST_URL}"    "${EASYLIST_SHA256:-}"
 fetch_content_blocker_list easyprivacy "${EASYPRIVACY_URL}" "${EASYPRIVACY_SHA256:-}"
 
+# Adblock engine filter lists (cookie consent, annoyance, cosmetic)
+fetch_content_blocker_list fanboy-annoyance "${FANBOY_ANNOYANCE_URL}"  "${FANBOY_ANNOYANCE_SHA256:-}"
+fetch_content_blocker_list ubo-annoyances   "${UBO_ANNOYANCES_URL}"    "${UBO_ANNOYANCES_SHA256:-}"
+
 python3 "${SCRIPT_DIR}/easylist-to-webkit.py" \
     "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
     --max-rules 10000 \
@@ -503,6 +507,20 @@ rules = (json.loads(defaults_path.read_text())
 output_path.write_text(json.dumps(rules, indent=2))
 print(f"Wrote {len(rules)} content blocker rules to {output_path}")
 PY
+
+# ---------------------------------------------------------------------------
+# Build adblock-rust engine and compile filter list cache
+# ---------------------------------------------------------------------------
+echo "--- Building adblock engine ---"
+(cd "${SCRIPT_DIR}/adblock-engine" && cargo build --release)
+
+echo "--- Compiling filter list cache ---"
+"${SCRIPT_DIR}/adblock-engine/target/release/builder" \
+    "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/easyprivacy.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-annoyance.txt" \
+    "${CONTENT_BLOCKER_FETCH_DIR}/ubo-annoyances.txt"
 
 # Binary
 mkdir -p "${S}/usr/bin"
@@ -554,6 +572,13 @@ cp -a "${BROWSER_SRC}/build_wpe/libsailfishbrowser.so.1.0.0" "${S}/usr/lib64/"
 ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so.1.0"
 ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so.1"
 ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so"
+
+# Adblock engine shared library
+cp -a "${SCRIPT_DIR}/adblock-engine/target/release/libatlantic_adblock.so" "${S}/usr/lib64/"
+
+# Adblock engine cache (FlatBuffers .dat)
+cp -a "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat" \
+      "${S}/usr/share/atlantic-browser/engine.dat"
 
 # QML files
 mkdir -p "${S}/usr/share/atlantic-browser"
