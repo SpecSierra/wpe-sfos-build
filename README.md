@@ -49,7 +49,8 @@ Current checkouts on the build host:
 | `scripts/build-ui.sh` | Atlantic UI/browser build against the staged engine |
 | `scripts/package-rpms.sh` | packaging entrypoint that delegates to the native RPM staging script |
 | `build-rpms-native.sh` | native RPM staging/packaging script |
-| `easylist-to-webkit.py` | converts EasyList/EasyPrivacy sources to WebKit content blocker JSON |
+| `adblock-engine/` | Brave/Rust adblock engine: `libatlantic_adblock.so` + the `builder` that compiles filter lists into `engine.dat` |
+| `web-extension/` | WebKit WebProcess extension that runs the Brave engine on every resource request (the sole network ad/tracker blocker) |
 | `data/content-blocker/` | build-time download target for EasyList/EasyPrivacy (gitignored, not vendored; fetched by `build-rpms-native.sh`, URLs/pins in `versions.env`) |
 | `cmake/` | shared CMake cache presets used by both the script and spec packaging paths |
 | `deploy/` | helper-process wrappers, shared runtime env, and deployment-time assets |
