@@ -1,7 +1,8 @@
 # Atlantic Browser — Firejail confinement profile.
 #
-# Direct firejail profile loaded by /usr/bin/atlantic-browser when
-# ATLANTIC_ENABLE_SAILJAIL=1 (the default).  Applied via
+# Optional firejail profile loaded by /usr/bin/atlantic-browser only when
+# ATLANTIC_ENABLE_SAILJAIL=1 (NOT the default — the default confinement is
+# Sailjail, applied by the .desktop entry). Applied via
 # `firejail --profile=/etc/firejail/atlantic-browser.profile`.
 #
 # REPLACES the previous bwrap-based WebKit sandbox (build iteration 213-227)

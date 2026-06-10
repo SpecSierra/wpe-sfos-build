@@ -547,13 +547,15 @@ fi
 LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser-env"
 
-# WPE launcher wrapper script
-# Sailjail-style confinement via firejail — OFF by default (experimental).
-# On-device testing (Xperia 10 II, SFOS 5.1) showed this path does NOT work as
-# When ATLANTIC_ENABLE_SAILJAIL=1 (the default), re-exec under firejail with
-# the Atlantic Browser confinement profile.  This replaces the bwrap-based
-# WebKit sandbox which is incompatible with the libhybris/Adreno GPU stack.
-# Set ATLANTIC_ENABLE_SAILJAIL=0 to disable firejail confinement.
+# WPE launcher wrapper (/usr/bin/atlantic-browser), used by the D-Bus
+# activation services (org.atlantic.browser[.ui]).
+#
+# Primary confinement is Sailjail, applied by the .desktop entry
+# (Exec=sailjail --profile=atlantic-browser ...) — that is the default launch
+# path. bwrap is NOT used: it is incompatible with the libhybris/Adreno GPU
+# stack. This wrapper additionally offers OPTIONAL firejail confinement for
+# launches that do not go through Sailjail; it is OFF by default. Opt in with
+# ATLANTIC_ENABLE_SAILJAIL=1.
 cat > "${S}/usr/bin/atlantic-browser" <<LAUNCHER
 #!/bin/sh
 if [ "\${ATLANTIC_ENABLE_SAILJAIL:-0}" = "1" ] && [ -z "\${ATLANTIC_IN_SAILJAIL:-}" ] && command -v firejail >/dev/null 2>&1; then
@@ -565,8 +567,8 @@ LAUNCHER
 chmod 755 "${S}/usr/bin/atlantic-browser"
 cp -a "${BROWSER_SRC}/build_browser/atlantic-browser" "${S}/usr/bin/atlantic-browser.bin"
 
-# Sailjail firejail confinement profile (applied when ATLANTIC_ENABLE_SAILJAIL=1,
-# the default).  Installed to /etc/firejail.
+# firejail profile for the optional wrapper confinement above (used only when
+# ATLANTIC_ENABLE_SAILJAIL=1, which is not the default). Installed to /etc/firejail.
 mkdir -p "${S}/etc/firejail"
 cp -a "${SCRIPT_DIR}/deploy/atlantic-browser.firejail.profile" \
       "${S}/etc/firejail/atlantic-browser.profile"
@@ -667,10 +669,16 @@ cp -a "${BROWSER_SRC}/build_browser/atlantic-browser_eng_en.qm" "${S}/usr/share/
 mkdir -p "${S}/etc/sailjail/applications"
 cat > "${S}/etc/sailjail/applications/atlantic-browser.profile" << 'EOF'
 [sailfish]
+# Sailjail is the default launch path (.desktop Exec=sailjail). Sandbox
+# ENFORCEMENT is currently disabled pending on-device validation of the full
+# path whitelist (see sailjail/atlantic-browser.permission). Flip to
+# Sandboxing=enabled once that is verified on device.
 Sandboxing=disabled
 
+# Keep in sync with the .desktop [X-Sailjail] block. "atlantic-browser" pulls in
+# the custom permission (GPU/hybris noblacklists) needed once sandboxing is on.
 [X-Sailjail]
-Permissions=Internet;Audio
+Permissions=Internet;Audio;WebView;UserDirs;atlantic-browser
 OrganizationName=org.sailfishos
 ApplicationName=browser
 EOF
