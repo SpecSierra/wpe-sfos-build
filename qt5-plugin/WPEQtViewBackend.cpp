@@ -81,41 +81,6 @@ WPEQtViewBackend::WPEQtViewBackend(const QSizeF& size, EGLDisplay display, EGLCo
 
     imageTargetTexture2DOES = reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(eglGetProcAddress("glEGLImageTargetTexture2DOES"));
 
-    static const char* vertexShaderSource =
-        "attribute vec2 pos;\n"
-        "attribute vec2 texture;\n"
-        "varying vec2 v_texture;\n"
-        "void main() {\n"
-        "  v_texture = texture;\n"
-        "  gl_Position = vec4(pos, 0, 1);\n"
-        "}\n";
-    static const char* fragmentShaderSource =
-        "precision mediump float;\n"
-        "uniform sampler2D u_texture;\n"
-        "varying vec2 v_texture;\n"
-        "void main() {\n"
-        "  gl_FragColor = texture2D(u_texture, v_texture);\n"
-        "}\n";
-
-    QOpenGLFunctions* glFunctions = context->functions();
-    GLuint vertexShader = glFunctions->glCreateShader(GL_VERTEX_SHADER);
-    glFunctions->glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
-    glFunctions->glCompileShader(vertexShader);
-
-    GLuint fragmentShader = glFunctions->glCreateShader(GL_FRAGMENT_SHADER);
-    glFunctions->glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
-    glFunctions->glCompileShader(fragmentShader);
-
-    m_program = glFunctions->glCreateProgram();
-    glFunctions->glAttachShader(m_program, vertexShader);
-    glFunctions->glAttachShader(m_program, fragmentShader);
-
-    glFunctions->glBindAttribLocation(m_program, 0, "pos");
-    glFunctions->glBindAttribLocation(m_program, 1, "texture");
-
-    glFunctions->glLinkProgram(m_program);
-    m_textureUniform = glFunctions->glGetUniformLocation(m_program, "u_texture");
-
     static struct wpe_view_backend_exportable_fdo_egl_client exportableClient = {
         // export_egl_image
         nullptr,

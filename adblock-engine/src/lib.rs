@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 use std::slice;
 
 use adblock::engine::Engine as AdblockEngine;
-use adblock::lists::{FilterSet, ParseOptions};
+use adblock::lists::FilterSet;
 use adblock::request::Request;
 
 pub struct AtlanticAdblockEngine {
@@ -72,69 +72,9 @@ pub unsafe extern "C" fn atlantic_adblock_create_from_cache(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn atlantic_adblock_create_from_lists(
-    lists: *const *const c_char,
-    count: i32,
-) -> *mut AtlanticAdblockEngine {
-    if lists.is_null() || count <= 0 {
-        return std::ptr::null_mut();
-    }
-
-    let mut filter_set = FilterSet::new(true);
-    let list_slice = slice::from_raw_parts(lists, count as usize);
-
-    for &ptr in list_slice {
-        if ptr.is_null() {
-            continue;
-        }
-        let path = CStr::from_ptr(ptr).to_str().unwrap_or("");
-        if let Ok(text) = std::fs::read_to_string(path) {
-            let fmt = if path.contains("hosts") {
-                adblock::lists::FilterFormat::Hosts
-            } else {
-                adblock::lists::FilterFormat::Standard
-            };
-            let opts = ParseOptions {
-                format: fmt,
-                ..ParseOptions::default()
-            };
-            filter_set.add_filter_list(&text, opts);
-        }
-    }
-
-    let engine = AdblockEngine::from_filter_set(filter_set, true);
-    Box::into_raw(Box::new(AtlanticAdblockEngine { engine }))
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn atlantic_adblock_destroy(engine: *mut AtlanticAdblockEngine) {
     if !engine.is_null() {
         drop(Box::from_raw(engine));
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn atlantic_adblock_serialize(
-    engine: *mut AtlanticAdblockEngine,
-    out: *mut *mut u8,
-    out_len: *mut usize,
-) -> i32 {
-    if engine.is_null() || out.is_null() || out_len.is_null() {
-        return 0;
-    }
-    let eng = &(*engine).engine;
-    let data = eng.serialize();
-    let len = data.len();
-    let ptr = data.leak();
-    *out = ptr.as_mut_ptr();
-    *out_len = len;
-    1
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn atlantic_adblock_free_buffer(buf: *mut u8, len: usize) {
-    if !buf.is_null() && len > 0 {
-        drop(Vec::from_raw_parts(buf, len, len));
     }
 }
 
@@ -258,17 +198,4 @@ pub unsafe extern "C" fn atlantic_adblock_free_cosmetic(result: CosmeticResult) 
     if !result.generated_css.is_null() {
         drop(CString::from_raw(result.generated_css as *mut c_char));
     }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn atlantic_adblock_enable_tag(
-    engine: *mut AtlanticAdblockEngine,
-    tag: *const c_char,
-) {
-    if engine.is_null() || tag.is_null() {
-        return;
-    }
-    let eng = &mut (*engine).engine;
-    let tag_str = str_from_c(tag);
-    eng.enable_tags(&[tag_str]);
 }

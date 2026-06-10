@@ -31,7 +31,6 @@
 #include <QHoverEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <QElapsedTimer>
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
 #include <QPointer>
@@ -78,15 +77,11 @@ private:
     struct wpe_fdo_egl_exported_image* m_pendingImage { nullptr };
     struct wpe_fdo_egl_exported_image* m_committedImage { nullptr };
     bool m_frameUpdateRequested { false };
-    QElapsedTimer m_frameThrottleTimer;
-    qint64 m_frameIntervalMs { 33 }; // default ~30fps; 0 = unlimited
 
     QPointer<WPEQtView> m_view;
     QOffscreenSurface m_surface;
     QSizeF m_size;
     GLuint m_textureId { 0 };
-    unsigned m_program { 0 };
-    unsigned m_textureUniform { 0 };
 
     bool m_hovering { false };
     uint32_t m_mouseModifiers { 0 };

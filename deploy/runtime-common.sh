@@ -60,10 +60,6 @@ atlantic_build_ld_preload() {
         preload="${preload}${sep}${ATLANTIC_COMPAT_DIR}/libglibc-compat.so"
         sep=":"
     fi
-    if [ "${USE_COW_STRING_COMPAT:-0}" = "1" ]; then
-        preload="${preload}${sep}${ATLANTIC_COMPAT_DIR}/libcow_string_compat.so"
-        sep=":"
-    fi
     if [ "${USE_SIGILL_SKIP:-0}" = "1" ]; then
         preload="${preload}${sep}${ATLANTIC_COMPAT_DIR}/libsigill_skip.so"
         sep=":"
