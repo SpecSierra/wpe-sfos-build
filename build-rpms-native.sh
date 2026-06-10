@@ -629,6 +629,7 @@ cp -a "${BROWSER_SRC}/apps/browser/qml/pages"        "${S}/usr/share/atlantic-br
 cp -a "${BROWSER_SRC}/apps/browser/qml/cover"        "${S}/usr/share/atlantic-browser/"
 mkdir -p "${S}/usr/share/atlantic-browser/shared"
 cp -a "${BROWSER_SRC}/apps/shared/"*.qml             "${S}/usr/share/atlantic-browser/shared/"
+cp -a "${BROWSER_SRC}/apps/shared/"*.js              "${S}/usr/share/atlantic-browser/shared/"
 
 # Data files
 mkdir -p "${S}/usr/share/atlantic-browser/data"
