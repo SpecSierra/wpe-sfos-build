@@ -268,15 +268,16 @@ for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
 ATLANTIC_LD_PRELOAD='${WPE_COMPAT_PRELOAD}'
 ATLANTIC_LD_LIBRARY_PATH='${WPE_HELPER_LIBRARY_PATH}'
 atlantic_export_helper_env
-# The browser UI process is pinned to the big cores (atlantic-browser-env) and
-# CPU affinity is inherited across fork/exec, so without a reset here the
-# WebProcess/NetworkProcess — JSC, GC, parser and paint threads included —
-# would be confined to 4 of the 8 cores. Heavy pages need the whole SoC
-# (AppSupport's Chromium runs unpinned); the scheduler keeps hot threads on
-# the big cluster by itself. Derived from nproc, not hardcoded, so the future
+# Pin the WPE helpers (WebProcess/NetworkProcess/GPUProcess) to the big cores.
+# The WebProcess runs the compositor/paint threads, so letting them drift onto
+# the little cluster (cores 0-3 on the Snapdragon 665) causes visible scroll
+# jank — device-verified. An earlier "unpin to all cores for heavy-page
+# throughput" assumed the scheduler keeps hot threads on the big cluster by
+# itself; it does not, and scrolling regressed. Big cores = upper half of the
+# CPU range (Kryo 260 Gold 4-7 here), derived from nproc so the future
 # Mali/Dimensity device is handled too. ATLANTIC_HELPER_CPUSET overrides.
 if command -v taskset >/dev/null 2>&1 && command -v nproc >/dev/null 2>&1; then
-    cpuset="\${ATLANTIC_HELPER_CPUSET:-0-\$(( \$(nproc) - 1 ))}"
+    cpuset="\${ATLANTIC_HELPER_CPUSET:-\$(( \$(nproc) / 2 ))-\$(( \$(nproc) - 1 ))}"
     exec taskset -c "\${cpuset}" "${ATLANTIC_WPE_HELPER_DIR}/${helper}" "\$@"
 fi
 exec "${ATLANTIC_WPE_HELPER_DIR}/${helper}" "\$@"
