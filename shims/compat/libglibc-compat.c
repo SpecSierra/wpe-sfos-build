@@ -75,27 +75,26 @@ long long __isoc23_strtoll(const char *nptr, char **endptr, int base)
 #define AT_EMPTY_PATH 0x1000
 #endif
 
+/* NOTE: glibc's syscall(2) wrapper already returns -1 with errno set on
+ * failure (it does NOT return -errno).  The previous `errno = -r` here
+ * clobbered the real error with EPERM (-(-1) == 1) for EVERY failed stat,
+ * so callers probing for ENOENT (sqlite, fontconfig, GIO, dlopen path
+ * search) saw "permission denied" instead of "not found". */
 int fstat(int fd, struct stat *buf)
 {
-    int r = syscall(SYS_newfstatat, fd, "", buf, AT_EMPTY_PATH);
-    if (r < 0) { errno = -r; return -1; }
-    return 0;
+    return (int)syscall(SYS_newfstatat, fd, "", buf, AT_EMPTY_PATH);
 }
 
 int fstat64(int fd, struct stat *buf) { return fstat(fd, buf); }
 
 int stat(const char *path, struct stat *buf)
 {
-    int r = syscall(SYS_newfstatat, AT_FDCWD, path, buf, 0);
-    if (r < 0) { errno = -r; return -1; }
-    return 0;
+    return (int)syscall(SYS_newfstatat, AT_FDCWD, path, buf, 0);
 }
 
 int lstat(const char *path, struct stat *buf)
 {
-    int r = syscall(SYS_newfstatat, AT_FDCWD, path, buf, AT_SYMLINK_NOFOLLOW);
-    if (r < 0) { errno = -r; return -1; }
-    return 0;
+    return (int)syscall(SYS_newfstatat, AT_FDCWD, path, buf, AT_SYMLINK_NOFOLLOW);
 }
 
 /* stat64/lstat64/fstat64 — on aarch64 these are identical to the non-64 variants */

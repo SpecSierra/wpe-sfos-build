@@ -106,11 +106,19 @@ atlantic_export_helper_env() {
     export GST_PLUGIN_SYSTEM_PATH_1_0="${ATLANTIC_GSTREAMER_PLUGIN_DIR}"
     export GST_PLUGIN_PATH="${ATLANTIC_GSTREAMER_PLUGIN_DIR}"
     export GST_PLUGIN_FEATURE_RANK="${ATLANTIC_GST_PLUGIN_FEATURE_RANK}"
-    export WEBKIT_GST_BUFFER_SIZE="${WEBKIT_GST_BUFFER_SIZE:-10485760}"
-    # GStreamer pipeline tuning (via patched WebKit source)
+    # GStreamer pipeline tuning. The three WEBKIT_GST_* knobs below are consumed
+    # by patches/webkit/webkit-gst-buffer-tuning.patch (MediaPlayerPrivate-
+    # GStreamer::configureElement) — they are NOT upstream env vars, so they do
+    # nothing unless that patch is in scripts/patches.sh.
+    #   queue2 high-watermark 0.05 (upstream hardcodes 0.10): start playback at
+    #     a 5% fill instead of 10% — faster stream start, fewer "buffering"
+    #     pauses on fast links.
+    #   ring-buffer 16 MB / uridecodebin multiqueue 8 MB (upstream 2 MB each):
+    #     deeper read-ahead for progressive/blob playback.
     export WEBKIT_GST_QUEUE_HIGH_WATERMARK="${WEBKIT_GST_QUEUE_HIGH_WATERMARK:-0.05}"
     export WEBKIT_GST_RING_BUFFER_MAX_SIZE="${WEBKIT_GST_RING_BUFFER_MAX_SIZE:-16777216}"
     export WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE="${WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE:-8388608}"
+    # Upstream env var (GstDownloadBuffer max-size-bytes, default 100 KB).
     export WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES="${WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES:-67108864}"
     # Decode-resolution ceiling (format WIDTHxHEIGHT@FRAMERATE, consumed by
     # WebCore GStreamerRegistryScanner). The browser advertises support only up
@@ -157,12 +165,9 @@ atlantic_export_browser_env() {
     export ATLANTIC_BROWSER_RUNTIME_DELAY_MS="${ATLANTIC_BROWSER_RUNTIME_DELAY_MS}"
     export WEBKIT_GST_ENABLE_HLS_SUPPORT="${ATLANTIC_WEBKIT_HLS_SUPPORT}"
 
-    # ── GStreamer buffer tuning (via patched WebKit source) ──────────────────
-    export WEBKIT_GST_BUFFER_SIZE="${WEBKIT_GST_BUFFER_SIZE:-10485760}"        # 10 MB ring buffer
-    export WEBKIT_GST_QUEUE_HIGH_WATERMARK="${WEBKIT_GST_QUEUE_HIGH_WATERMARK:-0.05}"    # 5% fill threshold (was hardcoded 10%)
-    export WEBKIT_GST_RING_BUFFER_MAX_SIZE="${WEBKIT_GST_RING_BUFFER_MAX_SIZE:-16777216}"  # 16 MB ring buffer (was 2 MB)
-    export WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE="${WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE:-8388608}"  # 8 MB multiqueue (was 2 MB)
-    export WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES="${WPE_SHELL_MEDIA_DISK_CACHE_SIZE_BYTES:-67108864}"  # 64 MB disk cache
+    # GStreamer buffer tuning is exported once in atlantic_export_helper_env
+    # (called above) — GStreamer runs in WPEWebProcess, which gets the helper
+    # env; the browser process only needs it for pages WebKit runs in-process.
 
     # ── GStreamer debug (uncomment to diagnose buffering issues) ──────────────
     # export GST_DEBUG="${GST_DEBUG:-webkit*:4,GstQueue2:3}"
@@ -192,24 +197,30 @@ atlantic_export_browser_env() {
     export JSC_worklistDFGLoadWeight=5
     export JSC_worklistBaselineLoadWeight=2
 
-    # ── JSC JIT tier-up thresholds ────────────────────────────────────────────
-    # Lower thresholds so hot functions reach JIT earlier without waiting for
-    # the default call-count watermarks (500/1000).
-    export JSC_thresholdForJITAfterWarmUp=50
-    export JSC_thresholdForOptimizeAfterWarmUp=200
-
-    # ── JSC GC heap tuning ────────────────────────────────────────────────────
-    # Cap JS heap at 35% of available RAM. Setting 0.8/0.9 let the heap grow
-    # to ~900 MB before GC, pushing this device into heavy zram swap (884/1024 MB
-    # used) — swap latency is far worse than GC churn. 35% ≈ 350 MB for JS
-    # on this 3.5 GB device, enough for large SPAs without thrashing swap.
-    export JSC_smallHeapRAMFraction=0.50
-    export JSC_largeHeapSize=67108864
-    # Disable type-profiling heap snapshot (fires on every GC).  On the device
-    # this saves ~3-8 MB of heap overhead and removes a frequent allocation
-    # hot spot in the GC finaliser.
-    export JSC_useTypeProfiler=0
-    export JSC_useControlFlowProfiler=0
+    # ── JSC JIT tier-up thresholds / GC heap tuning ──────────────────────────
+    # Deliberately NOT overridden — and actively cleared below, because stale
+    # values can still arrive via the systemd user session env (the old
+    # /var/lib/environment/nemo/70-browser.conf injected them).
+    #
+    # Tier-up: the previous thresholdForJITAfterWarmUp=50 /
+    # thresholdForOptimizeAfterWarmUp=200 (vs upstream 500/1000) made tier-up
+    # 10x/5x more eager, flooding the 2-thread compiler worklist with
+    # baseline/DFG compiles of barely-warm functions during page load —
+    # exactly the heavy-page phase that was slow — and increasing DFG
+    # recompiles from early type instability. Late-tier latency is already
+    # addressed by webkit-jsc-linux-arm64-jit-thresholds.patch (FTL threshold
+    # 64000 → 15000).
+    #
+    # GC: the previous JSC_smallHeapRAMFraction=0.50 did the OPPOSITE of its
+    # stated "cap the heap to avoid zram swap" intent: raising the fraction
+    # (default 0.25) keeps heaps in the "small" class up to ~1.75 GB on this
+    # device, where JSC applies smallHeapGrowthFactor=2.0 (vs 1.5/1.24 for
+    # medium/large) — i.e. the heap was allowed to DOUBLE before collecting,
+    # growing memory pressure and swap. Upstream defaults collect earlier.
+    # (useTypeProfiler/useControlFlowProfiler are already false by default.)
+    unset JSC_thresholdForJITAfterWarmUp JSC_thresholdForOptimizeAfterWarmUp \
+          JSC_smallHeapRAMFraction JSC_largeHeapRAMFraction JSC_largeHeapSize \
+          JSC_useTypeProfiler JSC_useControlFlowProfiler 2>/dev/null || true
 
     # ── Skia painting thread caps ────────────────────────────────────────────
     # WEBKIT_SKIA_GPU_PAINTING_THREADS is intentionally NOT set here. The browser

@@ -58,6 +58,13 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-jsc-linux-arm64-thread-tuning.patch"
     "patches/webkit/webkit-jsc-linux-arm64-jit-thresholds.patch"
     "patches/webkit/webkit-webcore-scroll-anim-narrowing.patch"
+    # webkit-gst-buffer-tuning.patch: makes GstQueue2 high-watermark,
+    # urisourcebin ring-buffer-max-size and uridecodebin buffer-size
+    # configurable via WEBKIT_GST_QUEUE_HIGH_WATERMARK /
+    # WEBKIT_GST_RING_BUFFER_MAX_SIZE / WEBKIT_GST_URIDECODEBIN_BUFFER_SIZE
+    # (defaults exported by deploy/runtime-common.sh). Authored in 20106a4 but
+    # never added to this list — the runtime env vars were dead until now.
+    "patches/webkit/webkit-gst-buffer-tuning.patch"
     "patches/webkit/webkit-bubblewrap-sfos-sandbox.patch"
 )
 

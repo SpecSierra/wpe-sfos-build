@@ -13,6 +13,16 @@ on:
       - patches/**
       - rpm/**
       - versions.env
+      # deploy/ (runtime-common.sh, launcher templates), shims/ and cmake/
+      # (toolchains, feature flags) all change the shipped RPM contents —
+      # their omission here previously let runtime/toolchain changes land
+      # without triggering a build.
+      - deploy/**
+      - shims/**
+      - cmake/**
+      - sfos-toolchain*.cmake
+      - qt5-plugin/**
+      - adblock-engine/**
     tags:
       - 'v*.*.*'
 

@@ -268,6 +268,17 @@ for helper in WPEWebProcess WPENetworkProcess WPEGPUProcess; do
 ATLANTIC_LD_PRELOAD='${WPE_COMPAT_PRELOAD}'
 ATLANTIC_LD_LIBRARY_PATH='${WPE_HELPER_LIBRARY_PATH}'
 atlantic_export_helper_env
+# The browser UI process is pinned to the big cores (atlantic-browser-env) and
+# CPU affinity is inherited across fork/exec, so without a reset here the
+# WebProcess/NetworkProcess — JSC, GC, parser and paint threads included —
+# would be confined to 4 of the 8 cores. Heavy pages need the whole SoC
+# (AppSupport's Chromium runs unpinned); the scheduler keeps hot threads on
+# the big cluster by itself. Derived from nproc, not hardcoded, so the future
+# Mali/Dimensity device is handled too. ATLANTIC_HELPER_CPUSET overrides.
+if command -v taskset >/dev/null 2>&1 && command -v nproc >/dev/null 2>&1; then
+    cpuset="\${ATLANTIC_HELPER_CPUSET:-0-\$(( \$(nproc) - 1 ))}"
+    exec taskset -c "\${cpuset}" "${ATLANTIC_WPE_HELPER_DIR}/${helper}" "\$@"
+fi
 exec "${ATLANTIC_WPE_HELPER_DIR}/${helper}" "\$@"
 WRAPPER
     chmod 755 "${S}${PACKAGE_RUNTIME_PREFIX}/libexec/wpe-webkit-2.0/${helper}"
