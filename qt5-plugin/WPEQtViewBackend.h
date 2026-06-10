@@ -82,6 +82,9 @@ private:
     QOffscreenSurface m_surface;
     QSizeF m_size;
     GLuint m_textureId { 0 };
+    // Kept to prime GL state for the Qt ShaderEffect chrome blur (see ctor).
+    unsigned m_program { 0 };
+    unsigned m_textureUniform { 0 };
 
     bool m_hovering { false };
     uint32_t m_mouseModifiers { 0 };
