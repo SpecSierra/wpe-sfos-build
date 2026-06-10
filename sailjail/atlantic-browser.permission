@@ -33,6 +33,7 @@ noblacklist /usr/libexec/wpe-webkit-2.0
 noblacklist /usr/libexec/droid-hybris
 noblacklist /usr/lib64/wpe-compat
 noblacklist /usr/lib64/qt5
+noblacklist /usr/lib64/atlantic-browser
 noblacklist /usr/share/atlantic-browser
 noblacklist /usr/share/qt5
 noblacklist /odm

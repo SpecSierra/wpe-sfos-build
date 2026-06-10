@@ -615,6 +615,24 @@ ln -sfn libsailfishbrowser.so.1.0.0 "${S}/usr/lib64/libsailfishbrowser.so"
 # Adblock engine shared library
 cp -a "${SCRIPT_DIR}/adblock-engine/target/release/libatlantic_adblock.so" "${S}/usr/lib64/"
 
+# Adblock WebProcess extension — does the network blocking inside the WebProcess
+# (the only place that sees every subresource). Links libatlantic_adblock so the
+# Brave engine is pulled into the WebProcess. Built with the same SFOS toolchain
+# as the qt5 plugin; installed where the UI process points the extensions dir.
+echo "--- Building adblock web-process extension ---"
+EXT_BUILD="${STAGING}/web-extension-build"
+rm -rf "${EXT_BUILD}"
+PKG_CONFIG_PATH="${WPE_PREFIX}/lib/pkgconfig:${WPE_PREFIX}/lib/aarch64-linux-gnu/pkgconfig" \
+cmake -B "${EXT_BUILD}" -S "${SCRIPT_DIR}/web-extension" -G Ninja \
+    -DCMAKE_TOOLCHAIN_FILE="${SCRIPT_DIR}/sfos-toolchain.cmake" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DATLANTIC_ADBLOCK_LIBDIR="${SCRIPT_DIR}/adblock-engine/target/release"
+ninja -C "${EXT_BUILD}"
+mkdir -p "${S}/usr/lib64/atlantic-browser/web-extensions"
+cp -a "${EXT_BUILD}/libatlantic-adblock-extension.so" \
+      "${S}/usr/lib64/atlantic-browser/web-extensions/"
+maybe_patch_glibc_versions "${S}/usr/lib64/atlantic-browser/web-extensions/libatlantic-adblock-extension.so"
+
 # Adblock engine cache (FlatBuffers .dat)
 mkdir -p "${S}/usr/share/atlantic-browser"
 cp -a "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat" \
