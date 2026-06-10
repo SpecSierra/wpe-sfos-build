@@ -126,6 +126,11 @@ void WPEQtView::createWebView()
     if (m_pendingDeviceScaleFactor != 1.0)
         webkit_web_view_set_zoom_level(m_webView, m_pendingDeviceScaleFactor);
 
+    if (!m_pendingUserAgent.isEmpty()) {
+        webkit_settings_set_user_agent(webkit_web_view_get_settings(m_webView),
+                                       m_pendingUserAgent.toUtf8().constData());
+    }
+
     if (!m_url.isEmpty())
         webkit_web_view_load_uri(m_webView, m_url.toString().toUtf8().constData());
     else if (!m_html.isEmpty())
@@ -537,6 +542,11 @@ WebKitWebView* WPEQtView::webView() const
 
 void WPEQtView::setUserAgent(const QString& userAgent)
 {
+    // The web view is created lazily (deferred until the scene graph is
+    // initialised), so buffer the UA instead of dropping it — otherwise an
+    // early caller silently leaves the stock WPE UA in place and sites serve
+    // the wrong variant for the whole session.
+    m_pendingUserAgent = userAgent;
     if (!m_webView)
         return;
     WebKitSettings* settings = webkit_web_view_get_settings(m_webView);

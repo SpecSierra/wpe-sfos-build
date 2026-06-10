@@ -137,4 +137,5 @@ private:
     WPEQtViewBackend* m_backend { nullptr };
     bool m_errorOccured { false };
     qreal m_pendingDeviceScaleFactor { 1.0 };
+    QString m_pendingUserAgent;
 };
