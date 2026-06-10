@@ -338,80 +338,9 @@ fpm_rpm wpewebkit2-qt5 "$LEGACY_WPEWEBKIT_VERSION" "WPE WebKit Qt5 QML plugin fo
 # ===========================================================================
 # 6. wpe-sfos-compat  (compiled from source)
 # ===========================================================================
-echo "--- Building wpe-sfos-compat shims ---"
-COMPAT_SRC="${SCRIPT_DIR}/shims/compat"
-COMPAT_BUILD="${STAGING}/compat-build"
-rm -rf "$COMPAT_BUILD"; mkdir -p "$COMPAT_BUILD"
-
-CC=gcc
-CFLAGS="-O2 -march=armv8-a -mtune=cortex-a73.cortex-a53 -fPIC -fvisibility=hidden"
-SHARED="-shared -Wl,--allow-shlib-undefined"
-
-for lib in \
-    "libsigill_skip.so:libsigill_skip.c"
-do
-    name="${lib%%:*}"; src="${lib##*:}"
-    $CC $CFLAGS $SHARED -o "${COMPAT_BUILD}/${name}" "${COMPAT_SRC}/${src}"
-done
-
-# libegl-stubs.so: must NOT use -fvisibility=hidden — symbols must be globally
-# visible so dlsym(RTLD_DEFAULT, "eglCreateSync") finds them in patched libepoxy
-$CC -O2 -march=armv8-a -mtune=cortex-a73.cortex-a53 -fPIC $SHARED \
-    -o "${COMPAT_BUILD}/libegl-stubs.so" "${COMPAT_SRC}/libegl-stubs.c"
-
-# libglibc-compat.so: needs version script (GLIBC_2.17 + GLIBC_2.34 sections)
-# and must export dlopen/dlsym/dlerror@GLIBC_2.34 for binaries built on glibc 2.34+
-if [ "${USE_GLIBC_COMPAT}" = "1" ]; then
-    $CC -O2 -march=armv8-a -mtune=cortex-a73.cortex-a53 -fPIC $SHARED \
-        -Wl,--version-script="${COMPAT_SRC}/libglibc-compat.map" \
-        -o "${COMPAT_BUILD}/libglibc-compat.so" "${COMPAT_SRC}/libglibc-compat.c" \
-        -ldl
-fi
-
-# GLib compat: provides g_once_init_enter/leave_pointer absent from Jolla's GLib 2.78.4 build
-# Must link against SFOS libglib-2.0 so the wrappers call the real SFOS implementation
-if [ "${USE_GLIB_COMPAT}" = "1" ]; then
-    $CC -O2 -march=armv8-a -mtune=cortex-a73.cortex-a53 -fPIC $SHARED \
-        --sysroot="${SFOS_SYSROOT}" \
-        -Wl,-soname,libglib-compat.so \
-        -o "${COMPAT_BUILD}/libglib-compat.so" "${COMPAT_SRC}/libglib_compat.c" \
-        -L"${SFOS_SYSROOT}/usr/lib64" -lglib-2.0
-    ln -sfn libglib-compat.so "${COMPAT_BUILD}/libglib-compat-preload.so"
-fi
-
-# Stub: libgssapi_krb5.so.2 (GSSAPI for libsoup3 — always returns unavailable on SFOS)
-# Note: must NOT use -fvisibility=hidden here — version-script requires GLOBAL symbols
-$CC -O2 -march=armv8-a -mtune=cortex-a73.cortex-a53 -fPIC $SHARED \
-    -Wl,--version-script="${COMPAT_SRC}/libgssapi_krb5.map" \
-    -Wl,-soname,libgssapi_krb5.so.2 \
-    -o "${COMPAT_BUILD}/libgssapi_krb5.so.2" "${COMPAT_SRC}/libgssapi_krb5_stub.c"
-ln -sfn libgssapi_krb5.so.2 "${COMPAT_BUILD}/libgssapi_krb5.so"
-
-# Stub: libharfbuzz-icu.so.0 (avoids pulling in libicuuc.so.74 which SFOS doesn't have)
-# Note: must NOT use -fvisibility=hidden here — symbols must be globally visible
-$CC -O2 -march=armv8-a -mtune=cortex-a73.cortex-a53 -fPIC $SHARED \
-    -Wl,-soname,libharfbuzz-icu.so.0 \
-    -o "${COMPAT_BUILD}/libharfbuzz-icu.so.0" "${COMPAT_SRC}/libharfbuzz_icu_stub.c"
-ln -sfn libharfbuzz-icu.so.0 "${COMPAT_BUILD}/libharfbuzz-icu.so"
-
-# Copy missing runtime libs from Ubuntu (not present on SFOS) into compat dir
-UBUNTU_LIBS=/usr/lib/aarch64-linux-gnu
-for lib in \
-    libsoup-3.0.so.0.7.1 \
-    libbrotlidec.so.1.1.0 \
-    libbrotlicommon.so.1.1.0 \
-    libatomic.so.1.2.0 \
-    libjpeg.so.8.2.2 \
-    libgbm.so.1.0.0; do
-    cp "${UBUNTU_LIBS}/${lib}" "${COMPAT_BUILD}/${lib}"
-done
-
-# Patch glibc version symbols in all compat shims and bundled libs
-if [ "${PATCH_GLIBC_VERSIONS}" = "1" ]; then
-    for f in "${COMPAT_BUILD}"/*.so "${COMPAT_BUILD}"/*.so.[0-9]*; do
-        [ -f "$f" ] && maybe_patch_glibc_versions "$f"
-    done
-fi
+# Compile the C compat shims + gather Ubuntu runtime libs into ${COMPAT_BUILD}.
+# shellcheck source=scripts/stage-compat-shims.sh
+. "${SCRIPT_DIR}/scripts/stage-compat-shims.sh"
 
 echo "--- Staging wpe-sfos-compat ---"
 S="${STAGING}/wpe-sfos-compat"; rm -rf "$S"; mkdir -p "$S"
@@ -443,89 +372,10 @@ fpm_rpm wpe-sfos-compat "$WPE_SFOS_COMPAT_VERSION" "SFOS compatibility shims for
 echo "--- Staging atlantic-browser ---"
 S="${STAGING}/atlantic-browser"; rm -rf "$S"; mkdir -p "$S"
 
-CONTENT_BLOCKER_BUILD_DIR="${STAGING}/content-blocker-build"
-rm -rf "${CONTENT_BLOCKER_BUILD_DIR}"
-mkdir -p "${CONTENT_BLOCKER_BUILD_DIR}"
-
-# Fetch the EasyList sources into the build/staging dir, NOT into the git
-# checkout.  Writing them under ${SCRIPT_DIR}/data used to leave root-owned
-# files in the working tree that the (non-root) CI runner could not `git clean`,
-# breaking the checkout of every subsequent build.  Staging is build-scratch and
-# outside the repo, so the checkout is never affected.
-CONTENT_BLOCKER_FETCH_DIR="${CONTENT_BLOCKER_BUILD_DIR}"
-
-# Cached: an existing fetched copy is reused; a vendored/offline copy under
-# data/content-blocker (read-only seed) is also honoured.
-fetch_content_blocker_list() {
-    local name="$1" url="$2" pin="$3"
-    local dest="${CONTENT_BLOCKER_FETCH_DIR}/${name}.txt"
-    local seed="${CONTENT_BLOCKER_DATA_DIR}/${name}.txt"
-    if [ ! -s "${dest}" ] && [ -s "${seed}" ]; then
-        echo "  Seeding ${name}.txt from vendored copy"
-        cp "${seed}" "${dest}"
-    fi
-    if [ ! -s "${dest}" ]; then
-        echo "  Downloading ${name} from ${url}"
-        wget -q "${url}" -O "${dest}.tmp"
-        mv "${dest}.tmp" "${dest}"
-    else
-        echo "  Using cached ${name}.txt"
-    fi
-    if [ -n "${pin}" ]; then
-        local got; got="$(sha256sum "${dest}" | awk '{print $1}')"
-        if [ "${got}" != "${pin}" ]; then
-            echo "  WARNING: ${name}.txt sha256 ${got} != pinned ${pin} (EasyList updates daily)." >&2
-            if [ "${CONTENT_BLOCKER_STRICT:-0}" = "1" ]; then
-                echo "  CONTENT_BLOCKER_STRICT=1 set — aborting on snapshot drift." >&2
-                exit 1
-            fi
-        fi
-    fi
-    echo "  ${name}: $(grep -m1 '^! Version:' "${dest}" 2>/dev/null || echo 'version unknown')"
-}
-fetch_content_blocker_list easylist    "${EASYLIST_URL}"    "${EASYLIST_SHA256:-}"
-fetch_content_blocker_list easyprivacy "${EASYPRIVACY_URL}" "${EASYPRIVACY_SHA256:-}"
-
-# Adblock engine filter lists (cookie consent, annoyance, cosmetic)
-fetch_content_blocker_list fanboy-annoyance "${FANBOY_ANNOYANCE_URL}"  "${FANBOY_ANNOYANCE_SHA256:-}"
-fetch_content_blocker_list ubo-annoyances   "${UBO_ANNOYANCES_URL}"    "${UBO_ANNOYANCES_SHA256:-}"
-fetch_content_blocker_list fanboy-social     "${FANBOY_SOCIAL_URL}"    "${FANBOY_SOCIAL_SHA256:-}"
-fetch_content_blocker_list anti-cv           "${ANTI_CV_URL}"          "${ANTI_CV_SHA256:-}"
-fetch_content_blocker_list fanboy-cookie     "${FANBOY_COOKIE_URL}"    "${FANBOY_COOKIE_SHA256:-}"
-
-# Regional Anti-CV language lists
-for region in ${REGIONAL_ANTI_CV_LISTS}; do
-    fetch_content_blocker_list "anti-cv-${region}" "${ANTI_CV_REPO_RAW}/${region}.txt" ""
-done
-
-# ---------------------------------------------------------------------------
-# Build adblock-rust engine and compile filter list cache
-# ---------------------------------------------------------------------------
-echo "--- Building adblock engine ---"
-(
-    if [ -f "${HOME}/.cargo/env" ]; then
-        source "${HOME}/.cargo/env"
-    elif [ -n "${SUDO_USER:-}" ] && [ -f "/home/${SUDO_USER}/.cargo/env" ]; then
-        source "/home/${SUDO_USER}/.cargo/env"
-    fi
-    cd "${SCRIPT_DIR}/adblock-engine" && cargo build --release
-)
-
-echo "--- Compiling filter list cache ---"
-BUILDER_ARGS=(
-    "${CONTENT_BLOCKER_BUILD_DIR}/engine.dat"
-    "${CONTENT_BLOCKER_FETCH_DIR}/easylist.txt"
-    "${CONTENT_BLOCKER_FETCH_DIR}/easyprivacy.txt"
-    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-annoyance.txt"
-    "${CONTENT_BLOCKER_FETCH_DIR}/ubo-annoyances.txt"
-    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-social.txt"
-    "${CONTENT_BLOCKER_FETCH_DIR}/anti-cv.txt"
-    "${CONTENT_BLOCKER_FETCH_DIR}/fanboy-cookie.txt"
-)
-for region in ${REGIONAL_ANTI_CV_LISTS}; do
-    BUILDER_ARGS+=("${CONTENT_BLOCKER_FETCH_DIR}/anti-cv-${region}.txt")
-done
-"${SCRIPT_DIR}/adblock-engine/target/release/builder" "${BUILDER_ARGS[@]}"
+# Fetch filter lists, build the Brave/Rust engine, compile engine.dat.
+# Sets CONTENT_BLOCKER_BUILD_DIR / CONTENT_BLOCKER_FETCH_DIR for staging below.
+# shellcheck source=scripts/build-adblock-lists.sh
+. "${SCRIPT_DIR}/scripts/build-adblock-lists.sh"
 
 # Binary
 mkdir -p "${S}/usr/bin"
