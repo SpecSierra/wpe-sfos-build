@@ -1,4 +1,5 @@
 /*
+ * SPDX-License-Identifier: MPL-2.0
  * libegl-stubs.c — EGL 1.5 shim for SFOS Adreno libEGL (EGL 1.4 only)
  *
  * The Hybris/Adreno libEGL.so.1.0.0 on SFOS (Sony Xperia 10 II) does not export

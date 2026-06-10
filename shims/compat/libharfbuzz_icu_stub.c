@@ -1,4 +1,5 @@
 /*
+ * SPDX-License-Identifier: MPL-2.0
  * Minimal libharfbuzz-icu stub for Sailfish OS.
  * WPEWebKit calls hb_icu_script_to_script() to convert ICU script codes
  * to HarfBuzz 4-character tags. The Ubuntu build of libharfbuzz-icu links

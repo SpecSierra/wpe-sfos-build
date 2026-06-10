@@ -1,4 +1,5 @@
 /*
+ * SPDX-License-Identifier: MPL-2.0
  * libglibc-compat.c — shim symbols for running on Sailfish OS (glibc 2.30)
  * when binaries (e.g. libstdc++.so.6.0.33) were built against glibc 2.32-2.38.
  *

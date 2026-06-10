@@ -284,3 +284,21 @@ Atlantic should be maintained like a browser port:
 - the UI should remain thin while the engine moves forward
 
 If a change makes the next engine bump easier, it is probably the right change.
+
+## License
+
+First-party code in this repository is licensed under the **Mozilla Public
+License 2.0** (see `LICENSE.txt`) — consistent with the `atlantic-browser`
+repository and with the Brave/Rust `adblock` engine this project builds on.
+
+This repository also contains code derived from third-party upstreams that keep
+their original licenses (these are **not** relicensed under MPL-2.0):
+
+| Path | License | Origin |
+|------|---------|--------|
+| `qt5-plugin/` | LGPL-2.1-or-later | WebKit WPE Qt API (Copyright Igalia S.L / Zodiac Inflight Innovations) |
+| `patches/webkit/` | per WebKit | patches against WebKit (LGPL-2.1 / BSD-2-Clause) |
+| `adblock-engine/` | MPL-2.0 | wraps the MPL-2.0 `adblock` crate (Brave) |
+
+Keep the upstream copyright/license headers in those files intact. Per-file
+`SPDX-License-Identifier` headers take precedence over this summary.

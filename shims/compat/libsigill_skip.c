@@ -1,4 +1,5 @@
 /*
+ * SPDX-License-Identifier: MPL-2.0
  * libsigill_skip.so — installed via LD_PRELOAD before libpreloadpatchmanager.so
  * runs its init.  On aarch64, __builtin_trap() emits a 4-byte "brk"/"udf"
  * instruction.  We install a SIGILL handler that simply advances PC by 4

@@ -1,4 +1,5 @@
 /*
+ * SPDX-License-Identifier: MPL-2.0
  * Minimal GSSAPI stub for Sailfish OS.
  * libsoup-3.0 links against libgssapi_krb5 for HTTP Negotiate/SPNEGO auth.
  * SFOS has no Kerberos infrastructure, so these all return GSS_S_UNAVAILABLE.

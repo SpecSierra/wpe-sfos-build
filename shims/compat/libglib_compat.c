@@ -1,4 +1,5 @@
 /*
+ * SPDX-License-Identifier: MPL-2.0
  * GLib compatibility shim for Sailfish OS.
  * Provides g_once_init_enter_pointer / g_once_init_leave_pointer which were
  * added in GLib 2.74 but are absent from the Jolla GLib 2.78.4 build.
