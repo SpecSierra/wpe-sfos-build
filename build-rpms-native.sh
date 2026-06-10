@@ -632,10 +632,7 @@ cp -a "${BROWSER_SRC}/apps/shared/"*.qml             "${S}/usr/share/atlantic-br
 
 # Data files
 mkdir -p "${S}/usr/share/atlantic-browser/data"
-cp -a "${BROWSER_SRC}/data/prefs.js"                 "${S}/usr/share/atlantic-browser/data/"
-cp -a "${BROWSER_SRC}/data/ua-update.json"           "${S}/usr/share/atlantic-browser/data/"
 cp -a "${BROWSER_SRC}/data/icon-launcher-browser.png" "${S}/usr/share/atlantic-browser/data/"
-cp -a "${CONTENT_BLOCKER_JSON}"                      "${S}/usr/share/atlantic-browser/content-blocker.json"
 
 # Launcher icon
 mkdir -p "${S}/usr/share/icons/hicolor/86x86/apps"
