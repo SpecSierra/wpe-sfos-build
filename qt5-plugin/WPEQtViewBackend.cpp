@@ -311,7 +311,7 @@ void WPEQtViewBackend::dispatchWheelEvent(QWheelEvent* event)
 {
     QPoint delta = event->angleDelta();
     QPoint numDegrees = delta / 8;
-    struct wpe_input_axis_2d_event wpeEvent;
+    struct wpe_input_axis_2d_event wpeEvent = {};  // zero both axes + base; only one axis is set below
     if (delta.y() == event->QWHEEL_POSITION.y())
         wpeEvent.x_axis = numDegrees.x();
     else
@@ -365,6 +365,11 @@ void WPEQtViewBackend::dispatchTouchEvent(QTouchEvent* event)
         eventType = wpe_input_touch_event_type_null;
         break;
     }
+
+    // No touch points means g_new0(..., 0) returns NULL; dispatching would then
+    // read rawEvents[0].id off a null pointer. Nothing to deliver, so bail out.
+    if (event->touchPoints().isEmpty())
+        return;
 
     int i = 0;
     struct wpe_input_touch_event_raw* rawEvents = g_new0(wpe_input_touch_event_raw, event->touchPoints().length());

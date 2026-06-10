@@ -158,15 +158,15 @@ pub unsafe extern "C" fn atlantic_adblock_get_cosmetic(
         } else {
             let combined: Vec<&str> = resources.hide_selectors.iter().map(|s| s.as_str()).collect();
             let joined = combined.join(", ");
-            CString::new(joined).unwrap().into_raw() as *const c_char
+            // to_c_string tolerates interior NUL bytes (downloaded filter lists are
+            // untrusted); CString::new().unwrap() here would panic instead.
+            to_c_string(&joined) as *const c_char
         };
 
         let script = if resources.injected_script.is_empty() {
             std::ptr::null()
         } else {
-            CString::new(resources.injected_script.as_str())
-                .unwrap()
-                .into_raw() as *const c_char
+            to_c_string(resources.injected_script.as_str()) as *const c_char
         };
 
         let css = if resources.procedural_actions.is_empty() {
@@ -174,7 +174,7 @@ pub unsafe extern "C" fn atlantic_adblock_get_cosmetic(
         } else {
             let combined: Vec<&str> = resources.procedural_actions.iter().map(|s| s.as_str()).collect();
             let joined = combined.join("\n");
-            CString::new(joined).unwrap().into_raw() as *const c_char
+            to_c_string(&joined) as *const c_char
         };
 
         CosmeticResult {
