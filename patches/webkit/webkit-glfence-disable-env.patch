@@ -1,0 +1,59 @@
+--- a/Source/WebCore/platform/graphics/egl/GLFence.cpp	2026-06-11 13:51:34.857793489 +0000
++++ b/Source/WebCore/platform/graphics/egl/GLFence.cpp	2026-06-11 13:52:08.882042234 +0000
+@@ -27,6 +27,9 @@
+ #include "PlatformDisplay.h"
+ #include <wtf/TZoneMallocInlines.h>
+ 
++#include <cstdlib>
++#include <cstring>
++
+ #if USE(LIBEPOXY)
+ #include <epoxy/gl.h>
+ #else
+@@ -37,6 +40,22 @@
+ 
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(GLFence);
+ 
++// Some drivers (e.g. the libhybris-wrapped Adreno 610 on Sailfish OS)
++// advertise EGL/GL fence support but do not actually order GPU work across
++// shared contexts on a server wait, which corrupts Skia-GPU-painted tiles
++// when the compositor samples them. WPE_GL_FENCE_DISABLED=1 makes fences
++// unavailable so every call site falls back to its synchronous path
++// (GrSyncCpu::kYes / glFinish), which guarantees the producing context's
++// work is complete before any consumer sees the texture.
++static bool fencesDisabledByEnvironment()
++{
++    static bool disabled = [] {
++        const char* env = getenv("WPE_GL_FENCE_DISABLED");
++        return env && *env && strcmp(env, "0");
++    }();
++    return disabled;
++}
++
+ static inline bool eglVersionSupportsFences(const GLDisplay& display)
+ {
+     return display.checkVersion(1, 5);
+@@ -54,6 +73,9 @@
+ 
+ bool GLFence::isSupported(const GLDisplay& display)
+ {
++    if (fencesDisabledByEnvironment())
++        return false;
++
+     auto* context = GLContextWrapper::currentContext();
+     if (!context)
+         return false;
+@@ -71,6 +93,13 @@
+     if (!context)
+         return nullptr;
+ 
++    if (fencesDisabledByEnvironment()) {
++        // Strongest ordering available without fences: fully finish this
++        // context's GPU work so any consumer context sees final contents.
++        glFinish();
++        return nullptr;
++    }
++
+     if (eglVersionSupportsFences(display))
+         return GLFenceEGL::create(display);
+ 
