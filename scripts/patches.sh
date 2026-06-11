@@ -44,6 +44,7 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-webcore-bitmaptexturepool-owners.patch"
     "patches/webkit/webkit-webcore-texmap-owner-headers.patch"
     "patches/webkit/webkit-glfence-disable-env.patch"
+    "patches/webkit/webkit-texpool-compositor-sync-env.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
     # webkit-gpu-process-by-default-wpe.patch: DISABLED. It hard-enables
