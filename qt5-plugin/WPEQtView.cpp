@@ -24,6 +24,7 @@
 #include "WPEQtViewBackend.h"
 #include "WPEQtViewLoadRequest.h"
 #include "WPEQtViewLoadRequestPrivate.h"
+#include <QDebug>
 #include <QGuiApplication>
 #include <QQuickWindow>
 #include <QSGSimpleTextureNode>
@@ -110,22 +111,6 @@ void WPEQtView::createWebView()
     m_backend = backend.get();
     auto* settings = webkit_settings_new_with_settings("enable-developer-extras", TRUE,
         "enable-webgl", TRUE, "enable-mediasource", TRUE, nullptr);
-
-    // WPE ships the hidden-page throttling preferences off (Cocoa and GTK
-    // default them on). Without them a hidden page still fires DOM timers at
-    // full rate, so a timer-heavy background tab keeps burning CPU even after
-    // the activity state drops the visible flag. Enable both via the feature
-    // API; they are embedder-status so no stability caveats apply.
-    WebKitFeatureList* features = webkit_settings_get_all_features();
-    const gsize featureCount = webkit_feature_list_get_length(features);
-    for (gsize i = 0; i < featureCount; ++i) {
-        WebKitFeature* feature = webkit_feature_list_get(features, i);
-        const char* identifier = webkit_feature_get_identifier(feature);
-        if (!g_strcmp0(identifier, "HiddenPageDOMTimerThrottlingEnabled")
-            || !g_strcmp0(identifier, "HiddenPageCSSAnimationSuspensionEnabled"))
-            webkit_settings_set_feature_enabled(settings, feature, TRUE);
-    }
-    webkit_feature_list_unref(features);
     m_webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "backend", webkit_web_view_backend_new(m_backend->backend(), [](gpointer data) {
             delete static_cast<WPEQtViewBackend*>(data);
@@ -151,6 +136,28 @@ void WPEQtView::createWebView()
         webkit_web_view_load_uri(m_webView, m_url.toString().toUtf8().constData());
     else if (!m_html.isEmpty())
         webkit_web_view_load_html(m_webView, m_html.toUtf8().constData(), m_baseUrl.toString().toUtf8().constData());
+
+    // WPE ships the hidden-page throttling preferences off (Cocoa and GTK
+    // default them on). Without them a hidden page still fires DOM timers at
+    // full rate, so a timer-heavy background tab keeps burning CPU even after
+    // the activity state drops the visible flag. Set them on the view's
+    // attached settings after construction and log the read-back so a silent
+    // no-op is visible in the device log.
+    if (WebKitSettings* attachedSettings = webkit_web_view_get_settings(m_webView)) {
+        WebKitFeatureList* features = webkit_settings_get_all_features();
+        const gsize featureCount = webkit_feature_list_get_length(features);
+        for (gsize i = 0; i < featureCount; ++i) {
+            WebKitFeature* feature = webkit_feature_list_get(features, i);
+            const char* identifier = webkit_feature_get_identifier(feature);
+            if (!g_strcmp0(identifier, "HiddenPageDOMTimerThrottlingEnabled")
+                || !g_strcmp0(identifier, "HiddenPageCSSAnimationSuspensionEnabled")) {
+                webkit_settings_set_feature_enabled(attachedSettings, feature, TRUE);
+                qDebug() << "[WPE-FEAT]" << identifier << "set, readback="
+                         << webkit_settings_get_feature_enabled(attachedSettings, feature);
+            }
+        }
+        webkit_feature_list_unref(features);
+    }
 
     // The backend constructor starts with visible+focused+in_window; reconcile
     // with the visibility requested before the view existed (background tabs
