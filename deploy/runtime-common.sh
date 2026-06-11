@@ -218,15 +218,18 @@ atlantic_export_browser_env() {
           JSC_smallHeapRAMFraction JSC_largeHeapRAMFraction JSC_largeHeapSize \
           JSC_useTypeProfiler JSC_useControlFlowProfiler 2>/dev/null || true
 
-    # ── Skia painting thread caps ────────────────────────────────────────────
-    # WEBKIT_SKIA_GPU_PAINTING_THREADS is intentionally NOT set here. The browser
-    # auto-selects it from a GPU capability probe in main.cpp
-    # (configureGpuModeFromCapabilities): 1 thread when EGL_KHR_surfaceless_context
-    # is absent — e.g. the libhybris Adreno 610, where >1 concurrent worker
-    # context corrupts shared textures (garbled scrollbar/glyphs, dropped tiles) —
-    # and multi-threaded painting on surfaceless-capable stacks (Mali, desktop).
-    # Export WEBKIT_SKIA_GPU_PAINTING_THREADS=<n> before launch to override the
-    # auto-selection (the probe honours an explicit value).
+    # ── Skia painting backend ────────────────────────────────────────────────
+    # WEBKIT_SKIA_ENABLE_CPU_RENDERING and WEBKIT_SKIA_GPU_PAINTING_THREADS are
+    # intentionally NOT set here. The browser auto-selects the painting backend
+    # from a GPU capability probe in main.cpp (configureGpuModeFromCapabilities):
+    # CPU painting on conservative stacks — e.g. the libhybris Adreno 610, where
+    # GPU tile painting corrupts tiles at ANY thread count because the driver
+    # does not honour cross-context EGL fence server-waits (black/stale/
+    # misplaced tiles on image-heavy pages) — and multi-threaded GPU painting on
+    # surfaceless-capable stacks (Mali, desktop). Export either variable before
+    # launch to override the auto-selection (the probe honours explicit values).
+    # The CPU painting thread count below applies whenever CPU painting is in
+    # effect (2 raster workers; tiles upload from the compositor context).
     export WEBKIT_SKIA_CPU_PAINTING_THREADS=2
 
     # ── Tile size alignment ───────────────────────────────────────────────────
