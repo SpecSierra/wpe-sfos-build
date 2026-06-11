@@ -110,6 +110,22 @@ void WPEQtView::createWebView()
     m_backend = backend.get();
     auto* settings = webkit_settings_new_with_settings("enable-developer-extras", TRUE,
         "enable-webgl", TRUE, "enable-mediasource", TRUE, nullptr);
+
+    // WPE ships the hidden-page throttling preferences off (Cocoa and GTK
+    // default them on). Without them a hidden page still fires DOM timers at
+    // full rate, so a timer-heavy background tab keeps burning CPU even after
+    // the activity state drops the visible flag. Enable both via the feature
+    // API; they are embedder-status so no stability caveats apply.
+    WebKitFeatureList* features = webkit_settings_get_all_features();
+    const gsize featureCount = webkit_feature_list_get_length(features);
+    for (gsize i = 0; i < featureCount; ++i) {
+        WebKitFeature* feature = webkit_feature_list_get(features, i);
+        const char* identifier = webkit_feature_get_identifier(feature);
+        if (!g_strcmp0(identifier, "HiddenPageDOMTimerThrottlingEnabled")
+            || !g_strcmp0(identifier, "HiddenPageCSSAnimationSuspensionEnabled"))
+            webkit_settings_set_feature_enabled(settings, feature, TRUE);
+    }
+    webkit_feature_list_unref(features);
     m_webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "backend", webkit_web_view_backend_new(m_backend->backend(), [](gpointer data) {
             delete static_cast<WPEQtViewBackend*>(data);
