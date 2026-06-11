@@ -136,7 +136,36 @@ void WPEQtView::createWebView()
     else if (!m_html.isEmpty())
         webkit_web_view_load_html(m_webView, m_html.toUtf8().constData(), m_baseUrl.toString().toUtf8().constData());
 
+    // The backend constructor starts with visible+focused+in_window; reconcile
+    // with the visibility requested before the view existed (background tabs
+    // are created hidden).
+    applyWebKitVisibility();
+
     Q_EMIT webViewCreated();
+}
+
+void WPEQtView::setWebKitVisible(bool visible)
+{
+    if (m_webKitVisible == visible)
+        return;
+    m_webKitVisible = visible;
+    applyWebKitVisibility();
+}
+
+void WPEQtView::applyWebKitVisibility()
+{
+    if (!m_backend)
+        return;
+
+    // in_window stays set for the lifetime of the view; only visible+focused
+    // track tab/app foreground state. Dropping them flips
+    // document.visibilityState to "hidden" and document.hasFocus() to false,
+    // which suspends rAF and lets WebKit align DOM timers.
+    const uint32_t flags = wpe_view_activity_state_visible | wpe_view_activity_state_focused;
+    if (m_webKitVisible)
+        wpe_view_backend_add_activity_state(m_backend->backend(), flags);
+    else
+        wpe_view_backend_remove_activity_state(m_backend->backend(), flags);
 }
 
 void WPEQtView::notifyUrlChangedCallback(WPEQtView* view)

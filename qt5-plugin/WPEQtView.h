@@ -78,6 +78,13 @@ public:
     void setUserAgent(const QString& userAgent);
     void setDeviceScaleFactor(qreal scale);
 
+    // Drives the WPE activity state (visible+focused) so WebKit throttles
+    // hidden pages: rAF stops and DOM timers align once the page is no longer
+    // the active foreground tab. Safe to call before the backend exists; the
+    // pending state is applied when the web view is created.
+    void setWebKitVisible(bool visible);
+    bool webKitVisible() const { return m_webKitVisible; }
+
 public Q_SLOTS:
     void goBack();
     void goForward();
@@ -134,7 +141,10 @@ private:
     QString m_html;
     QUrl m_baseUrl;
     QSizeF m_size;
+    void applyWebKitVisibility();
+
     WPEQtViewBackend* m_backend { nullptr };
+    bool m_webKitVisible { true };
     bool m_errorOccured { false };
     qreal m_pendingDeviceScaleFactor { 1.0 };
     QString m_pendingUserAgent;
