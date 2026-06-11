@@ -230,7 +230,7 @@ atlantic_export_browser_env() {
     # launch to override the auto-selection (the probe honours explicit values).
     # The CPU painting thread count below applies whenever CPU painting is in
     # effect (2 raster workers; tiles upload from the compositor context).
-    export WEBKIT_SKIA_CPU_PAINTING_THREADS=2
+    export WEBKIT_SKIA_CPU_PAINTING_THREADS="${WEBKIT_SKIA_CPU_PAINTING_THREADS:-2}"
 
     # ── Tile size alignment ───────────────────────────────────────────────────
     # 256 px tiles for Adreno 610 — smaller texture uploads reduce GPU pipeline
