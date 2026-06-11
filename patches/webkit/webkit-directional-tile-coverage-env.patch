@@ -1,6 +1,6 @@
 diff -ur a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.cpp b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.cpp
 --- a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.cpp	2026-06-11 15:05:33.155383414 +0000
-+++ b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.cpp	2026-06-11 15:06:02.675535080 +0000
++++ b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.cpp	2026-06-11 15:37:23.791879024 +0000
 @@ -27,6 +27,9 @@
  #include "ProcessCapabilities.h"
  #include <wtf/CheckedArithmetic.h>
@@ -57,20 +57,32 @@ diff -ur a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackin
      bool contentsScaleChanged = m_contentsScale != contentsScale;
      m_contentsScale = contentsScale;
  
-@@ -215,6 +248,12 @@
+@@ -215,6 +248,24 @@
          return;
  
      if (geometryChanged) {
 +        // Track the vertical scroll direction (only when the viewport moved
 +        // within unchanged content, so layout changes don't count) to bias
-+        // directional coverage ahead of the motion.
-+        if (!contentsRectChanged && visibleRect.y() != m_visibleRect.y() && visibleRect.height() == m_visibleRect.height())
-+            m_lastScrollDirectionY = visibleRect.y() > m_visibleRect.y() ? 1 : -1;
++        // directional coverage ahead of the motion. Hysteresis: the bias only
++        // flips after half a viewport of sustained movement in the new
++        // direction — the small counter-movement when a finger lands for the
++        // next flick must not flip it (a flip relocates the cover rect, and
++        // thrashing it caused visible repaint gaps).
++        if (!contentsRectChanged && visibleRect.height() == m_visibleRect.height()) {
++            int dy = visibleRect.y() - m_visibleRect.y();
++            if (dy) {
++                if ((dy > 0) != (m_scrollAccumulatorY > 0))
++                    m_scrollAccumulatorY = 0;
++                m_scrollAccumulatorY += dy;
++                if (std::abs(m_scrollAccumulatorY) > m_visibleRect.height() / 2)
++                    m_lastScrollDirectionY = m_scrollAccumulatorY > 0 ? 1 : -1;
++            }
++        }
 +
          m_contentsRect = contentsRect;
          m_visibleRect = visibleRect;
          m_coverAreaMultiplier = coverAreaMultiplier;
-@@ -468,9 +507,24 @@
+@@ -468,9 +519,38 @@
  
      // If we cover more that the actual viewport we can be smart about which tiles we choose to render.
      if (m_coverAreaMultiplier > 1) {
@@ -80,17 +92,31 @@ diff -ur a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackin
 +        if (directionalCoverageEnabled()) {
 +            // Spend the budget vertically (scroll direction), biased ahead of
 +            // the last observed motion: 70% ahead / 30% behind, and only a
-+            // quarter viewport of horizontal slack on each side.
++            // quarter viewport of horizontal slack on each side. The keep
++            // rect stays symmetric at the maximum extent so a direction flip
++            // re-aims future painting but never evicts already-painted tiles.
 +            coverRect.inflateX(m_visibleRect.width() / 4);
 +            int extraY = m_visibleRect.height() * (m_coverAreaMultiplier - 1);
-+            int behindY = extraY / 2;
-+            if (m_lastScrollDirectionY > 0)
-+                behindY = extraY * 3 / 10;
-+            else if (m_lastScrollDirectionY < 0)
-+                behindY = extraY * 7 / 10;
-+            coverRect.setHeight(coverRect.height() + extraY);
++            int aheadY = extraY * 7 / 10;
++            int behindY = extraY - aheadY;
++            if (m_lastScrollDirectionY < 0)
++                std::swap(aheadY, behindY);
++            else if (!m_lastScrollDirectionY)
++                aheadY = behindY = extraY / 2;
++            coverRect.setHeight(coverRect.height() + aheadY + behindY);
 +            coverRect.setY(coverRect.y() - behindY);
-+        } else {
++            keepRect = m_visibleRect;
++            keepRect.inflateX(m_visibleRect.width() / 4);
++            keepRect.inflateY(std::max(aheadY, behindY));
++            ASSERT(keepRect.contains(coverRect));
++            adjustForContentsRect(coverRect);
++            keepRect.unite(coverRect);
++            keepRect.inflateX(m_tileSize.width() / 2);
++            keepRect.inflateY(m_tileSize.height() / 2);
++            keepRect.intersect(m_contentsRect);
++            return { WTF::move(coverRect), WTF::move(keepRect) };
++        }
++        {
 +            // The initial cover area covers equally in each direction, according to the coverAreaMultiplier.
 +            coverRect.inflateX(m_visibleRect.width() * (m_coverAreaMultiplier - 1) / 2);
 +            coverRect.inflateY(m_visibleRect.height() * (m_coverAreaMultiplier - 1) / 2);
@@ -100,12 +126,13 @@ diff -ur a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackin
      }
 diff -ur a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.h b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.h
 --- a/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.h	2026-06-11 15:05:33.162383449 +0000
-+++ b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.h	2026-06-11 15:06:02.675535080 +0000
-@@ -145,6 +145,7 @@
++++ b/Source/WebCore/platform/graphics/texmap/coordinated/CoordinatedBackingStoreProxy.h	2026-06-11 15:37:23.792879030 +0000
+@@ -145,6 +145,8 @@
      float m_contentsScale { 1 };
      IntSize m_tileSize;
      float m_coverAreaMultiplier { 2 };
 +    int m_lastScrollDirectionY { 0 };
++    int m_scrollAccumulatorY { 0 };
      bool m_pendingTileCreation { false };
      IntRect m_contentsRect;
      IntRect m_visibleRect;
