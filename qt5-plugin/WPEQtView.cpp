@@ -140,17 +140,17 @@ void WPEQtView::createWebView()
     // WPE ships the hidden-page throttling preferences off (Cocoa and GTK
     // default them on). Without them a hidden page still fires DOM timers at
     // full rate, so a timer-heavy background tab keeps burning CPU even after
-    // the activity state drops the visible flag. Set them on the view's
-    // attached settings after construction and log the read-back so a silent
-    // no-op is visible in the device log.
+    // the activity state drops the visible flag. Note: the feature API strips
+    // the "Enabled" suffix from preference keys, so the identifiers are
+    // "HiddenPageDOMTimerThrottling", not "...ThrottlingEnabled".
     if (WebKitSettings* attachedSettings = webkit_web_view_get_settings(m_webView)) {
         WebKitFeatureList* features = webkit_settings_get_all_features();
         const gsize featureCount = webkit_feature_list_get_length(features);
         for (gsize i = 0; i < featureCount; ++i) {
             WebKitFeature* feature = webkit_feature_list_get(features, i);
             const char* identifier = webkit_feature_get_identifier(feature);
-            if (!g_strcmp0(identifier, "HiddenPageDOMTimerThrottlingEnabled")
-                || !g_strcmp0(identifier, "HiddenPageCSSAnimationSuspensionEnabled")) {
+            if (!g_strcmp0(identifier, "HiddenPageDOMTimerThrottling")
+                || !g_strcmp0(identifier, "HiddenPageCSSAnimationSuspension")) {
                 webkit_settings_set_feature_enabled(attachedSettings, feature, TRUE);
                 qDebug() << "[WPE-FEAT]" << identifier << "set, readback="
                          << webkit_settings_get_feature_enabled(attachedSettings, feature);
