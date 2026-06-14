@@ -1,0 +1,92 @@
+Make touch-driven panning scroll on the async scrolling thread instead of
+being forced synchronous (main-thread) whenever the touched region carries a
+non-passive wheel/mousewheel listener.
+
+Background
+----------
+WPE already has the full threaded async-scrolling stack compiled in and enabled
+(ENABLE_ASYNC_SCROLLING + ENABLE_SCROLLING_THREAD via PlatformEnableGlib,
+ThreadedScrollingCoordinator / ScrollingTreeCoordinated, the live "Core:Scrolling"
+thread, and ENABLE_KINETIC_SCROLLING). Touch panning is turned into synthetic
+"smooth" wheel/axis events by TouchGestureController; those events carry precise
+scrolling deltas (hasPreciseScrollingDeltas == true).
+
+The keystone that defeats it: ScrollingTree::computeWheelProcessingSteps() returns
+{ SynchronousScrolling, BlockingDOMEventDispatch } for the *first* event of a
+gesture as soon as the scroll point lies in a synchronous wheel/mousewheel
+tracking region (i.e. any non-passive wheel/mousewheel listener under the finger,
+which modern SPAs like reddit attach to feed/post elements). WHEEL_EVENT_REGIONS
+(the NonBlocking-gesture-state escape hatch) is compiled OUT on WPE, so there is
+no way back to async. Because the first event goes to the main thread, no async
+scroll ever starts, isUserScrollInProgressAtEventLocation() stays false, and
+EventDispatcher keeps every subsequent event synchronous too. Result on device:
+the Core:Scrolling thread is idle (~0.5%) while the WebProcess main thread is
+pegged (~33%) and scrolling crawls at ~7fps. Because the events never reach the
+scrolling thread's ScrollingEffectsController, the kinetic (fling) animation
+never runs either, so there is no momentum.
+
+Fix
+---
+For precise-delta (touch / touchpad) wheel events, treat a synchronous wheel
+region the way other ports treat a NonBlocking gesture state: scroll
+asynchronously on the scrolling thread and still dispatch the DOM wheel event,
+but non-blocking (the page's listener still fires, it just can't block the
+scroll). This mirrors the passive-listener behaviour the browser already forces
+via its kPassiveScroll user script, and matches how mobile WebKit keeps touch
+panning off the main thread. Discrete mouse-wheel events (no precise deltas) are
+unaffected and keep their existing synchronous/blocking behaviour.
+
+Gated on WEBKIT_TOUCH_SCROLL_ASYNC (default ON; set =0 to restore upstream
+behaviour for A/B testing on device, like the other tuning env patches).
+--- a/Source/WebCore/page/scrolling/ScrollingTree.cpp
++++ b/Source/WebCore/page/scrolling/ScrollingTree.cpp
+@@ -46,10 +46,31 @@
+ #include <wtf/TZoneMallocInlines.h>
+ #include <wtf/text/TextStream.h>
+ 
++#include <cstdlib>
++#include <cstring>
++
+ namespace WebCore {
+ 
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTree);
+ 
++// When a touch (or touchpad) pan lands on a synchronous wheel/mousewheel
++// tracking region, scroll it asynchronously on the scrolling thread instead of
++// dropping to the main thread. The DOM wheel event is still dispatched, just
++// non-blocking, so page listeners fire without blocking the scroll. Keeps touch
++// panning smooth (and lets the kinetic/fling animation run) on SPAs that attach
++// non-passive wheel listeners. See webkit-touch-async-scroll-env.patch.
++static bool touchAsyncScrollEnabled()
++{
++    static bool enabled = [] {
++        const char* env = getenv("WEBKIT_TOUCH_SCROLL_ASYNC");
++        // Default ON; only an explicit "0" disables it.
++        if (env && *env)
++            return strcmp(env, "0") != 0;
++        return true;
++    }();
++    return enabled;
++}
++
+ using OrphanScrollingNodeMap = HashMap<ScrollingNodeID, RefPtr<ScrollingTreeNode>>;
+ 
+ struct CommitTreeState {
+@@ -114,8 +135,16 @@
+             || m_treeState.eventTrackingRegions.trackingTypeForPoint(EventTrackingRegions::EventType::Mousewheel, roundedPosition) == TrackingType::Synchronous;
+         LOG_WITH_STREAM(Scrolling, stream << "\nScrollingTree::computeWheelProcessingSteps: wheelEvent " << wheelEvent << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
+ 
+-        if (isSynchronousDispatchRegion)
++        if (isSynchronousDispatchRegion) {
++            // Touch / touchpad panning (precise deltas) stays on the scrolling
++            // thread even over a non-passive wheel region: scroll async and
++            // dispatch the DOM wheel event non-blocking, so listeners still fire
++            // but cannot block the scroll. Discrete wheel events are unchanged.
++            if (touchAsyncScrollEnabled() && wheelEvent.hasPreciseScrollingDeltas())
++                return { WheelEventProcessingSteps::AsyncScrolling, WheelEventProcessingSteps::NonBlockingDOMEventDispatch };
++
+             return { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch };
++        }
+     }
+ 
+ #if ENABLE(WHEEL_EVENT_REGIONS)

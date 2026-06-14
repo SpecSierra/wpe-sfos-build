@@ -47,6 +47,13 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-texpool-compositor-sync-env.patch"
     "patches/webkit/webkit-raster-on-compositor-thread-env.patch"
     "patches/webkit/webkit-directional-tile-coverage-env.patch"
+    # webkit-touch-async-scroll-env.patch: touch/touchpad (precise-delta) panning
+    # scrolls on the async scrolling thread even over a non-passive wheel region,
+    # instead of being forced synchronous on the main thread (the keystone that
+    # kept WPE's already-enabled APZ from engaging on SPAs like reddit — see the
+    # patch header). Restores off-main-thread scrolling + kinetic momentum.
+    # Toggle off with WEBKIT_TOUCH_SCROLL_ASYNC=0.
+    "patches/webkit/webkit-touch-async-scroll-env.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
     # webkit-gpu-process-by-default-wpe.patch: DISABLED. It hard-enables
