@@ -47,13 +47,6 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-texpool-compositor-sync-env.patch"
     "patches/webkit/webkit-raster-on-compositor-thread-env.patch"
     "patches/webkit/webkit-directional-tile-coverage-env.patch"
-    # webkit-touch-async-scroll-env.patch: touch/touchpad (precise-delta) panning
-    # scrolls on the async scrolling thread even over a non-passive wheel region,
-    # instead of being forced synchronous on the main thread (the keystone that
-    # kept WPE's already-enabled APZ from engaging on SPAs like reddit — see the
-    # patch header). Restores off-main-thread scrolling + kinetic momentum.
-    # Toggle off with WEBKIT_TOUCH_SCROLL_ASYNC=0.
-    "patches/webkit/webkit-touch-async-scroll-env.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
     # webkit-gpu-process-by-default-wpe.patch: DISABLED. It hard-enables
@@ -83,10 +76,6 @@ readonly WEBKIT_SOURCE_PATCHES=(
     # never added to this list — the runtime env vars were dead until now.
     "patches/webkit/webkit-gst-buffer-tuning.patch"
     "patches/webkit/webkit-bubblewrap-sfos-sandbox.patch"
-    # TEMP diagnostic — REMOVE after root-causing touch momentum. ENV-GATED
-    # (WEBKIT_SCROLL_DIAG=1), so OFF by default = no overhead / normal scroll
-    # speed. Logs the kinetic-fling apply path to /tmp/wpe-scroll-diag.log.
-    "patches/webkit/zz-diag-scroll-applypath.patch"
 )
 
 readonly QT5_PLUGIN_PATCHES=(
