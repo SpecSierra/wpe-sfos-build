@@ -28,6 +28,7 @@
 
 class WPEQtViewBackend;
 class WPEQtViewLoadRequest;
+class WPEWaylandSubsurface;
 
 class Q_DECL_EXPORT WPEQtView : public QQuickItem {
     Q_OBJECT
@@ -143,7 +144,12 @@ private:
     QSizeF m_size;
     void applyWebKitVisibility();
 
+    // Pushes the item's on-screen rect (device pixels) to the direct-composite
+    // subsurface, when active.
+    void updateSubsurfaceGeometry();
+
     WPEQtViewBackend* m_backend { nullptr };
+    WPEWaylandSubsurface* m_subsurface { nullptr };
     bool m_webKitVisible { true };
     bool m_errorOccured { false };
     qreal m_pendingDeviceScaleFactor { 1.0 };

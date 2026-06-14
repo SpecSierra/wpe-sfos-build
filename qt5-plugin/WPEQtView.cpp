@@ -24,6 +24,7 @@
 #include "WPEQtViewBackend.h"
 #include "WPEQtViewLoadRequest.h"
 #include "WPEQtViewLoadRequestPrivate.h"
+#include "WPEWaylandSubsurface.h"
 #include <QDebug>
 #include <QGuiApplication>
 #include <QQuickWindow>
@@ -60,6 +61,7 @@ WPEQtView::WPEQtView(QQuickItem* parent)
 
 WPEQtView::~WPEQtView()
 {
+    delete m_subsurface;
     if (m_webView) {
         g_signal_handlers_disconnect_by_func(m_webView, reinterpret_cast<gpointer>(notifyUrlChangedCallback), this);
         g_signal_handlers_disconnect_by_func(m_webView, reinterpret_cast<gpointer>(notifyTitleChangedCallback), this);
@@ -75,6 +77,21 @@ void WPEQtView::geometryChanged(const QRectF& newGeometry, const QRectF&)
     m_size = newGeometry.size();
     if (m_backend)
         m_backend->resize(newGeometry.size());
+    updateSubsurfaceGeometry();
+}
+
+void WPEQtView::updateSubsurfaceGeometry()
+{
+    if (!m_subsurface || !window())
+        return;
+    const qreal dpr = window()->effectiveDevicePixelRatio();
+    const QRectF sceneRect = mapRectToScene(QRectF(QPointF(0, 0), m_size));
+    m_subsurface->setGeometry(QRect(qRound(sceneRect.x() * dpr), qRound(sceneRect.y() * dpr),
+                                    qRound(sceneRect.width() * dpr), qRound(sceneRect.height() * dpr)));
+    // set_position is applied on the parent surface's next commit; nudge Qt to
+    // render a frame so the new position takes effect promptly.
+    if (QQuickWindow* w = window())
+        QMetaObject::invokeMethod(w, "update", Qt::QueuedConnection);
 }
 
 void WPEQtView::configureWindow()
@@ -109,6 +126,22 @@ void WPEQtView::createWebView()
     }
 
     m_backend = backend.get();
+
+    // Direct-composite: present web frames into a dedicated wl_subsurface instead
+    // of a QSG texture node, so the system compositor presents them directly
+    // (no Qt scene-graph re-composite of web content). Falls back to the QSG path
+    // if unavailable. Must be wired before the first exported frame.
+    if (WPEWaylandSubsurface::enabled() && !m_subsurface) {
+        m_subsurface = new WPEWaylandSubsurface();
+        if (m_subsurface->ensureCreated(window())) {
+            updateSubsurfaceGeometry();
+            m_backend->setSubsurface(m_subsurface);
+        } else {
+            delete m_subsurface;
+            m_subsurface = nullptr; // QSG path
+        }
+    }
+
     auto* settings = webkit_settings_new_with_settings("enable-developer-extras", TRUE,
         "enable-webgl", TRUE, "enable-mediasource", TRUE, nullptr);
     m_webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
@@ -250,6 +283,14 @@ QSGNode* WPEQtView::updatePaintNode(QSGNode* node, UpdatePaintNodeData*)
 {
     if (!m_webView || !m_backend)
         return node;
+
+    // Direct-composite: web content is presented on the wl_subsurface, so this
+    // item contributes nothing to the Qt scene — leaving a transparent hole the
+    // subsurface (placed below the window surface) shows through. Drop any old node.
+    if (m_subsurface && m_subsurface->isValid()) {
+        delete node;
+        return nullptr;
+    }
 
     auto* textureNode = static_cast<QSGSimpleTextureNode*>(node);
     if (!textureNode) {

@@ -39,6 +39,7 @@
 #include <wpe/fdo.h>
 
 class WPEQtView;
+class WPEWaylandSubsurface;
 
 class Q_DECL_EXPORT WPEQtViewBackend {
 public:
@@ -67,6 +68,11 @@ public:
 
     bool handleFullscreenChanged(bool enable);
 
+    // Direct-composite path: when set (and ATLANTIC_DIRECT_COMPOSITE=1), exported
+    // images are presented to this wl_subsurface from displayImage() on the GUI
+    // thread instead of being imported as a QSG texture node. See WPEWaylandSubsurface.
+    void setSubsurface(WPEWaylandSubsurface* subsurface) { m_subsurface = subsurface; }
+
 private:
     void displayImage(struct wpe_fdo_egl_exported_image*);
     uint32_t modifiers() const;
@@ -77,6 +83,8 @@ private:
     struct wpe_fdo_egl_exported_image* m_pendingImage { nullptr };
     struct wpe_fdo_egl_exported_image* m_committedImage { nullptr };
     bool m_frameUpdateRequested { false };
+
+    WPEWaylandSubsurface* m_subsurface { nullptr };
 
     QPointer<WPEQtView> m_view;
     QOffscreenSurface m_surface;

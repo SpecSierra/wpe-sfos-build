@@ -22,6 +22,7 @@
 #include "WPEQtViewBackend.h"
 
 #include "WPEQtView.h"
+#include "WPEWaylandSubsurface.h"
 #include <QGuiApplication>
 #include <QMetaObject>
 #include <QOpenGLFunctions>
@@ -238,6 +239,23 @@ void WPEQtViewBackend::didRenderFrame()
 
 void WPEQtViewBackend::displayImage(struct wpe_fdo_egl_exported_image* image)
 {
+    // Direct-composite path: render straight into the wl_subsurface and run the
+    // frame-complete handshake here, decoupled from Qt's render loop. This
+    // bypasses the QSG texture-node re-composite of the web content and avoids
+    // forcing a full Qt window frame per web frame. Runs on the GUI thread.
+    if (m_subsurface) {
+        m_subsurface->present(image, /*flipY*/ true);
+        if (m_exportable) {
+            wpe_view_backend_exportable_fdo_dispatch_frame_complete(m_exportable);
+            // Release the previously displayed image (a frame old, GPU no longer
+            // sampling it) rather than the one we just drew from.
+            if (m_committedImage)
+                wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_committedImage);
+        }
+        m_committedImage = image;
+        return;
+    }
+
     if (m_pendingImage && m_exportable)
         wpe_view_backend_exportable_fdo_egl_dispatch_release_exported_image(m_exportable, m_pendingImage);
 
