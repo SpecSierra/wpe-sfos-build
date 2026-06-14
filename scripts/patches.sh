@@ -69,6 +69,12 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-jsc-linux-arm64-thread-tuning.patch"
     "patches/webkit/webkit-jsc-linux-arm64-jit-thresholds.patch"
     "patches/webkit/webkit-webcore-scroll-anim-narrowing.patch"
+    # webkit-kinetic-decel-friction-env.patch: make the kinetic-fling deceleration
+    # friction tunable (WEBKIT_KINETIC_DECEL_FRICTION, default 4 = upstream). The
+    # device-measured fix for "touch momentum feels dead": friction=4 is desktop
+    # tuning; a lower value gives the longer, smoother glide phone flicking expects.
+    # Browser sets the device default in apps/browser/main.cpp.
+    "patches/webkit/webkit-kinetic-decel-friction-env.patch"
     # webkit-gst-buffer-tuning.patch: makes GstQueue2 high-watermark,
     # urisourcebin ring-buffer-max-size and uridecodebin buffer-size
     # configurable via WEBKIT_GST_QUEUE_HIGH_WATERMARK /
