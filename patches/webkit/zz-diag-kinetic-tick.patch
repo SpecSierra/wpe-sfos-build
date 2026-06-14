@@ -1,0 +1,68 @@
+TEMP env-gated diagnostic (WEBKIT_SCROLL_DIAG=1; revert before ship). Logs why a
+kinetic fling truncates under main-thread jank: [START] = fling velocity +
+estimated coast; [TICK] = per-frame elapsed/dt/velocity/offset-delta and which
+end-condition (endVel = |velocity|<1, endDelta = per-tick move <1px) fires.
+Applies on top of webkit-kinetic-decel-friction-env.patch. Diagnostic only.
+--- a/Source/WebCore/platform/ScrollAnimationKinetic.cpp
++++ b/Source/WebCore/platform/ScrollAnimationKinetic.cpp
+@@ -29,6 +29,7 @@
+ 
+ #include "PlatformWheelEvent.h"
+ #include "ScrollExtents.h"
++#include <cstdio>
+ #include <cstdlib>
+ #include <cstring>
+ #include <wtf/TZoneMallocInlines.h>
+@@ -91,6 +92,17 @@
+ static constexpr double velocityAccumulationMax = 6.0;
+ static constexpr Seconds scrollCaptureThreshold { 150_ms };
+ 
++// TEMP env-gated kinetic diagnostic (WEBKIT_SCROLL_DIAG=1). Off by default = one
++// cached bool check, no I/O. Confirms why a fling truncates under main-thread jank.
++static bool wpeScrollDiag()
++{
++    static bool on = [] {
++        const char* e = getenv("WEBKIT_SCROLL_DIAG");
++        return e && *e && strcmp(e, "0");
++    }();
++    return on;
++}
++
+ namespace WebCore {
+ 
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollAnimationKinetic);
+@@ -123,7 +135,18 @@
+         m_offset = m_upper;
+     }
+ 
+-    if (std::abs(m_velocity) < 1 || (lastTime > 0_s && std::abs(m_offset - lastOffset) < 1)) {
++    bool endByVelocity = std::abs(m_velocity) < 1;
++    bool endByDelta = (lastTime > 0_s && std::abs(m_offset - lastOffset) < 1);
++    if (wpeScrollDiag()) {
++        if (FILE* d = fopen("/tmp/wpe-scroll-diag.log", "a")) {
++            fprintf(d, "[TICK] t=%.3f dt=%.4f vel=%.1f offDelta=%.2f off=%.0f endVel=%d endDelta=%d\n",
++                m_elapsedTime.value(), (m_elapsedTime - lastTime).value(), m_velocity,
++                std::abs(m_offset - lastOffset), m_offset, (int)endByVelocity, (int)endByDelta);
++            fclose(d);
++        }
++    }
++
++    if (endByVelocity || endByDelta) {
+         m_offset = round(m_offset);
+         m_velocity = 0;
+     }
+@@ -215,6 +238,14 @@
+         m_verticalData = std::nullopt;
+ 
+     m_currentOffset = initialOffset;
++    if (wpeScrollDiag()) {
++        if (FILE* d = fopen("/tmp/wpe-scroll-diag.log", "a")) {
++            fprintf(d, "[START] vel=(%.1f,%.1f) prevVel=(%.1f,%.1f) friction=%.2f coastEstY=%.0f\n",
++                velocity.width(), velocity.height(), previousVelocity.width(), previousVelocity.height(),
++                decelFrictionValue(), velocity.height() / decelFrictionValue());
++            fclose(d);
++        }
++    }
+     didStart(MonotonicTime::now());
+     return true;
+ }

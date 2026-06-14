@@ -68,6 +68,10 @@ readonly WEBKIT_SOURCE_PATCHES=(
     # tuning; a lower value gives the longer, smoother glide phone flicking expects.
     # Browser sets the device default in apps/browser/main.cpp.
     "patches/webkit/webkit-kinetic-decel-friction-env.patch"
+    # TEMP diagnostic — REMOVE after root-causing reddit fling truncation. ENV-GATED
+    # (WEBKIT_SCROLL_DIAG=1), off by default. Logs kinetic fling start + per-tick
+    # timing/termination to /tmp/wpe-scroll-diag.log.
+    "patches/webkit/zz-diag-kinetic-tick.patch"
     # webkit-gst-buffer-tuning.patch: makes GstQueue2 high-watermark,
     # urisourcebin ring-buffer-max-size and uridecodebin buffer-size
     # configurable via WEBKIT_GST_QUEUE_HIGH_WATERMARK /
