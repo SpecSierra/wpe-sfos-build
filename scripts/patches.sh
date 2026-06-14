@@ -77,11 +77,10 @@ readonly WEBKIT_SOURCE_PATCHES=(
     # never added to this list — the runtime env vars were dead until now.
     "patches/webkit/webkit-gst-buffer-tuning.patch"
     "patches/webkit/webkit-bubblewrap-sfos-sandbox.patch"
-    # TEMP diagnostics — REMOVE after root-causing touch momentum. Log to
-    # /tmp/wpe-scroll-diag.log: wheel scrolling decision + kinetic-fling start +
-    # display-refresh servicing on the scrolling thread.
-    "patches/webkit/zz-diag-wheel-logging.patch"
-    "patches/webkit/zz-diag-kinetic-logging.patch"
+    # TEMP diagnostic — REMOVE after root-causing touch momentum. ENV-GATED
+    # (WEBKIT_SCROLL_DIAG=1), so OFF by default = no overhead / normal scroll
+    # speed. Logs the kinetic-fling apply path to /tmp/wpe-scroll-diag.log.
+    "patches/webkit/zz-diag-scroll-applypath.patch"
 )
 
 readonly QT5_PLUGIN_PATCHES=(
