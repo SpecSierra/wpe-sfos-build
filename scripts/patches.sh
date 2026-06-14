@@ -47,6 +47,17 @@ readonly WEBKIT_SOURCE_PATCHES=(
     "patches/webkit/webkit-texpool-compositor-sync-env.patch"
     "patches/webkit/webkit-raster-on-compositor-thread-env.patch"
     "patches/webkit/webkit-directional-tile-coverage-env.patch"
+    # webkit-memory-pressure-threshold-env.patch: make WebKit's memory-pressure
+    # purge threshold + poll interval tunable (WEBKIT_MEMORY_BASE_THRESHOLD_MB /
+    # WEBKIT_MEMORY_POLL_INTERVAL_MS, defaults exported by runtime-common.sh).
+    # Device root cause of the reddit "big lag spikes": the WebProcess footprint
+    # that pushes the SYSTEM into the kernel lowmemorykiller (multi-second
+    # major-fault thrashing on scroll) is only ~700 MB, but WebKit's default
+    # baseThreshold = min(3 GB, RAM) means it only purges its decoded-image / tile
+    # caches at ~1 GB and re-checks every 30 s, so it never feels pressure before
+    # the kernel thrashes. The device default (1200 MB base, 3 s poll) makes the
+    # handler purge at ~400-600 MB. Kill threshold is unaffected (ramSize-based).
+    "patches/webkit/webkit-memory-pressure-threshold-env.patch"
     "patches/webkit/webkit-renderbox-isnan.patch"
     "patches/webkit/webkit-shapeoutside-isnan.patch"
     # webkit-gpu-process-by-default-wpe.patch: DISABLED. It hard-enables

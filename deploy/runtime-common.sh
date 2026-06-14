@@ -218,6 +218,24 @@ atlantic_export_browser_env() {
           JSC_smallHeapRAMFraction JSC_largeHeapRAMFraction JSC_largeHeapSize \
           JSC_useTypeProfiler JSC_useControlFlowProfiler 2>/dev/null || true
 
+    # ── WebKit memory-pressure budget ─────────────────────────────────────────
+    # Honoured by webkit-memory-pressure-threshold-env.patch. Device-measured
+    # root cause of the reddit "big lag spikes": they are kernel memory-pressure
+    # thrashing, not rendering. A heavy feed grows the WebProcess to ~700 MB RSS;
+    # on this 3.5 GB device the rest of RAM is held by lipstick/system, so at that
+    # footprint the kernel lowmemorykiller starts reaping and the WebProcess's own
+    # pages get evicted + major-faulted back in (~1700 major faults in a 10 s
+    # scroll), each fault a multi-second main-thread stall. WebKit's MemoryPressure
+    # Handler would release its decoded-image / page / tile caches and bound RSS,
+    # but its defaults (baseThreshold = min(3 GB, RAM) → purge at ~1 GB, 30 s poll)
+    # never fire before the kernel thrashes. Set a realistic budget: 1200 MB base
+    # → conservative purge at ~400 MB / strict at ~600 MB, re-checked every 3 s, so
+    # WebKit releases caches BEFORE the system runs out. Only the purge thresholds
+    # move; the kill threshold is ramSize-based and unaffected. Light pages
+    # (footprint < ~400 MB) see no change. Override per-launch if needed.
+    export WEBKIT_MEMORY_BASE_THRESHOLD_MB="${WEBKIT_MEMORY_BASE_THRESHOLD_MB:-1200}"
+    export WEBKIT_MEMORY_POLL_INTERVAL_MS="${WEBKIT_MEMORY_POLL_INTERVAL_MS:-3000}"
+
     # ── Skia painting backend ────────────────────────────────────────────────
     # WEBKIT_SKIA_ENABLE_CPU_RENDERING and WEBKIT_SKIA_GPU_PAINTING_THREADS are
     # intentionally NOT set here. The browser auto-selects the painting backend
