@@ -3,6 +3,21 @@
 Host-side helper scripts used during browser development on the build server.
 They are **not** part of any build or RPM — purely manual debugging aids.
 
+## `atldbg` — the unified debugger (start here)
+
+For day-to-day debugging use **`atldbg`** (`./atldbg.sh`, or the `~/atldbg`
+symlink): one tool to find bugs, find CPU/exec hotspots, find slow JS functions,
+and debug media & rendering. It opens the inspector tunnel automatically and
+targets the visible tab. See [`atldbg/README.md`](atldbg/README.md).
+
+```sh
+~/atldbg doctor          # health snapshot
+~/atldbg cpu | profile | bug | media | render | tabs | eval "<js>"
+```
+
+The raw scripts below are the lower-level primitives `atldbg` is built on, kept
+for ad-hoc use.
+
 ## Touch input simulation
 
 The device has no `evdev`/`evemu` tools, so touch is simulated by raw-writing
